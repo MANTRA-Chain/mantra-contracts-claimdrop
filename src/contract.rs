@@ -1,9 +1,11 @@
-use crate::error::ContractError;
-use cosmwasm_std::entry_point;
+use cosmwasm_std::{entry_point, to_json_binary};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
+use crate::commands;
+use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::CAMPAIGN_COUNT;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:airdrop-manager";
@@ -11,25 +13,48 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
 pub fn instantiate(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: InstantiateMsg,
+    info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    cw_ownable::initialize_owner(
+        deps.storage,
+        deps.api,
+        Some(&msg.owner.unwrap_or(info.sender.into_string())),
+    )?;
+
+    Ok(Response::default())
 }
 
 #[entry_point]
 pub fn execute(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    match msg {
+        ExecuteMsg::CreateCampaign { params } => commands::create_campaign(deps, env, info, params),
+        ExecuteMsg::UpdateOwnership(action) => {
+            Ok(
+                cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
+                    |ownership| {
+                        Response::default()
+                            .add_attribute("action", "update_ownership")
+                            .add_attributes(ownership.into_attributes())
+                    },
+                )?,
+            )
+        }
+    }
 }
 
 #[entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
+    }
 }
