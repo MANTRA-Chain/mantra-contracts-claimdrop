@@ -5,6 +5,7 @@ use crate::msg::Campaign;
 /// The number of campaigns created
 pub const CAMPAIGN_COUNT: Item<u64> = Item::new("campaign_count");
 
+//todo use indexedmap here instead so CAMPAIGNS and MERKLE_ROOT becomes one
 /// The list of campaigns. The key is the campaign id, the value is the campaign data.
 pub const CAMPAIGNS: Map<u64, Campaign> = Map::new("campaigns");
 

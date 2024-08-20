@@ -5,7 +5,6 @@ use cw2::set_contract_version;
 use crate::commands;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::CAMPAIGN_COUNT;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:airdrop-manager";
@@ -37,7 +36,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateCampaign { params } => commands::create_campaign(deps, env, info, params),
+        ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
