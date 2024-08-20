@@ -2,7 +2,7 @@
 
 on: [push, pull_request]
 
-name: Basic
+name: Tests and Lints
 
 jobs:
 
@@ -17,17 +17,15 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.60.0
+          toolchain: 1.80.0
           target: wasm32-unknown-unknown
           override: true
 
-      - name: Run unit tests
-        uses: actions-rs/cargo@v1
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
         with:
-          command: unit-test
-          args: --locked
-        env:
-          RUST_BACKTRACE: 1
+          version: "0.15.0"
+          args: '--locked -- --test-threads 4'
 
       - name: Compile WASM contract
         uses: actions-rs/cargo@v1
@@ -48,7 +46,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.60.0
+          toolchain: 1.80.0
           override: true
           components: rustfmt, clippy
 
