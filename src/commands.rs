@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response};
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -53,9 +53,40 @@ fn create_campaign(
 /// Ends an airdrop campaign. Only the owner or the contract admin can end a campaign. The remaining
 /// funds in the campaign are refunded to the owner.
 fn end_campaign(
-    _deps: DepsMut,
-    _info: MessageInfo,
-    _campaign_id: u64,
+    deps: DepsMut,
+    info: MessageInfo,
+    campaign_id: u64,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    let mut campaign = CAMPAIGNS
+        .may_load(deps.storage, campaign_id)?
+        .ok_or(ContractError::CampaignNotFound { campaign_id })?;
+
+    ensure!(
+        campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
+        ContractError::Unauthorized
+    );
+
+    //todo grace period to close a campaign once it finishes???
+
+    let refund = campaign
+        .reward_asset
+        .amount
+        .checked_sub(campaign.claimed.amount)?;
+
+    let refund_msg = BankMsg::Send {
+        to_address: campaign.owner.to_string(),
+        amount: coins(refund.u128(), campaign.reward_asset.denom.clone()),
+    };
+
+    // Set the claimed amount to the total reward amount, so that the campaign is considered finished.
+    campaign.claimed = campaign.reward_asset.clone();
+
+    CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
+
+    Ok(Response::default()
+        .add_message(refund_msg)
+        .add_attributes(vec![
+            ("action", "end_campaign".to_string()),
+            ("campaign_id", campaign_id.to_string()),
+        ]))
 }
