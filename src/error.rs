@@ -42,4 +42,35 @@ pub enum ContractError {
 
     #[error("Campaign with id {campaign_id} not found")]
     CampaignNotFound { campaign_id: u64 },
+
+    #[error("The address have already claimed the given campaign")]
+    Claimed,
+
+    #[error("Wrong hash length")]
+    WrongHashLength,
+
+    #[error("Merkle root verification failed, expected: {expected}, actual: {actual}")]
+    MerkleRootVerificationFailed {
+        expected: [u8; 32],
+        actual: [u8; 32],
+    },
+
+    #[error("Claim amount exceeds the maximum claimable amount")]
+    ExceededMaxClaimAmount,
+
+    #[error("Campaign has ended, cannot claim anymore")]
+    CampaignEnded,
+
+    #[error(
+        "Invalid distribution order, current start: {current_start}, previous end: {previous_end}"
+    )]
+    InvalidDistributionOrder {
+        current_start: u64,
+        previous_end: u64,
+    },
+
+    #[error(
+        "Overlapping distributions, check the start_time and end_time of the distribution types"
+    )]
+    OverlappingDistributions,
 }

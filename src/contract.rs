@@ -37,6 +37,11 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
+        ExecuteMsg::Claim {
+            campaign_id,
+            total_amount,
+            proof,
+        } => commands::claim(deps, env, info, campaign_id, total_amount, proof),
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(

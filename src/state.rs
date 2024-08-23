@@ -34,4 +34,4 @@ impl<'a> IndexList<Campaign> for CampaignIndexes<'a> {
 }
 
 //todo likely to change, bool works fine when you have a single reward token with lumpsum distribution only
-pub const CLAIMS: Map<(String, u64), bool> = Map::new("claims");
+pub const CLAIMS: Map<(String, u64), ()> = Map::new("claims");
