@@ -49,11 +49,8 @@ pub enum ContractError {
     #[error("Wrong hash length")]
     WrongHashLength,
 
-    #[error("Merkle root verification failed, expected: {expected}, actual: {actual}")]
-    MerkleRootVerificationFailed {
-        expected: [u8; 32],
-        actual: [u8; 32],
-    },
+    #[error("Merkle root verification failed")]
+    MerkleRootVerificationFailed,
 
     #[error("Claim amount exceeds the maximum claimable amount")]
     ExceededMaxClaimAmount,

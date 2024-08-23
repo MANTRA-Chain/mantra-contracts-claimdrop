@@ -62,10 +62,7 @@ pub(crate) fn validate_claim(
 
     ensure!(
         merkle_root_buf == hash,
-        ContractError::MerkleRootVerificationFailed {
-            expected: merkle_root_buf,
-            actual: hash
-        }
+        ContractError::MerkleRootVerificationFailed
     );
 
     Ok(())
@@ -83,7 +80,7 @@ pub(crate) fn compute_claimable_amount(
     //todo will need to store in state the amount claimed by each address when there's linear or periodic vesting,
     // alongside with information such as what periods they already claimed, the last time they claimed and so on.
 
-    for dist in campaign.distribution_type {
+    for dist in campaign.distribution_type.clone() {
         match dist {
             DistributionType::LinearVesting {
                 percentage,

@@ -31,7 +31,31 @@ pub enum ExecuteMsg {
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    #[returns(CampaignsResponse)]
+    Campaigns {
+        /// Get campaigns based on the filter, defined by [CampaignFilter].
+        filter_by: Option<CampaignFilter>,
+        /// The campaign id to start querying from. Used for paginating results.
+        start_after: Option<u64>,
+        /// The maximum number of campaigns to return. If not set, the default value is used. Used for paginating results.
+        limit: Option<u8>,
+    },
+}
+
+#[cw_serde]
+pub enum CampaignFilter {
+    /// Filters campaigns by the owner
+    Owner { owner: String },
+    /// Filters campaigns by the campaign id
+    CampaignId { campaign_id: u64 },
+}
+
+#[cw_serde]
+pub struct CampaignsResponse {
+    /// The list of campaigns
+    pub campaigns: Vec<Campaign>,
+}
 
 #[cw_serde]
 pub enum CampaignAction {
