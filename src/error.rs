@@ -60,8 +60,8 @@ pub enum ContractError {
     #[error("Claim amount exceeds the maximum claimable amount")]
     ExceededMaxClaimAmount,
 
-    #[error("Campaign has ended, cannot claim anymore")]
-    CampaignEnded,
+    #[error("Campaign has {reason}, cannot claim")]
+    CampaignTimeMismatch { reason: String },
 
     #[error(
         "Invalid distribution order, current start: {current_start}, previous end: {previous_end}"
@@ -75,6 +75,9 @@ pub enum ContractError {
         "Overlapping distributions, check the start_time and end_time of the distribution types"
     )]
     OverlappingDistributions,
+
+    #[error("There's nothing to claim for the given address")]
+    NothingToClaim,
 }
 
 impl From<semver::Error> for ContractError {

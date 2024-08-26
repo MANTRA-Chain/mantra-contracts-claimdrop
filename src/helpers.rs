@@ -14,6 +14,7 @@ pub(crate) fn validate_campaign_params(
     validate_merkle_root(&campaign_params.merkle_root)?;
     campaign_params.validate_campaign_distribution(current_time)?;
     campaign_params.validate_campaign_times(current_time)?;
+    campaign_params.validate_cliff_duration()?;
 
     let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
     ensure!(
@@ -98,10 +99,13 @@ pub(crate) fn compute_claimable_amount(
                 start_time,
                 end_time,
             } => {
-                if start_time > current_time.seconds() && end_time < current_time.seconds() {
+                println!("start_time: {}, end_time: {}", start_time, end_time);
+                println!("current_time: {}", current_time.seconds());
+
+                if campaign.is_active(current_time) {
                     claimable_amount = claimable_amount.checked_add(
                         percentage
-                            .checked_mul(Decimal::from_ratio(total_amount, Uint128::zero()))?
+                            .checked_mul(Decimal::from_ratio(total_amount, Uint128::one()))?
                             .to_uint_floor(),
                     )?;
                 }
