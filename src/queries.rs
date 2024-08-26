@@ -14,11 +14,11 @@ pub(crate) fn query_campaigns(
     //do the same as above but matching if campaign_filter is some
     let campaigns = if let Some(campaign_filter) = campaign_filter {
         match campaign_filter {
-            CampaignFilter::Owner { owner } => {
+            CampaignFilter::Owner(owner) => {
                 deps.api.addr_validate(&owner)?;
                 get_campaigns_by_owner(deps.storage, owner)?
             }
-            CampaignFilter::CampaignId { campaign_id } => {
+            CampaignFilter::CampaignId(campaign_id) => {
                 vec![get_campaign_by_id(deps.storage, campaign_id)?]
             }
         }

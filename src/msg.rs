@@ -44,11 +44,14 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
+pub struct MigrateMsg {}
+
+#[cw_serde]
 pub enum CampaignFilter {
     /// Filters campaigns by the owner
-    Owner { owner: String },
+    Owner(String),
     /// Filters campaigns by the campaign id
-    CampaignId { campaign_id: u64 },
+    CampaignId(u64),
 }
 
 #[cw_serde]
@@ -105,17 +108,7 @@ impl Display for Campaign {
         write!(
             f,
             "Campaign {{ id: {}, owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, cliff_duration: {:?}, start_time: {}, end_time: {}, merkle_root: {} }}",
-            self.id,
-            self.owner,
-            self.name,
-            self.description,
-            self.reward_asset,
-            self.claimed,
-            self.distribution_type,
-            self.cliff_duration,
-            self.start_time,
-            self.end_time,
-            self.merkle_root
+            self.id, self.owner, self.name, self.description, self.reward_asset, self.claimed, self.distribution_type, self.cliff_duration, self.start_time, self.end_time, self.merkle_root
         )
     }
 }
@@ -190,16 +183,6 @@ impl CampaignParams {
             ContractError::InvalidCampaignParam {
                 param: "name".to_string(),
                 reason: "cannot be longer than 50 characters".to_string(),
-            }
-        );
-
-        ensure!(
-            self.name
-                .chars()
-                .all(|c| c.is_alphanumeric() || c.is_whitespace()),
-            ContractError::InvalidCampaignParam {
-                param: "name".to_string(),
-                reason: "can only contain alphanumeric characters and spaces".to_string(),
             }
         );
 

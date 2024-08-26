@@ -1,13 +1,18 @@
 use cosmwasm_std::{Decimal, OverflowError, StdError, Uint128};
+use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use hex::FromHexError;
 use thiserror::Error;
 
+#[cw_migrate_invalid_version_error]
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("Semver parsing error: {0}")]
+    SemVer(String),
 
     #[error("Unauthorized")]
     Unauthorized,
@@ -70,4 +75,10 @@ pub enum ContractError {
         "Overlapping distributions, check the start_time and end_time of the distribution types"
     )]
     OverlappingDistributions,
+}
+
+impl From<semver::Error> for ContractError {
+    fn from(err: semver::Error) -> Self {
+        Self::SemVer(err.to_string())
+    }
 }

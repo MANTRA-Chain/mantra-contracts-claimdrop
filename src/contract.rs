@@ -1,9 +1,10 @@
-use cosmwasm_std::{entry_point, to_json_binary};
+use cosmwasm_std::{ensure, entry_point, to_json_binary, StdError};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw2::set_contract_version;
+use cw2::{get_contract_version, set_contract_version, CONTRACT};
+use semver::Version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::{commands, queries};
 
 // version info for migration info
@@ -71,4 +72,28 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         )?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
     }
+}
+
+#[entry_point]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    //todo write macro for all this contract name/version validation
+    let stored_contract_name = CONTRACT.load(deps.storage)?.contract;
+    ensure!(
+        &stored_contract_name == CONTRACT_NAME,
+        StdError::generic_err("Contract name mismatch")
+    );
+
+    let version: Version = CONTRACT_VERSION.parse()?;
+    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
+
+    ensure!(
+        storage_version < version,
+        ContractError::MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        }
+    );
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }
