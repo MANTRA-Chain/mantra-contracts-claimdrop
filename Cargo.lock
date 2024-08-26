@@ -16,10 +16,11 @@ dependencies = [
 
 [[package]]
 name = "airdrop-manager"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-migrate-error-derive",
  "cw-multi-test",
  "cw-ownable",
  "cw-storage-plus",
@@ -27,6 +28,7 @@ dependencies = [
  "cw2",
  "hex",
  "schemars",
+ "semver",
  "serde",
  "sha2",
  "thiserror",
@@ -405,6 +407,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73553ee4dad5b1678977ff603e72c3fdd41518ca2b0bd9b245b21e4c72eafa9e"
 dependencies = [
  "cosmwasm-std",
+]
+
+[[package]]
+name = "cw-migrate-error-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "431d51e7f8b028e8a09d2125be3c6b8661b512ba40daadf6e0ffc4aadcef604b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "semver",
+ "syn 2.0.75",
+ "thiserror",
 ]
 
 [[package]]

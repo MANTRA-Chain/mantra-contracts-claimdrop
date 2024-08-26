@@ -17,12 +17,48 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     /// Manages campaigns based on the action, defined by [CampaignAction].
     ManageCampaign { action: CampaignAction },
+    /// Claims rewards from a campaign
+    Claim {
+        /// The campaign id to claim from
+        campaign_id: u64,
+        /// The total amount entitled to claim.
+        total_amount: Uint128,
+        /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
+        proof: Vec<String>,
+    },
 }
 
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    #[returns(CampaignsResponse)]
+    Campaigns {
+        /// Get campaigns based on the filter, defined by [CampaignFilter].
+        filter_by: Option<CampaignFilter>,
+        /// The campaign id to start querying from. Used for paginating results.
+        start_after: Option<u64>,
+        /// The maximum number of campaigns to return. If not set, the default value is used. Used for paginating results.
+        limit: Option<u8>,
+    },
+}
+
+#[cw_serde]
+pub struct MigrateMsg {}
+
+#[cw_serde]
+pub enum CampaignFilter {
+    /// Filters campaigns by the owner
+    Owner(String),
+    /// Filters campaigns by the campaign id
+    CampaignId(u64),
+}
+
+#[cw_serde]
+pub struct CampaignsResponse {
+    /// The list of campaigns
+    pub campaigns: Vec<Campaign>,
+}
 
 #[cw_serde]
 pub enum CampaignAction {
@@ -56,6 +92,8 @@ pub struct Campaign {
     /// The sum of the percentages must be 100.
     /// The distribution types are applied in the order they are defined.
     pub distribution_type: Vec<DistributionType>,
+    /// The duration of the cliff, in seconds
+    pub cliff_duration: Option<u64>,
     /// The campaign start time (unix timestamp)
     pub start_time: u64,
     /// The campaign end time (unix timestamp)
@@ -66,10 +104,11 @@ pub struct Campaign {
 
 impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        //todo regenerate this once the struct is finalized
         write!(
             f,
-            "Campaign {{ id: {}, owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, merkle_root: {} }}",
-            self.id, self.owner, self.name, self.description, self.reward_asset, self.claimed, self.distribution_type, self.start_time, self.end_time, self.merkle_root
+            "Campaign {{ id: {}, owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, cliff_duration: {:?}, start_time: {}, end_time: {}, merkle_root: {} }}",
+            self.id, self.owner, self.name, self.description, self.reward_asset, self.claimed, self.distribution_type, self.cliff_duration, self.start_time, self.end_time, self.merkle_root
         )
     }
 }
@@ -90,6 +129,7 @@ impl Campaign {
                 amount: Uint128::zero(),
             },
             distribution_type: params.distribution_type,
+            cliff_duration: params.cliff_duration,
             start_time: params.start_time,
             end_time: params.end_time,
             merkle_root: params.merkle_root,
@@ -117,6 +157,8 @@ pub struct CampaignParams {
     /// The sum of the percentages must be 100.
     /// The distribution types are applied in the order they are defined.
     pub distribution_type: Vec<DistributionType>,
+    /// The duration of the cliff, in seconds
+    pub cliff_duration: Option<u64>,
     /// The campaign start timestamp, in seconds
     pub start_time: u64,
     /// The campaign end timestamp, in seconds
@@ -145,16 +187,6 @@ impl CampaignParams {
         );
 
         ensure!(
-            self.name
-                .chars()
-                .all(|c| c.is_alphanumeric() || c.is_whitespace()),
-            ContractError::InvalidCampaignParam {
-                param: "name".to_string(),
-                reason: "can only contain alphanumeric characters and spaces".to_string(),
-            }
-        );
-
-        ensure!(
             !self.description.is_empty(),
             ContractError::InvalidCampaignParam {
                 param: "description".to_string(),
@@ -169,14 +201,6 @@ impl CampaignParams {
                 reason: "cannot be longer than 500 characters".to_string(),
             }
         );
-
-        Ok(())
-    }
-
-    /// Validates the merkle root, i.e. checks if it is a valid SHA-256 hash
-    pub fn validate_merkle_root(&self) -> Result<(), ContractError> {
-        let mut merkle_root_buf: [u8; 32] = [0; 32];
-        hex::decode_to_slice(&self.merkle_root, &mut merkle_root_buf)?;
 
         Ok(())
     }
@@ -211,20 +235,31 @@ impl CampaignParams {
     /// Ensures the distribution type parameters are correct
     pub fn validate_campaign_distribution(
         &self,
-        _current_time: Timestamp,
+        current_time: Timestamp,
     ) -> Result<(), ContractError> {
         let mut total_percentage = Decimal::zero();
+        let mut start_times = vec![];
+        let mut end_times = vec![];
 
         for dist in self.distribution_type.iter() {
-            let percentage = match dist {
-                DistributionType::LinearVesting { percentage, .. } => percentage,
-                DistributionType::LumpSum { percentage, .. } => percentage,
+            let (percentage, start_time, end_time) = match dist {
+                DistributionType::LinearVesting {
+                    percentage,
+                    start_time,
+                    end_time,
+                } => (percentage, start_time, end_time),
+                DistributionType::LumpSum {
+                    percentage,
+                    start_time,
+                    end_time,
+                } => (percentage, start_time, end_time),
+                DistributionType::PeriodicVesting {
+                    percentage,
+                    start_time,
+                    end_time,
+                    period_duration,
+                } => (percentage, start_time, end_time),
             };
-
-            //todo validate times
-
-            //todo check if the vestings are repeated? i.e. imagine 2 lumpsum distributions of 50% each
-            // with the exact same start and end times?
 
             ensure!(
                 percentage != Decimal::zero(),
@@ -232,6 +267,24 @@ impl CampaignParams {
             );
 
             total_percentage = total_percentage.checked_add(*percentage)?;
+            //
+            // if !start_times.is_empty() {
+            //     let current_distribution_type = dist.as_str();
+            //
+            //     let last_distribution_type = match &end_times.last().unwrap() {
+            //         DistributionType::LinearVesting => "LinearVesting",
+            //         DistributionType::LumpSum => "LumpSum",
+            //         DistributionType::PeriodicVesting => "PeriodicVesting",
+            //     };
+            //
+            //     ensure!(
+            //     current_distribution_type != last_distribution_type,
+            //     ContractError::OverlappingDistributions
+            // );
+            // }
+
+            start_times.push(start_time);
+            end_times.push(end_time.clone());
         }
 
         ensure!(
@@ -257,6 +310,17 @@ pub enum DistributionType {
         /// The unix timestamp when this distribution type ends, in seconds
         end_time: u64,
     },
+    /// The distribution is done in a periodic vesting schedule
+    PeriodicVesting {
+        /// The percentage of the total reward to be distributed with a linear vesting schedule
+        percentage: Decimal,
+        /// The unix timestamp when this distribution type starts, in seconds
+        start_time: u64,
+        /// The unix timestamp when this distribution type ends, in seconds
+        end_time: u64,
+        /// The duration of each period, in seconds
+        period_duration: u64,
+    },
     /// The distribution is done in a single lump sum, i.e. no vesting period
     LumpSum {
         percentage: Decimal,
@@ -265,4 +329,14 @@ pub enum DistributionType {
         /// The unix timestamp when this distribution type ends, in seconds
         end_time: u64,
     },
+}
+
+impl DistributionType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            DistributionType::LinearVesting { .. } => "LinearVesting",
+            DistributionType::PeriodicVesting { .. } => "PeriodicVesting",
+            DistributionType::LumpSum { .. } => "LumpSum",
+        }
+    }
 }
