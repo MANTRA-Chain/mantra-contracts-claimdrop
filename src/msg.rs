@@ -145,11 +145,6 @@ impl Campaign {
     pub fn has_started(&self, current_time: &Timestamp) -> bool {
         current_time.seconds() >= self.start_time
     }
-
-    /// Checks if the campaign is active, i.e. has started and has not ended
-    pub fn is_active(&self, current_time: &Timestamp) -> bool {
-        self.has_started(current_time) && !self.has_ended(current_time)
-    }
 }
 
 #[cw_serde]
@@ -372,5 +367,15 @@ impl DistributionType {
             DistributionType::PeriodicVesting { .. } => "PeriodicVesting",
             DistributionType::LumpSum { .. } => "LumpSum",
         }
+    }
+
+    pub fn has_started(&self, current_time: &Timestamp) -> bool {
+        let start_time = match self {
+            DistributionType::LinearVesting { start_time, .. } => start_time,
+            DistributionType::PeriodicVesting { start_time, .. } => start_time,
+            DistributionType::LumpSum { start_time, .. } => start_time,
+        };
+
+        current_time.seconds() >= *start_time
     }
 }

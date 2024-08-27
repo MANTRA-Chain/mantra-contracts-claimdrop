@@ -47,6 +47,15 @@ impl TestingSuite {
 
         self
     }
+
+    #[track_caller]
+    pub(crate) fn add_week(&mut self) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_days(7);
+        self.app.set_block(block_info);
+
+        self
+    }
 }
 
 // instantiate

@@ -522,3 +522,175 @@ fn create_campaign_and_claim() {
             }
         });
 }
+
+#[test]
+fn create_campaign_and_claim_multiple_distribution_types() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_airdrop_manager(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop, 土金, ك".to_string(),
+                reward_asset: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(25),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    },
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(75),
+                        start_time: current_time.plus_days(7).seconds(),
+                        end_time: current_time.plus_days(14).seconds(),
+                    },
+                ],
+                cliff_duration: None,
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+                merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                    .to_string(),
+            },
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {},
+    );
+
+    suite.add_day();
+
+    suite
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                // let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                //
+                // match err {
+                //     ContractError::OwnershipError { .. } => {}
+                //     _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                // }
+
+                println!("{:?}", result);
+                println!("<<<---------->>>");
+            },
+        )
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                let response = result.unwrap();
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].claimed, coin(2_500u128, "uom"));
+            }
+        })
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::NothingToClaim { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+                }
+            },
+        )
+        .add_week()
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
+            },
+        )
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                println!("----------");
+                match err {
+                    ContractError::NothingToClaim { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+                }
+            },
+        )
+        .add_day()
+        .add_day()
+        .add_day()
+        .add_day()
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
+                println!("----**-----");
+            },
+        )
+        .add_week()
+        .add_week()
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
+                println!("----**-----");
+            },
+        )
+        .add_day()
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
+            },
+        );
+}

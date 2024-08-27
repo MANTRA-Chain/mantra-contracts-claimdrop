@@ -1,8 +1,11 @@
-use cosmwasm_std::{ensure, Addr, Coin, Decimal, MessageInfo, Timestamp, Uint128};
+use std::collections::HashMap;
+
+use cosmwasm_std::{ensure, Addr, Coin, Decimal, DepsMut, MessageInfo, Timestamp, Uint128};
 use sha2::Digest;
 
 use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
+use crate::state::{get_claims_for_address, Claim, DistributionSlot};
 
 /// Validates the campaign parameters
 pub(crate) fn validate_campaign_params(
@@ -71,50 +74,116 @@ pub(crate) fn validate_claim(
 
 /// Calculates the amount a user can claim at this point in time
 pub(crate) fn compute_claimable_amount(
+    deps: &DepsMut,
     campaign: &Campaign,
     current_time: &Timestamp,
     address: &Addr,
     total_amount: Uint128,
-) -> Result<Coin, ContractError> {
+) -> Result<(Coin, HashMap<DistributionSlot, Claim>), ContractError> {
     let mut claimable_amount = Uint128::zero();
+    let mut new_claims = HashMap::new();
 
-    //todo will need to store in state the amount claimed by each address when there's linear or periodic vesting,
-    // alongside with information such as what periods they already claimed, the last time they claimed and so on.
+    if campaign.has_started(current_time) {
+        let claims_for_address = get_claims_for_address(deps.as_ref(), campaign.id, address)?;
 
-    for dist in campaign.distribution_type.clone() {
-        match dist {
-            DistributionType::LinearVesting {
-                percentage,
-                start_time,
-                end_time,
-            } => {}
-            DistributionType::PeriodicVesting {
-                percentage,
-                start_time,
-                end_time,
-                period_duration,
-            } => {}
-            DistributionType::LumpSum {
-                percentage,
-                start_time,
-                end_time,
-            } => {
-                println!("start_time: {}, end_time: {}", start_time, end_time);
-                println!("current_time: {}", current_time.seconds());
+        for (distribution_slot, distribution) in
+            campaign.distribution_type.iter().enumerate().clone()
+        {
+            println!("dist: {:?}", distribution);
+            if !distribution.has_started(current_time) {
+                println!("distribution not active");
+                continue;
+            }
 
-                if campaign.is_active(current_time) {
-                    claimable_amount = claimable_amount.checked_add(
+            let claim_for_distribution = claims_for_address.get(&distribution_slot);
+
+            if distribution.has_started(current_time) {
+                let claim_amount = match distribution {
+                    DistributionType::LinearVesting {
+                        percentage,
+                        start_time,
+                        end_time,
+                    } => {
+                        let elapsed_time = if claim_for_distribution.is_some() {
+                            let (_, last_claimed) = claim_for_distribution.unwrap();
+
+                            println!("current_time: {}", current_time.seconds());
+                            println!("end_time: {}", end_time);
+                            println!("last_claimed: {}", last_claimed);
+
+                            if last_claimed > end_time {
+                                0u64
+                            } else {
+                                current_time.seconds().min(end_time.to_owned()) - last_claimed
+                            }
+                        } else {
+                            current_time.seconds().min(end_time.to_owned()) - start_time
+                        };
+
+                        println!("computing LinearVesting");
+
+                        println!("elapsed_time: {}", elapsed_time);
+                        let vesting_duration = end_time - start_time;
+                        println!("vesting_duration: {}", vesting_duration);
+                        let vesting_progress = Decimal::from_ratio(elapsed_time, vesting_duration);
+                        println!("vesting_progress: {}", vesting_progress);
+
                         percentage
                             .checked_mul(Decimal::from_ratio(total_amount, Uint128::one()))?
-                            .to_uint_floor(),
-                    )?;
-                }
+                            .checked_mul(vesting_progress)?
+                            .to_uint_floor()
+                    }
+                    DistributionType::PeriodicVesting {
+                        percentage,
+                        start_time,
+                        end_time,
+                        period_duration,
+                    } => Uint128::zero(),
+                    DistributionType::LumpSum {
+                        percentage,
+                        start_time,
+                        end_time,
+                    } => {
+                        // it means the user has already claimed this distribution
+                        if claim_for_distribution.is_some() {
+                            continue;
+                        }
+
+                        println!("computing LumpSum");
+
+                        percentage
+                            .checked_mul(Decimal::from_ratio(total_amount, Uint128::one()))?
+                            .to_uint_floor()
+                    }
+                };
+
+                println!("{} - claim_amount: {}", distribution_slot, claim_amount);
+
+                claimable_amount = claimable_amount.checked_add(claim_amount)?;
+
+                new_claims.insert(
+                    distribution_slot,
+                    (claimable_amount.clone(), current_time.seconds()),
+                );
             }
         }
+
+        // println!("claimable_amount before tweak: {}", claimable_amount);
+        //
+        //
+        // let (already_claimed, last_claimed) = get_claims_for_address(deps, campaign.id, address)?;
+        // println!("already_claimed: {}", already_claimed);
+        // claimable_amount = claimable_amount.checked_sub(already_claimed)?;
+        // println!("claimable_amount: {}", claimable_amount);
     }
 
-    Ok(Coin {
-        denom: campaign.reward_asset.denom.clone(),
-        amount: claimable_amount,
-    })
+    //todo compensate for rounding errors
+
+    Ok((
+        Coin {
+            denom: campaign.reward_asset.denom.clone(),
+            amount: claimable_amount,
+        },
+        new_claims,
+    ))
 }
