@@ -256,7 +256,7 @@ impl CampaignParams {
     /// Ensures the distribution type parameters are correct
     pub fn validate_campaign_distribution(
         &self,
-        current_time: Timestamp,
+        _current_time: Timestamp,
     ) -> Result<(), ContractError> {
         let mut total_percentage = Decimal::zero();
         let mut start_times = vec![];
@@ -286,7 +286,7 @@ impl CampaignParams {
                     percentage,
                     start_time,
                     end_time,
-                    period_duration,
+                    ..
                 } => (percentage, start_time, end_time),
             };
 
@@ -313,7 +313,7 @@ impl CampaignParams {
             // }
 
             start_times.push(start_time);
-            end_times.push(end_time.clone());
+            end_times.push(*end_time);
         }
 
         ensure!(

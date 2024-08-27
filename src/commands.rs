@@ -1,13 +1,9 @@
-use std::collections::HashMap;
-
 use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
-use crate::state::{
-    get_total_claims_amount_for_address, Claim, DistributionSlot, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS,
-};
+use crate::state::{get_total_claims_amount_for_address, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS};
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(

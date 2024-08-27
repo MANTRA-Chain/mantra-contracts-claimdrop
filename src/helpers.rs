@@ -43,7 +43,7 @@ pub(crate) fn validate_claim(
     campaign: &Campaign,
     sender: &Addr,
     amount: Uint128,
-    proof: &Vec<String>,
+    proof: &[String],
 ) -> Result<(), ContractError> {
     let user_input = format!("{}{}{}", campaign.id, sender, amount);
     let hash = sha2::Sha256::digest(user_input.as_bytes())
@@ -51,12 +51,12 @@ pub(crate) fn validate_claim(
         .try_into()
         .map_err(|_| ContractError::WrongHashLength)?;
 
-    let hash = proof.into_iter().try_fold(hash, |hash, p| {
+    let hash = proof.iter().try_fold(hash, |hash, p| {
         let mut proof_buf = [0; 32];
         hex::decode_to_slice(p, &mut proof_buf)?;
         let mut hashes = [hash, proof_buf];
         hashes.sort_unstable();
-        sha2::Sha256::digest(&hashes.concat())
+        sha2::Sha256::digest(hashes.concat())
             .as_slice()
             .try_into()
             .map_err(|_| ContractError::WrongHashLength {})
@@ -133,17 +133,8 @@ pub(crate) fn compute_claimable_amount(
                             .checked_mul(vesting_progress)?
                             .to_uint_floor()
                     }
-                    DistributionType::PeriodicVesting {
-                        percentage,
-                        start_time,
-                        end_time,
-                        period_duration,
-                    } => Uint128::zero(),
-                    DistributionType::LumpSum {
-                        percentage,
-                        start_time,
-                        end_time,
-                    } => {
+                    DistributionType::PeriodicVesting { .. } => Uint128::zero(),
+                    DistributionType::LumpSum { percentage, .. } => {
                         // it means the user has already claimed this distribution
                         if claim_for_distribution.is_some() {
                             continue;
@@ -163,7 +154,7 @@ pub(crate) fn compute_claimable_amount(
 
                 new_claims.insert(
                     distribution_slot,
-                    (claimable_amount.clone(), current_time.seconds()),
+                    (claimable_amount, current_time.seconds()),
                 );
             }
         }

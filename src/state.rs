@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Deps, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
 
 use crate::error::ContractError;
@@ -80,11 +80,7 @@ pub fn get_campaigns(
     limit: Option<u8>,
 ) -> StdResult<Vec<Campaign>> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = if start_from.is_some() {
-        Some(Bound::exclusive(start_from.unwrap()))
-    } else {
-        None
-    };
+    let start = start_from.map(Bound::exclusive);
 
     CAMPAIGNS
         .range(storage, start, None, Order::Descending)

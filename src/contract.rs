@@ -79,7 +79,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     //todo write macro for all this contract name/version validation
     let stored_contract_name = CONTRACT.load(deps.storage)?.contract;
     ensure!(
-        &stored_contract_name == CONTRACT_NAME,
+        stored_contract_name == CONTRACT_NAME,
         StdError::generic_err("Contract name mismatch")
     );
 
