@@ -137,8 +137,13 @@ impl Campaign {
     }
 
     /// Checks if the campaign has ended
-    pub fn has_ended(&self, current_time: Timestamp) -> bool {
+    pub fn has_ended(&self, current_time: &Timestamp) -> bool {
         current_time.seconds() >= self.end_time || self.claimed.amount == self.reward_asset.amount
+    }
+
+    /// Checks if the campaign has ended
+    pub fn has_started(&self, current_time: &Timestamp) -> bool {
+        current_time.seconds() >= self.start_time
     }
 }
 
@@ -221,13 +226,29 @@ impl CampaignParams {
                 reason: "cannot be less than the current time".to_string(),
             }
         );
-        ensure!(
-            self.end_time > current_time.seconds(),
-            ContractError::InvalidCampaignParam {
-                param: "end_time".to_string(),
-                reason: "cannot be less or equal than the current time".to_string(),
-            }
-        );
+
+        Ok(())
+    }
+
+    /// Validates the cliff duration
+    pub fn validate_cliff_duration(&self) -> Result<(), ContractError> {
+        if let Some(cliff_duration) = self.cliff_duration {
+            ensure!(
+                cliff_duration > 0,
+                ContractError::InvalidCampaignParam {
+                    param: "cliff_duration".to_string(),
+                    reason: "cannot be zero".to_string(),
+                }
+            );
+
+            ensure!(
+                cliff_duration < self.end_time - self.start_time,
+                ContractError::InvalidCampaignParam {
+                    param: "cliff_duration".to_string(),
+                    reason: "cannot be greater or equal than the campaign duration".to_string(),
+                }
+            );
+        }
 
         Ok(())
     }
@@ -235,11 +256,19 @@ impl CampaignParams {
     /// Ensures the distribution type parameters are correct
     pub fn validate_campaign_distribution(
         &self,
-        current_time: Timestamp,
+        _current_time: Timestamp,
     ) -> Result<(), ContractError> {
         let mut total_percentage = Decimal::zero();
         let mut start_times = vec![];
         let mut end_times = vec![];
+
+        ensure!(
+            !self.distribution_type.is_empty(),
+            ContractError::InvalidCampaignParam {
+                param: "distribution_type".to_string(),
+                reason: "cannot be empty".to_string(),
+            }
+        );
 
         for dist in self.distribution_type.iter() {
             let (percentage, start_time, end_time) = match dist {
@@ -257,7 +286,7 @@ impl CampaignParams {
                     percentage,
                     start_time,
                     end_time,
-                    period_duration,
+                    ..
                 } => (percentage, start_time, end_time),
             };
 
@@ -284,7 +313,7 @@ impl CampaignParams {
             // }
 
             start_times.push(start_time);
-            end_times.push(end_time.clone());
+            end_times.push(*end_time);
         }
 
         ensure!(
@@ -338,5 +367,15 @@ impl DistributionType {
             DistributionType::PeriodicVesting { .. } => "PeriodicVesting",
             DistributionType::LumpSum { .. } => "LumpSum",
         }
+    }
+
+    pub fn has_started(&self, current_time: &Timestamp) -> bool {
+        let start_time = match self {
+            DistributionType::LinearVesting { start_time, .. } => start_time,
+            DistributionType::PeriodicVesting { start_time, .. } => start_time,
+            DistributionType::LumpSum { start_time, .. } => start_time,
+        };
+
+        current_time.seconds() >= *start_time
     }
 }

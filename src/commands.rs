@@ -1,9 +1,11 @@
-use cosmwasm_std::{coin, coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
-use crate::state::{CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS};
+use crate::state::{
+    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS,
+};
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -106,6 +108,7 @@ pub(crate) fn claim(
     campaign_id: u64,
     total_amount: Uint128,
     proof: Vec<String>,
+    //todo make receiver optional so we can make a contract/gas station pay for the fees
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
@@ -114,26 +117,42 @@ pub(crate) fn claim(
         .ok_or(ContractError::CampaignNotFound { campaign_id })?;
 
     ensure!(
-        !campaign.has_ended(env.block.time),
-        ContractError::CampaignEnded
+        campaign.has_started(&env.block.time),
+        ContractError::CampaignTimeMismatch {
+            reason: "not started".to_string()
+        }
     );
-
-    let claimed = CLAIMS.may_load(deps.storage, (info.sender.to_string(), campaign_id))?;
-    ensure!(claimed.is_none(), ContractError::Claimed);
 
     helpers::validate_claim(&campaign, &info.sender, total_amount, &proof)?;
 
-    let claimable_amount =
-        helpers::compute_claimable_amount(&campaign, &env.block.time, &info.sender, total_amount)?;
+    let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
+        &deps,
+        &campaign,
+        &env.block.time,
+        &info.sender,
+        total_amount,
+    )?;
 
-    campaign.claimed = coin(
-        campaign
-            .claimed
-            .amount
-            .checked_add(claimable_amount.amount)?
-            .u128(),
-        &campaign.reward_asset.denom,
+    println!("claimable_amount: {:?}", claimable_amount);
+
+    ensure!(
+        claimable_amount.amount > Uint128::zero(),
+        ContractError::NothingToClaim
     );
+
+    let previous_claims = get_claims_for_address(deps.as_ref(), campaign_id, &info.sender)?;
+
+    println!("new_claims: {:?}", new_claims);
+    println!("previous_claims: {:?}", previous_claims);
+
+    let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
+
+    println!("updated_claims: {:?}", updated_claims);
+
+    campaign.claimed.amount = campaign
+        .claimed
+        .amount
+        .checked_add(claimable_amount.amount)?;
 
     ensure!(
         campaign.claimed.amount <= campaign.reward_asset.amount,
@@ -141,12 +160,24 @@ pub(crate) fn claim(
     );
 
     CAMPAIGNS.save(deps.storage, campaign.id, &campaign)?;
-    CLAIMS.save(deps.storage, (info.sender.to_string(), campaign.id), &())?;
+    CLAIMS.save(
+        deps.storage,
+        (info.sender.to_string(), campaign.id),
+        &updated_claims,
+    )?;
+
+    let x = get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &info.sender)?;
+    println!("total claims for user: {:?}", x);
+    ensure!(
+        total_amount
+            >= get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &info.sender)?,
+        ContractError::ExceededMaxClaimAmount
+    );
 
     Ok(Response::default()
         .add_message(BankMsg::Send {
             to_address: info.sender.to_string(),
-            amount: coins(total_amount.u128(), campaign.reward_asset.denom.clone()),
+            amount: vec![claimable_amount.clone()],
         })
         .add_attributes(vec![
             ("action", "claim".to_string()),

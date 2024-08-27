@@ -1,4 +1,6 @@
-use cosmwasm_std::{Order, StdResult, Storage};
+use std::collections::HashMap;
+
+use cosmwasm_std::{Addr, Deps, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
 
 use crate::error::ContractError;
@@ -35,8 +37,12 @@ impl<'a> IndexList<Campaign> for CampaignIndexes<'a> {
     }
 }
 
-//todo likely to change, bool works fine when you have a single reward token with lumpsum distribution only
-pub const CLAIMS: Map<(String, u64), ()> = Map::new("claims");
+//todo probably need to add time when it was claimed last, so the linear vesting can be calculated properly
+
+pub type Claim = (Uint128, u64);
+pub type DistributionSlot = usize;
+
+pub const CLAIMS: Map<(String, u64), HashMap<DistributionSlot, Claim>> = Map::new("claims");
 
 /// Returns a campaign by its id
 pub fn get_campaign_by_id(
@@ -74,11 +80,7 @@ pub fn get_campaigns(
     limit: Option<u8>,
 ) -> StdResult<Vec<Campaign>> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = if start_from.is_some() {
-        Some(Bound::exclusive(start_from.unwrap()))
-    } else {
-        None
-    };
+    let start = start_from.map(Bound::exclusive);
 
     CAMPAIGNS
         .range(storage, start, None, Order::Descending)
@@ -88,4 +90,31 @@ pub fn get_campaigns(
             Ok(campaign)
         })
         .collect()
+}
+
+/// Returns the claims that an address has made for a campaign
+pub fn get_claims_for_address(
+    deps: Deps,
+    campaign_id: u64,
+    address: &Addr,
+) -> Result<HashMap<DistributionSlot, Claim>, ContractError> {
+    let claimed = CLAIMS.may_load(deps.storage, (address.to_string(), campaign_id))?;
+    Ok(claimed.unwrap_or_default())
+}
+
+/// Returns the claims that an address has made for a campaign
+pub fn get_total_claims_amount_for_address(
+    deps: Deps,
+    campaign_id: u64,
+    address: &Addr,
+) -> Result<Uint128, ContractError> {
+    let claimed = CLAIMS
+        .may_load(deps.storage, (address.to_string(), campaign_id))?
+        .unwrap_or(HashMap::default());
+    let mut total = Uint128::zero();
+    for (_, (amount, _)) in claimed.iter() {
+        total = total.checked_add(*amount)?;
+    }
+
+    Ok(total)
 }
