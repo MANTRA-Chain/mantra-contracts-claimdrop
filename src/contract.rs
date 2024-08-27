@@ -40,9 +40,9 @@ pub fn execute(
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
         ExecuteMsg::Claim {
             campaign_id,
-            total_amount,
+            total_claimable_amount,
             proof,
-        } => commands::claim(deps, env, info, campaign_id, total_amount, proof),
+        } => commands::claim(deps, env, info, campaign_id, total_claimable_amount, proof),
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(

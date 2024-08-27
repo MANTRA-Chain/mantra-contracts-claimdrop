@@ -21,8 +21,8 @@ pub enum ExecuteMsg {
     Claim {
         /// The campaign id to claim from
         campaign_id: u64,
-        /// The total amount entitled to claim.
-        total_amount: Uint128,
+        /// The total claimable amount from the campaign
+        total_claimable_amount: Uint128,
         /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
         proof: Vec<String>,
     },
