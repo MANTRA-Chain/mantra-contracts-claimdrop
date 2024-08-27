@@ -99,7 +99,7 @@ pub fn get_claims_for_address(
     address: &Addr,
 ) -> Result<HashMap<DistributionSlot, Claim>, ContractError> {
     let claimed = CLAIMS.may_load(deps.storage, (address.to_string(), campaign_id))?;
-    Ok(claimed.unwrap_or(HashMap::default()))
+    Ok(claimed.unwrap_or_default())
 }
 
 /// Returns the claims that an address has made for a campaign

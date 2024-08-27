@@ -566,6 +566,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
 
     suite.add_day();
 
+    println!(">>>>> LumpSum claiming");
     suite
         .claim(
             alice,
@@ -585,7 +586,6 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 // }
 
                 println!("{:?}", result);
-                println!("<<<---------->>>");
             },
         )
         .query_campaigns(None, None, None, {
@@ -594,6 +594,8 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 let response = result.unwrap();
                 assert_eq!(response.campaigns.len(), 1);
                 assert_eq!(response.campaigns[0].claimed, coin(2_500u128, "uom"));
+
+                println!(">>>>> trying to claim again without moving time, should err");
             }
         })
         .claim(
@@ -606,11 +608,14 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
             ],
             |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
                     ContractError::NothingToClaim { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
                 }
+
+                println!(">>>>> add a week and claim");
             },
         )
         .add_week()
@@ -625,6 +630,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 println!("{:?}", result);
+                println!(">>>>> try claiming again without moving time, should err");
             },
         )
         .claim(
@@ -638,11 +644,13 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                println!("----------");
+                println!("result: {:?}", err);
                 match err {
                     ContractError::NothingToClaim { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
                 }
+
+                println!(">>>>> add 4 days and claim");
             },
         )
         .add_day()
@@ -660,7 +668,9 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 println!("{:?}", result);
-                println!("----**-----");
+                println!(
+                    ">>>>> add 2 more weeks and claim, the campaign should have finished by then"
+                );
             },
         )
         .add_week()
@@ -676,7 +686,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 println!("{:?}", result);
-                println!("----**-----");
+                println!(">>>>> add a day and try claiming again, should err");
             },
         )
         .add_day()
@@ -691,6 +701,15 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 println!("{:?}", result);
+                println!(">>>>> query campaigns");
             },
-        );
+        )
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                let response = result.unwrap();
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].claimed, coin(10_000u128, "uom"));
+            }
+        });
 }

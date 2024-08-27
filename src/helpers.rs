@@ -84,7 +84,8 @@ pub(crate) fn compute_claimable_amount(
     let mut new_claims = HashMap::new();
 
     if campaign.has_started(current_time) {
-        let claims_for_address = get_claims_for_address(deps.as_ref(), campaign.id, address)?;
+        let previous_claims_for_address =
+            get_claims_for_address(deps.as_ref(), campaign.id, address)?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()
@@ -95,7 +96,7 @@ pub(crate) fn compute_claimable_amount(
                 continue;
             }
 
-            let claim_for_distribution = claims_for_address.get(&distribution_slot);
+            let claim_for_distribution = previous_claims_for_address.get(&distribution_slot);
 
             if distribution.has_started(current_time) {
                 let claim_amount = match distribution {
@@ -166,9 +167,38 @@ pub(crate) fn compute_claimable_amount(
         // println!("already_claimed: {}", already_claimed);
         // claimable_amount = claimable_amount.checked_sub(already_claimed)?;
         // println!("claimable_amount: {}", claimable_amount);
-    }
 
-    //todo compensate for rounding errors
+        // compensate for rounding errors
+        if campaign.has_ended(current_time) {
+            let updated_claims = aggregate_claims(&previous_claims_for_address, &new_claims)?;
+
+            println!("updated_claims: {:?}", updated_claims);
+
+            let total_claimed = updated_claims
+                .iter()
+                .fold(Uint128::zero(), |acc, (_, (amount, _))| {
+                    acc.checked_add(*amount).unwrap()
+                });
+
+            println!("total_claimed loop: {}", total_claimed);
+
+            if total_claimed < total_amount {
+                println!(
+                    "total_amount.saturating_sub(total_claimed): {}",
+                    total_amount.saturating_sub(total_claimed)
+                );
+
+                let remaining_amount = total_amount.saturating_sub(total_claimed);
+                claimable_amount = claimable_amount.checked_add(remaining_amount)?;
+
+                for (_, (amount, timestamp)) in new_claims.iter_mut() {
+                    if *timestamp == current_time.seconds() {
+                        *amount = amount.checked_add(remaining_amount)?;
+                    }
+                }
+            }
+        }
+    }
 
     Ok((
         Coin {
@@ -177,4 +207,22 @@ pub(crate) fn compute_claimable_amount(
         },
         new_claims,
     ))
+}
+
+/// Aggregates the new claims with the existing claims
+pub fn aggregate_claims(
+    previous_claims: &HashMap<DistributionSlot, Claim>,
+    new_claims: &HashMap<DistributionSlot, Claim>,
+) -> Result<HashMap<DistributionSlot, Claim>, ContractError> {
+    let mut updated_claims = previous_claims.clone();
+
+    for (slot, claim) in new_claims.iter() {
+        let default_claim = (Uint128::zero(), 0u64);
+        let previous_claim = updated_claims.get(slot).unwrap_or(&default_claim);
+        let total_claimed_for_distribution_slot = previous_claim.0.checked_add(claim.0)?;
+        let new_timestamp = std::cmp::max(previous_claim.1, claim.1);
+
+        updated_claims.insert(*slot, (total_claimed_for_distribution_slot, new_timestamp));
+    }
+    Ok(updated_claims)
 }

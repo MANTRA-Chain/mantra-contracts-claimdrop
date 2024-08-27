@@ -3,7 +3,9 @@ use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
-use crate::state::{get_total_claims_amount_for_address, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS};
+use crate::state::{
+    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS,
+};
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -138,23 +140,13 @@ pub(crate) fn claim(
         ContractError::NothingToClaim
     );
 
-    let previous_claims = CLAIMS
-        .may_load(deps.storage, (info.sender.to_string(), campaign.id))?
-        .unwrap_or_default();
+    let previous_claims = get_claims_for_address(deps.as_ref(), campaign_id, &info.sender)?;
 
     println!("new_claims: {:?}", new_claims);
-    println!("claims: {:?}", previous_claims);
+    println!("previous_claims: {:?}", previous_claims);
 
-    let mut updated_claims = previous_claims.clone();
+    let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
 
-    for (slot, claim) in new_claims.iter() {
-        let default_claim = (Uint128::zero(), 0u64);
-        let previous_claim = updated_claims.get(slot).unwrap_or(&default_claim);
-        let total_claimed_for_distribution_slot = previous_claim.0.checked_add(claim.0)?;
-        let new_timestamp = std::cmp::max(previous_claim.1, claim.1);
-
-        updated_claims.insert(*slot, (total_claimed_for_distribution_slot, new_timestamp));
-    }
     println!("updated_claims: {:?}", updated_claims);
 
     campaign.claimed.amount = campaign
