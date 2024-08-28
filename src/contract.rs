@@ -43,7 +43,15 @@ pub fn execute(
             total_claimable_amount,
             receiver,
             proof,
-        } => commands::claim(deps, env, info, campaign_id, total_claimable_amount, receiver, proof),
+        } => commands::claim(
+            deps,
+            env,
+            info,
+            campaign_id,
+            total_claimable_amount,
+            receiver,
+            proof,
+        ),
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(

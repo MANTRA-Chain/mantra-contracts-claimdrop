@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Empty, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, Empty, StdResult, Timestamp, Uint128};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
     WasmKeeper,
@@ -190,6 +190,7 @@ impl TestingSuite {
         sender: &Addr,
         campaign_id: u64,
         total_claimable_amount: Uint128,
+        receiver: Option<String>,
         proof: Vec<String>,
         result: impl ResultHandler,
     ) -> &mut Self {
@@ -198,6 +199,7 @@ impl TestingSuite {
             ExecuteMsg::Claim {
                 campaign_id,
                 total_claimable_amount,
+                receiver,
                 proof,
             },
             &[],
@@ -256,5 +258,17 @@ impl TestingSuite {
         result: impl Fn(StdResult<cw_ownable::Ownership<String>>),
     ) -> &mut Self {
         self.query_contract(QueryMsg::Ownership {}, result)
+    }
+
+    #[track_caller]
+    pub(crate) fn query_balance(
+        &mut self,
+        denom: &str,
+        address: &Addr,
+        result: impl Fn(Uint128),
+    ) -> &mut Self {
+        let balance_response = self.app.wrap().query_balance(address, denom.clone());
+        result(balance_response.unwrap_or(coin(0, denom)).amount);
+        self
     }
 }

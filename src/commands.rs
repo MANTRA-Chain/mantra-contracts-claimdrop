@@ -119,8 +119,15 @@ pub(crate) fn claim(
 
     ensure!(
         campaign.has_started(&env.block.time),
-        ContractError::CampaignTimeMismatch {
+        ContractError::CampaignError {
             reason: "not started".to_string()
+        }
+    );
+
+    ensure!(
+        !campaign.is_closed(),
+        ContractError::CampaignError {
+            reason: "no funds available".to_string()
         }
     );
 

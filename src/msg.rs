@@ -141,7 +141,12 @@ impl Campaign {
 
     /// Checks if the campaign has ended
     pub fn has_ended(&self, current_time: &Timestamp) -> bool {
-        current_time.seconds() >= self.end_time || self.claimed.amount == self.reward_asset.amount
+        current_time.seconds() >= self.end_time || self.is_closed()
+    }
+
+    /// Checks if the campaign has been closed. When a
+    pub fn is_closed(&self) -> bool {
+        self.claimed.amount == self.reward_asset.amount
     }
 
     /// Checks if the campaign has ended
