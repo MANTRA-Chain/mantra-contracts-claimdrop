@@ -1,7 +1,6 @@
-use cosmwasm_std::{ensure, entry_point, to_json_binary, StdError};
+use cosmwasm_std::{entry_point, to_json_binary};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw2::{get_contract_version, set_contract_version, CONTRACT};
-use semver::Version;
+use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
