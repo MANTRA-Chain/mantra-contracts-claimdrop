@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Empty, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, Empty, StdResult, Timestamp, Uint128};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
     WasmKeeper,
@@ -6,6 +6,7 @@ use cw_multi_test::{
 
 use airdrop_manager::msg::{
     CampaignAction, CampaignFilter, CampaignsResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+    RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
@@ -65,8 +66,6 @@ impl TestingSuite {
         let mut senders = vec![];
         let mut balances = vec![];
 
-        let hrp = "mantra";
-
         // Generate multiple random addresses
         //todo this should be extracted to a helper function on mantra-std or something.
 
@@ -88,6 +87,7 @@ impl TestingSuite {
         balances.push((Addr::unchecked(sender3), initial_balances.clone()));
         balances.push((Addr::unchecked(sender4), initial_balances.clone()));
 
+        // let hrp = "mantra";
         // for _ in 0..5 {
         //     let mut data = [0u8; 20];
         //     rand::thread_rng().fill(&mut data);
@@ -100,7 +100,7 @@ impl TestingSuite {
         //     senders.push(addr);
         // }
 
-        let mut app = AppBuilder::new()
+        let app = AppBuilder::new()
             .with_wasm(WasmKeeper::default())
             .with_wasm(WasmKeeper::default())
             .with_bank(BankKeeper::new())
@@ -190,6 +190,7 @@ impl TestingSuite {
         sender: &Addr,
         campaign_id: u64,
         total_claimable_amount: Uint128,
+        receiver: Option<String>,
         proof: Vec<String>,
         result: impl ResultHandler,
     ) -> &mut Self {
@@ -198,6 +199,7 @@ impl TestingSuite {
             ExecuteMsg::Claim {
                 campaign_id,
                 total_claimable_amount,
+                receiver,
                 proof,
             },
             &[],
@@ -251,10 +253,42 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_ownership(
+    pub(crate) fn query_rewards(
+        &mut self,
+        campaign_id: u64,
+        total_claimable_amount: Uint128,
+        receiver: String,
+        proof: Vec<String>,
+        result: impl Fn(StdResult<RewardsResponse>),
+    ) -> &mut Self {
+        self.query_contract(
+            QueryMsg::Rewards {
+                campaign_id,
+                total_claimable_amount,
+                receiver,
+                proof,
+            },
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub(crate) fn _query_ownership(
         &mut self,
         result: impl Fn(StdResult<cw_ownable::Ownership<String>>),
     ) -> &mut Self {
         self.query_contract(QueryMsg::Ownership {}, result)
+    }
+
+    #[track_caller]
+    pub(crate) fn query_balance(
+        &mut self,
+        denom: &str,
+        address: &Addr,
+        result: impl Fn(Uint128),
+    ) -> &mut Self {
+        let balance_response = self.app.wrap().query_balance(address, denom);
+        result(balance_response.unwrap_or(coin(0, denom)).amount);
+        self
     }
 }

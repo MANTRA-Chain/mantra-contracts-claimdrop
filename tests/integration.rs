@@ -4,7 +4,9 @@ use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
 
 use airdrop_manager::error::ContractError;
-use airdrop_manager::msg::{CampaignAction, CampaignParams, DistributionType};
+use airdrop_manager::msg::{
+    CampaignAction, CampaignFilter, CampaignParams, DistributionType, RewardsResponse,
+};
 
 use crate::suite::TestingSuite;
 
@@ -13,30 +15,23 @@ mod suite;
 #[test]
 fn instantiate_airdrop_manager() {
     let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
-
-    let alice = &suite.senders[0].clone();
-    let current_time = &suite.get_time();
-
     suite.instantiate_airdrop_manager(None);
 }
 
 #[test]
-fn create_campaign_and_claim() {
+fn create_campaign_and_claim_single_distribution_type() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),
         coin(1_000_000_000, "uusdc"),
     ]);
 
     let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
     let current_time = &suite.get_time();
 
     suite
         .instantiate_airdrop_manager(None)
-        .query_campaigns(None, None, None, {
-            |result| {
-                assert_eq!(result.unwrap().campaigns.len(), 0);
-            }
-        })
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -173,6 +168,35 @@ fn create_campaign_and_claim() {
                 },
             },
             &vec![coin(100_000, "uom"), coin(100_000, "uusdc")],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                        end_time: current_time.seconds() + 172_800,
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -458,61 +482,8 @@ fn create_campaign_and_claim() {
                 },
             },
             &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {},
-        )
-
-
-        .query_campaigns(None, None, None, {
-            |result| {
-                println!("{:?}", result);
-                assert_eq!(result.unwrap().campaigns.len(), 1);
-            }
-        });
-
-    //todo test for failing cases as well
-    //claim
-    // suite.claim(
-    //     alice,
-    //     1,
-    //     Uint128::new(10_000u128),
-    //     vec![
-    //         "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
-    //         "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
-    //         "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
-    //     ],
-    //     |result: Result<AppResponse, anyhow::Error>| {
-    //         // let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-    //         //
-    //         // match err {
-    //         //     ContractError::OwnershipError { .. } => {}
-    //         //     _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
-    //         // }
-    //
-    //         println!("{:?}", result);
-    //     },
-    // );
-
-    suite.add_day();
-
-    suite
-        .claim(
-            alice,
-            1,
-            Uint128::new(10_000u128),
-            vec![
-                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
-                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
-                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
-            ],
             |result: Result<AppResponse, anyhow::Error>| {
-                // let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                //
-                // match err {
-                //     ContractError::OwnershipError { .. } => {}
-                //     _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
-                // }
-
-                println!("{:?}", result);
+                result.unwrap();
             },
         )
         .query_campaigns(None, None, None, {
@@ -521,6 +492,365 @@ fn create_campaign_and_claim() {
                 assert_eq!(result.unwrap().campaigns.len(), 1);
             }
         });
+
+    // claim
+    suite.claim(
+        alice,
+        1,
+        Uint128::new(20_000u128),
+        None,
+        vec![
+            "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+            "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+            "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+        ],
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+            match err {
+                ContractError::CampaignError { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        },
+    );
+
+    suite.add_day();
+
+    suite
+        .claim(
+            alice,
+            // trying to claim a campaign that doesn't exist
+            2,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::CampaignNotFound { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::CampaignNotFound"),
+                }
+            },
+        )
+        .claim(
+            alice,
+            1,
+            // pretending to be entitled to more tokens than the campaign has to offer for this user
+            Uint128::new(20_000u128),
+            None,
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::MerkleRootVerificationFailed { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::MerkleRootVerificationFailed"),
+                }
+            },
+        )
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            // provide wrong proofs
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::MerkleRootVerificationFailed { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::MerkleRootVerificationFailed"),
+                }
+            },
+        )
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            // try claiming for someone else, with the wrong proofs
+            Some(bob.to_string()),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::MerkleRootVerificationFailed { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::MerkleRootVerificationFailed"),
+                }
+            },
+        )
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(balance, Uint128::new(999_900_000));
+        })
+        .query_balance("uom", bob, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_000_000));
+        })
+        // bob claims for alice
+        .claim(
+            bob,
+            1,
+            Uint128::new(10_000u128),
+            Some(alice.to_string()),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(balance, Uint128::new(999_910_000));
+        })
+        .query_balance("uom", bob, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_000_000));
+        })
+        .claim(
+            bob,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            vec!["267bf7a7b8f52ece6b04cbddf77c0d0bbc1fc0544e8f68923f95fdd7b9121316".to_string()],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance("uom", bob, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_010_000));
+        })
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].claimed, coin(20_000u128, "uom"));
+            }
+        });
+
+    suite
+        .add_week()
+        .add_week()
+        .add_week()
+        .query_balance("uom", carol, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_000_000));
+        })
+        .claim(
+            carol,
+            1,
+            Uint128::new(20_000u128),
+            None,
+            vec![
+                "7a012b86f12743c59d9382d2be117e9362ba3210ed53dbdfefaaf556306c6d1e".to_string(),
+                "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance("uom", carol, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_020_000));
+        });
+}
+
+#[test]
+fn claim_ended_campaign() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_airdrop_manager(None)
+        .manage_campaign(
+            dan,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                        end_time: current_time.seconds() + 172_800,
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                assert_eq!(result.unwrap().campaigns.len(), 1);
+            }
+        });
+
+    // claim
+    suite
+        .add_day()
+        .claim(
+            bob,
+            1,
+            Uint128::new(10_000u128),
+            Some(alice.to_string()),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(
+            bob,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            vec!["267bf7a7b8f52ece6b04cbddf77c0d0bbc1fc0544e8f68923f95fdd7b9121316".to_string()],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance("uom", bob, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_010_000));
+        })
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_010_000));
+        });
+
+    suite
+        .manage_campaign(
+            // bob tries to end the campaign
+            bob,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &vec![coin(100_000, "uom")],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .manage_campaign(
+            // bob tries to end the campaign
+            bob,
+            CampaignAction::EndCampaign { campaign_id: 2 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::CampaignNotFound { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::CampaignNotFound"),
+                }
+            },
+        )
+        .manage_campaign(
+            // bob tries to end the campaign
+            bob,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].claimed, coin(20_000u128, "uom"));
+            }
+        })
+        .query_balance("uom", dan, |balance| {
+            assert_eq!(balance, Uint128::new(999_900_000));
+        })
+        .manage_campaign(
+            // alice should be able to, since she is the owner of the contract
+            alice,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        // the owner of the campaign, dan, got the remaining tokens back, which were 80k as 20k
+        // were claimed by bob and alice
+        .query_balance("uom", dan, |balance| {
+            assert_eq!(balance, Uint128::new(999_980_000));
+        })
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(
+                    response.campaigns[0].claimed,
+                    response.campaigns[0].reward_asset
+                );
+            }
+        });
+
+    // now carol tries to claim but it's too late
+    suite.claim(
+        carol,
+        1,
+        Uint128::new(20_000u128),
+        None,
+        vec![
+            "7a012b86f12743c59d9382d2be117e9362ba3210ed53dbdfefaaf556306c6d1e".to_string(),
+            "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
+            "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+        ],
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+            match err {
+                ContractError::CampaignError { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        },
+    );
 }
 
 #[test]
@@ -562,7 +892,9 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             },
         },
         &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {},
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
     );
 
     suite.add_day();
@@ -573,20 +905,14 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
                 "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
             ],
             |result: Result<AppResponse, anyhow::Error>| {
-                // let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                //
-                // match err {
-                //     ContractError::OwnershipError { .. } => {}
-                //     _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
-                // }
-
-                println!("{:?}", result);
+                result.unwrap();
             },
         )
         .query_campaigns(None, None, None, {
@@ -599,10 +925,31 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 println!(">>>>> trying to claim again without moving time, should err");
             }
         })
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(2_500u128, "uom"),
+                        pending: coins(10_000u128 - 2_500u128, "uom"),
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        )
         .claim(
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
@@ -624,6 +971,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
@@ -631,6 +979,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 println!("{:?}", result);
+                result.unwrap();
                 println!(">>>>> try claiming again without moving time, should err");
             },
         )
@@ -638,6 +987,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
@@ -658,10 +1008,31 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         .add_day()
         .add_day()
         .add_day()
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(3_571u128, "uom"),
+                        pending: coins(10_000u128 - 3_571u128, "uom"),
+                        available_to_claim: coins(4_285u128, "uom"),
+                    }
+                );
+            },
+        )
         .claim(
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
@@ -669,8 +1040,29 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             ],
             |result: Result<AppResponse, anyhow::Error>| {
                 println!("{:?}", result);
+                result.unwrap();
                 println!(
                     ">>>>> add 2 more weeks and claim, the campaign should have finished by then"
+                );
+            },
+        )
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(7_856u128, "uom"),
+                        pending: coins(10_000u128 - 7_856u128, "uom"),
+                        available_to_claim: vec![],
+                    }
                 );
             },
         )
@@ -680,6 +1072,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
@@ -695,6 +1088,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             alice,
             1,
             Uint128::new(10_000u128),
+            None,
             vec![
                 "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
                 "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
@@ -714,10 +1108,31 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 println!(">>>>> dan claiming all at once");
             }
         })
+        .query_rewards(
+            1,
+            Uint128::new(35_000u128),
+            dan.to_string(),
+            vec![
+                "8799448ea6334a9b96f60f63ef2e568be364c340fb1a189262d6d7955bce300b".to_string(),
+                "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: vec![],
+                        pending: coins(35_000u128, "uom"),
+                        available_to_claim: coins(35_000u128, "uom"),
+                    }
+                );
+            },
+        )
         .claim(
             dan,
             1,
             Uint128::new(35_000u128),
+            None,
             vec![
                 "8799448ea6334a9b96f60f63ef2e568be364c340fb1a189262d6d7955bce300b".to_string(),
                 "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
@@ -728,12 +1143,416 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 println!(">>>>> query campaigns");
             },
         )
+        .query_rewards(
+            1,
+            Uint128::new(35_000u128),
+            dan.to_string(),
+            vec![
+                "8799448ea6334a9b96f60f63ef2e568be364c340fb1a189262d6d7955bce300b".to_string(),
+                "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(35_000u128, "uom"),
+                        pending: vec![],
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        )
         .query_campaigns(None, None, None, {
             |result| {
                 println!("{:?}", result);
                 let response = result.unwrap();
                 assert_eq!(response.campaigns.len(), 1);
                 assert_eq!(response.campaigns[0].claimed, coin(45_000u128, "uom"));
+            }
+        });
+}
+
+#[test]
+fn query_rewards() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_airdrop_manager(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop, 土金, ك".to_string(),
+                reward_asset: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(25),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    },
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(75),
+                        start_time: current_time.plus_days(7).seconds(),
+                        end_time: current_time.plus_days(14).seconds(),
+                    },
+                ],
+                cliff_duration: None,
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+                merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                    .to_string(),
+            },
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(
+            1,
+            Uint128::new(35_000u128),
+            alice.to_string(),
+            vec![
+                "8799448ea6334a9b96f60f63ef2e568be364c340fb1a189262d6d7955bce300b".to_string(),
+                "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                let err = result.unwrap_err().to_string();
+
+                assert_eq!(
+                    err,
+                    "Generic error: Querier contract error: Merkle root verification failed"
+                );
+            },
+        )
+        .query_rewards(
+            1,
+            Uint128::new(20_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                let err = result.unwrap_err().to_string();
+
+                assert_eq!(
+                    err,
+                    "Generic error: Querier contract error: Merkle root verification failed"
+                );
+            },
+        )
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(2_500u128, "uom"),
+                        pending: coins(10_000u128 - 2_500u128, "uom"),
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(2_500u128, "uom"),
+                        pending: vec![],
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        );
+}
+
+#[test]
+fn end_campaigns() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_airdrop_manager(None)
+        .manage_campaign(
+            dan,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            dan,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop II".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(50_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(50_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaigns(None, None, None, {
+            |result| {
+                assert_eq!(result.unwrap().campaigns.len(), 2);
+            }
+        });
+
+    //end campaign
+    suite
+        .manage_campaign(
+            bob,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .manage_campaign(
+            bob,
+            CampaignAction::EndCampaign { campaign_id: 2 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .manage_campaign(
+            dan,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &[coin(100_000, "uom")],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .manage_campaign(
+            dan,
+            CampaignAction::EndCampaign { campaign_id: 1 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice, //alice can end the campaign since it's the owner of the contract
+            CampaignAction::EndCampaign { campaign_id: 2 },
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+}
+
+#[test]
+fn query_campaigns() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_airdrop_manager(None);
+
+    for i in 0..100 {
+        suite.manage_campaign(
+            dan,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: format!("Test Airdrop {i}"),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+    }
+
+    suite
+        .query_campaigns(
+            Some(CampaignFilter::Owner(alice.to_string())),
+            None,
+            None,
+            {
+                |result| {
+                    let response = result.unwrap();
+
+                    assert!(response.campaigns.is_empty());
+                }
+            },
+        )
+        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
+            |result| {
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].name, "Test Airdrop 0");
+            }
+        })
+        .query_campaigns(Some(CampaignFilter::CampaignId(80)), None, None, {
+            |result| {
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].name, "Test Airdrop 79");
+            }
+        })
+        .query_campaigns(Some(CampaignFilter::Owner(dan.to_string())), None, None, {
+            |result| {
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 50);
+                assert_eq!(response.campaigns.last().unwrap().id, 51);
+                assert_eq!(response.campaigns.first().unwrap().id, 100);
+            }
+        })
+        .query_campaigns(None, Some(20), None, {
+            |result| {
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 10);
+                assert_eq!(response.campaigns.first().unwrap().id, 100);
+                assert_eq!(response.campaigns.last().unwrap().id, 91);
+            }
+        })
+        .query_campaigns(None, Some(20u64), Some(30u8), {
+            |result| {
+                let response = result.unwrap();
+
+                assert_eq!(response.campaigns.len(), 30);
+                assert_eq!(response.campaigns.first().unwrap().id, 100);
+                assert_eq!(response.campaigns.last().unwrap().id, 71);
             }
         });
 }

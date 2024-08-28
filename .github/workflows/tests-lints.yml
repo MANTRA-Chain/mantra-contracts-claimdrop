@@ -27,14 +27,6 @@ jobs:
           version: "0.15.0"
           args: '--locked -- --test-threads 4'
 
-      - name: Compile WASM contract
-        uses: actions-rs/cargo@v1
-        with:
-          command: wasm
-          args: --locked
-        env:
-          RUSTFLAGS: "-C link-arg=-s"
-
   lints:
     name: Lints
     runs-on: ubuntu-latest

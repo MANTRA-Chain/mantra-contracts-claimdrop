@@ -23,6 +23,9 @@ pub enum ExecuteMsg {
         campaign_id: u64,
         /// The total claimable amount from the campaign
         total_claimable_amount: Uint128,
+        /// The receiver address of the claimed rewards. If not set, the sender of the message will be the receiver.
+        /// This is useful for allowing a contract to do the claim operation on behalf of a user.
+        receiver: Option<String>,
         /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
         proof: Vec<String>,
     },
@@ -33,13 +36,26 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(CampaignsResponse)]
+    /// Get campaigns based on the filter, defined by [CampaignFilter].
     Campaigns {
-        /// Get campaigns based on the filter, defined by [CampaignFilter].
+        /// The filter to apply to the campaigns, if any.
         filter_by: Option<CampaignFilter>,
         /// The campaign id to start querying from. Used for paginating results.
         start_after: Option<u64>,
         /// The maximum number of campaigns to return. If not set, the default value is used. Used for paginating results.
         limit: Option<u8>,
+    },
+    #[returns(RewardsResponse)]
+    /// Get the rewards for a specific campaign and receiver address.
+    Rewards {
+        /// The campaign id to query rewards for.
+        campaign_id: u64,
+        /// The total claimable amount for the campaign.
+        total_claimable_amount: Uint128,
+        /// The address to get the rewards for.
+        receiver: String,
+        /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
+        proof: Vec<String>,
     },
 }
 
@@ -58,6 +74,13 @@ pub enum CampaignFilter {
 pub struct CampaignsResponse {
     /// The list of campaigns
     pub campaigns: Vec<Campaign>,
+}
+
+#[cw_serde]
+pub struct RewardsResponse {
+    pub claimed: Vec<Coin>,
+    pub pending: Vec<Coin>,
+    pub available_to_claim: Vec<Coin>,
 }
 
 #[cw_serde]
@@ -138,7 +161,12 @@ impl Campaign {
 
     /// Checks if the campaign has ended
     pub fn has_ended(&self, current_time: &Timestamp) -> bool {
-        current_time.seconds() >= self.end_time || self.claimed.amount == self.reward_asset.amount
+        current_time.seconds() >= self.end_time || self.is_closed()
+    }
+
+    /// Checks if the campaign has been closed. When a
+    pub fn is_closed(&self) -> bool {
+        self.claimed.amount == self.reward_asset.amount
     }
 
     /// Checks if the campaign has ended

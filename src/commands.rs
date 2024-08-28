@@ -4,7 +4,8 @@ use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
 use crate::state::{
-    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS,
+    get_campaign_by_id, get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS,
+    CAMPAIGN_COUNT, CLAIMS,
 };
 
 /// Manages a campaign
@@ -43,6 +44,7 @@ fn create_campaign(
         .unwrap_or_else(|| info.sender.clone());
 
     let campaign = Campaign::from_params(campaign_params, campaign_id, owner);
+
     CAMPAIGN_COUNT.save(deps.storage, &campaign_id)?;
     CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
 
@@ -63,9 +65,7 @@ fn end_campaign(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = CAMPAIGNS
-        .may_load(deps.storage, campaign_id)?
-        .ok_or(ContractError::CampaignNotFound { campaign_id })?;
+    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
 
     ensure!(
         campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
@@ -107,29 +107,40 @@ pub(crate) fn claim(
     info: MessageInfo,
     campaign_id: u64,
     total_claimable_amount: Uint128,
+    receiver: Option<String>,
     proof: Vec<String>,
     //todo make receiver optional so we can make a contract/gas station pay for the fees
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = CAMPAIGNS
-        .may_load(deps.storage, campaign_id)?
-        .ok_or(ContractError::CampaignNotFound { campaign_id })?;
+    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
 
     ensure!(
         campaign.has_started(&env.block.time),
-        ContractError::CampaignTimeMismatch {
+        ContractError::CampaignError {
             reason: "not started".to_string()
         }
     );
 
-    helpers::validate_claim(&campaign, &info.sender, total_claimable_amount, &proof)?;
+    ensure!(
+        !campaign.is_closed(),
+        ContractError::CampaignError {
+            reason: "no funds available".to_string()
+        }
+    );
+
+    let receiver = receiver
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?
+        .unwrap_or_else(|| info.sender.clone());
+
+    helpers::validate_claim(&campaign, &receiver, total_claimable_amount, &proof)?;
 
     let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
-        &deps,
+        deps.as_ref(),
         &campaign,
         &env.block.time,
-        &info.sender,
+        &receiver,
         total_claimable_amount,
     )?;
 
@@ -140,11 +151,11 @@ pub(crate) fn claim(
         ContractError::NothingToClaim
     );
 
-    let previous_claims = get_claims_for_address(deps.as_ref(), campaign_id, &info.sender)?;
+    let previous_claims = get_claims_for_address(deps.as_ref(), campaign_id, &receiver)?;
 
     println!("new_claims: {:?}", new_claims);
     println!("previous_claims: {:?}", previous_claims);
-
+    //todo remake the update_claims update to be more efficient, doesn't look neat
     let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
 
     println!("updated_claims: {:?}", updated_claims);
@@ -162,29 +173,29 @@ pub(crate) fn claim(
     CAMPAIGNS.save(deps.storage, campaign.id, &campaign)?;
     CLAIMS.save(
         deps.storage,
-        (info.sender.to_string(), campaign.id),
+        (receiver.to_string(), campaign.id),
         &updated_claims,
     )?;
 
-    let x = get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &info.sender)?;
+    let x = get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &receiver)?;
     println!("total claims for user: {:?}", x);
 
     // final sanity check to make sure the address can't claim more than the total amount it's entitled to
     ensure!(
         total_claimable_amount
-            >= get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &info.sender)?,
+            >= get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &receiver)?,
         ContractError::ExceededMaxClaimAmount
     );
 
     Ok(Response::default()
         .add_message(BankMsg::Send {
-            to_address: info.sender.to_string(),
+            to_address: receiver.to_string(),
             amount: vec![claimable_amount.clone()],
         })
         .add_attributes(vec![
             ("action", "claim".to_string()),
             ("campaign_id", campaign_id.to_string()),
-            ("address", info.sender.to_string()),
+            ("receiver", receiver.to_string()),
             ("claimed_amount", claimable_amount.to_string()),
         ]))
 }
