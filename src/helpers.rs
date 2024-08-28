@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{ensure, Addr, Coin, Decimal, DepsMut, MessageInfo, Timestamp, Uint128};
+use cosmwasm_std::{
+    ensure, Addr, Coin, Decimal, DepsMut, MessageInfo, StdError, Timestamp, Uint128,
+};
 use sha2::Digest;
 
 use crate::error::ContractError;
@@ -72,13 +74,16 @@ pub(crate) fn validate_claim(
     Ok(())
 }
 
+const FALLBACK_TIME: u64 = 0u64;
+const FALLBACK_DISTRIBUTION_SLOT: usize = 0usize;
+
 /// Calculates the amount a user can claim at this point in time
 pub(crate) fn compute_claimable_amount(
     deps: &DepsMut,
     campaign: &Campaign,
     current_time: &Timestamp,
     address: &Addr,
-    total_amount: Uint128,
+    total_claimable_amount: Uint128,
 ) -> Result<(Coin, HashMap<DistributionSlot, Claim>), ContractError> {
     let mut claimable_amount = Uint128::zero();
     let mut new_claims = HashMap::new();
@@ -91,112 +96,49 @@ pub(crate) fn compute_claimable_amount(
             campaign.distribution_type.iter().enumerate().clone()
         {
             println!("dist: {:?}", distribution);
+            // skip distributions that have not started yet
             if !distribution.has_started(current_time) {
                 println!("distribution not active");
                 continue;
             }
 
-            let claim_for_distribution = previous_claims_for_address.get(&distribution_slot);
+            let previous_claim_for_address_for_distribution =
+                previous_claims_for_address.get(&distribution_slot);
 
-            if distribution.has_started(current_time) {
-                let claim_amount = match distribution {
-                    DistributionType::LinearVesting {
-                        percentage,
-                        start_time,
-                        end_time,
-                    } => {
-                        let elapsed_time = if claim_for_distribution.is_some() {
-                            let (_, last_claimed) = claim_for_distribution.unwrap();
+            let claim_amount = calculate_claim_amount_for_distribution(
+                &current_time,
+                total_claimable_amount,
+                &distribution,
+                &previous_claim_for_address_for_distribution,
+            )?;
 
-                            println!("current_time: {}", current_time.seconds());
-                            println!("end_time: {}", end_time);
-                            println!("last_claimed: {}", last_claimed);
-
-                            if last_claimed > end_time {
-                                0u64
-                            } else {
-                                current_time.seconds().min(end_time.to_owned()) - last_claimed
-                            }
-                        } else {
-                            current_time.seconds().min(end_time.to_owned()) - start_time
-                        };
-
-                        println!("computing LinearVesting");
-
-                        println!("elapsed_time: {}", elapsed_time);
-                        let vesting_duration = end_time - start_time;
-                        println!("vesting_duration: {}", vesting_duration);
-                        let vesting_progress = Decimal::from_ratio(elapsed_time, vesting_duration);
-                        println!("vesting_progress: {}", vesting_progress);
-
-                        percentage
-                            .checked_mul(Decimal::from_ratio(total_amount, Uint128::one()))?
-                            .checked_mul(vesting_progress)?
-                            .to_uint_floor()
-                    }
-                    DistributionType::PeriodicVesting { .. } => Uint128::zero(),
-                    DistributionType::LumpSum { percentage, .. } => {
-                        // it means the user has already claimed this distribution
-                        if claim_for_distribution.is_some() {
-                            continue;
-                        }
-
-                        println!("computing LumpSum");
-
-                        percentage
-                            .checked_mul(Decimal::from_ratio(total_amount, Uint128::one()))?
-                            .to_uint_floor()
-                    }
-                };
-
-                println!("{} - claim_amount: {}", distribution_slot, claim_amount);
-
-                claimable_amount = claimable_amount.checked_add(claim_amount)?;
-
-                new_claims.insert(
-                    distribution_slot,
-                    (claimable_amount, current_time.seconds()),
-                );
+            // nothing to claim for the current distribution, skip
+            if claim_amount == Uint128::zero() {
+                continue;
             }
+
+            println!("{} - claim_amount: {}", distribution_slot, claim_amount);
+
+            claimable_amount = claimable_amount.checked_add(claim_amount)?;
+
+            new_claims.insert(distribution_slot, (claim_amount, current_time.seconds()));
         }
 
-        // println!("claimable_amount before tweak: {}", claimable_amount);
-        //
-        //
-        // let (already_claimed, last_claimed) = get_claims_for_address(deps, campaign.id, address)?;
-        // println!("already_claimed: {}", already_claimed);
-        // claimable_amount = claimable_amount.checked_sub(already_claimed)?;
-        // println!("claimable_amount: {}", claimable_amount);
+        let (rounding_error_compensation_amount, slot) = get_compensation_for_rounding_errors(
+            campaign,
+            current_time,
+            total_claimable_amount,
+            previous_claims_for_address,
+            &new_claims,
+        )?;
 
-        // compensate for rounding errors
-        if campaign.has_ended(current_time) {
-            let updated_claims = aggregate_claims(&previous_claims_for_address, &new_claims)?;
+        if rounding_error_compensation_amount > Uint128::zero() {
+            claimable_amount = claimable_amount.checked_add(rounding_error_compensation_amount)?;
 
-            println!("updated_claims: {:?}", updated_claims);
-
-            let total_claimed = updated_claims
-                .iter()
-                .fold(Uint128::zero(), |acc, (_, (amount, _))| {
-                    acc.checked_add(*amount).unwrap()
-                });
-
-            println!("total_claimed loop: {}", total_claimed);
-
-            if total_claimed < total_amount {
-                println!(
-                    "total_amount.saturating_sub(total_claimed): {}",
-                    total_amount.saturating_sub(total_claimed)
-                );
-
-                let remaining_amount = total_amount.saturating_sub(total_claimed);
-                claimable_amount = claimable_amount.checked_add(remaining_amount)?;
-
-                for (_, (amount, timestamp)) in new_claims.iter_mut() {
-                    if *timestamp == current_time.seconds() {
-                        *amount = amount.checked_add(remaining_amount)?;
-                    }
-                }
-            }
+            let (amount, _) = new_claims
+                .get_mut(&slot)
+                .ok_or(StdError::generic_err("couldn't find claim"))?;
+            *amount = amount.checked_add(rounding_error_compensation_amount)?;
         }
     }
 
@@ -207,6 +149,108 @@ pub(crate) fn compute_claimable_amount(
         },
         new_claims,
     ))
+}
+
+/// Calculates the claimable amount for a given distribution, total amount and previous claim.
+fn calculate_claim_amount_for_distribution(
+    current_time: &&Timestamp,
+    total_claimable_amount: Uint128,
+    distribution_type: &&DistributionType,
+    previous_claim_for_address_for_distribution: &Option<&Claim>,
+) -> Result<Uint128, ContractError> {
+    match distribution_type {
+        DistributionType::LinearVesting {
+            percentage,
+            start_time,
+            end_time,
+        } => {
+            let elapsed_time =
+                if let Some((_, last_claimed)) = previous_claim_for_address_for_distribution {
+                    println!("current_time: {}", current_time.seconds());
+                    println!("end_time: {}", end_time);
+                    println!("last_claimed: {}", last_claimed);
+
+                    if last_claimed > end_time {
+                        FALLBACK_TIME
+                    } else {
+                        current_time.seconds().min(end_time.to_owned()) - last_claimed
+                    }
+                } else {
+                    current_time.seconds().min(end_time.to_owned()) - start_time
+                };
+
+            println!("computing LinearVesting");
+
+            let vesting_duration = end_time - start_time;
+            let vesting_progress = Decimal::from_ratio(elapsed_time, vesting_duration);
+
+            println!("elapsed_time: {}", elapsed_time);
+            println!("vesting_duration: {}", vesting_duration);
+            println!("vesting_progress: {}", vesting_progress);
+
+            Ok(percentage
+                .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
+                .checked_mul(vesting_progress)?
+                .to_uint_floor())
+        }
+        DistributionType::PeriodicVesting { .. } => unimplemented!(),
+        DistributionType::LumpSum { percentage, .. } => {
+            // it means the user has already claimed this distribution
+            if previous_claim_for_address_for_distribution.is_some() {
+                return Ok(Uint128::zero());
+            }
+
+            println!("computing LumpSum");
+
+            Ok(percentage
+                .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
+                .to_uint_floor())
+        }
+    }
+}
+
+fn get_compensation_for_rounding_errors(
+    campaign: &Campaign,
+    current_time: &Timestamp,
+    total_claimable_amount: Uint128,
+    previous_claims_for_address: HashMap<DistributionSlot, Claim>,
+    new_claims: &HashMap<DistributionSlot, Claim>,
+) -> Result<(Uint128, DistributionSlot), ContractError> {
+    if campaign.has_ended(current_time) {
+        let updated_claims = aggregate_claims(&previous_claims_for_address, new_claims)?;
+
+        println!("updated_claims: {:?}", updated_claims);
+
+        let total_claimed = updated_claims
+            .iter()
+            .fold(Uint128::zero(), |acc, (_, (amount, _))| {
+                acc.checked_add(*amount).unwrap()
+            });
+
+        println!("total_claimed loop: {}", total_claimed);
+
+        // if the campaign has ended and the user still has dust to claim
+        if total_claimed < total_claimable_amount {
+            println!(
+                "total_amount.saturating_sub(total_claimed): {}",
+                total_claimable_amount.saturating_sub(total_claimed)
+            );
+
+            let (slot, _) = new_claims
+                .iter()
+                .find(|(_, (_, timestamp))| *timestamp == current_time.seconds())
+                .unwrap_or((
+                    &FALLBACK_DISTRIBUTION_SLOT,
+                    &(Uint128::zero(), FALLBACK_TIME),
+                ));
+            return Ok((
+                total_claimable_amount.saturating_sub(total_claimed),
+                slot.to_owned(),
+            ));
+        }
+    }
+
+    Ok((Uint128::zero(), FALLBACK_DISTRIBUTION_SLOT))
 }
 
 /// Aggregates the new claims with the existing claims

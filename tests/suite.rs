@@ -189,7 +189,7 @@ impl TestingSuite {
         &mut self,
         sender: &Addr,
         campaign_id: u64,
-        total_amount: Uint128,
+        total_claimable_amount: Uint128,
         proof: Vec<String>,
         result: impl ResultHandler,
     ) -> &mut Self {
@@ -197,7 +197,7 @@ impl TestingSuite {
             sender,
             ExecuteMsg::Claim {
                 campaign_id,
-                total_amount,
+                total_claimable_amount,
                 proof,
             },
             &[],

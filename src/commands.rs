@@ -106,7 +106,7 @@ pub(crate) fn claim(
     env: Env,
     info: MessageInfo,
     campaign_id: u64,
-    total_amount: Uint128,
+    total_claimable_amount: Uint128,
     proof: Vec<String>,
     //todo make receiver optional so we can make a contract/gas station pay for the fees
 ) -> Result<Response, ContractError> {
@@ -123,14 +123,14 @@ pub(crate) fn claim(
         }
     );
 
-    helpers::validate_claim(&campaign, &info.sender, total_amount, &proof)?;
+    helpers::validate_claim(&campaign, &info.sender, total_claimable_amount, &proof)?;
 
     let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
         &deps,
         &campaign,
         &env.block.time,
         &info.sender,
-        total_amount,
+        total_claimable_amount,
     )?;
 
     println!("claimable_amount: {:?}", claimable_amount);
@@ -168,8 +168,10 @@ pub(crate) fn claim(
 
     let x = get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &info.sender)?;
     println!("total claims for user: {:?}", x);
+
+    // final sanity check to make sure the address can't claim more than the total amount it's entitled to
     ensure!(
-        total_amount
+        total_claimable_amount
             >= get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &info.sender)?,
         ContractError::ExceededMaxClaimAmount
     );
