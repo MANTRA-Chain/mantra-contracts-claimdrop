@@ -531,6 +531,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
     ]);
 
     let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
     let current_time = &suite.get_time();
 
     suite.instantiate_airdrop_manager(None).manage_campaign(
@@ -710,6 +711,29 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 let response = result.unwrap();
                 assert_eq!(response.campaigns.len(), 1);
                 assert_eq!(response.campaigns[0].claimed, coin(10_000u128, "uom"));
+                println!(">>>>> dan claiming all at once");
+            }
+        })
+        .claim(
+            dan,
+            1,
+            Uint128::new(35_000u128),
+            vec![
+                "8799448ea6334a9b96f60f63ef2e568be364c340fb1a189262d6d7955bce300b".to_string(),
+                "34424a2e4bdc8c8e9c3fb3e4743fbc0abba484737ac49f195100d7b8133cf5be".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
+                println!(">>>>> query campaigns");
+            },
+        )
+        .query_campaigns(None, None, None, {
+            |result| {
+                println!("{:?}", result);
+                let response = result.unwrap();
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].claimed, coin(45_000u128, "uom"));
             }
         });
 }

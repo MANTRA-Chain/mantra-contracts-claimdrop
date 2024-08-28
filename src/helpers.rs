@@ -121,10 +121,7 @@ pub(crate) fn compute_claimable_amount(
 
             claimable_amount = claimable_amount.checked_add(claim_amount)?;
 
-            new_claims.insert(
-                distribution_slot,
-                (claimable_amount, current_time.seconds()),
-            );
+            new_claims.insert(distribution_slot, (claim_amount, current_time.seconds()));
         }
 
         let (rounding_error_compensation_amount, slot) = get_compensation_for_rounding_errors(
@@ -143,20 +140,6 @@ pub(crate) fn compute_claimable_amount(
                 .ok_or(StdError::generic_err("couldn't find claim"))?;
             *amount = amount.checked_add(rounding_error_compensation_amount)?;
         }
-
-        // update the new claims with the compensation amount
-        // for (_, (amount, timestamp)) in new_claims.iter_mut() {
-        //     if *timestamp == current_time.seconds() {
-        //         *amount = amount.checked_add(dust_amount)?;
-        //     }
-        // }
-
-        // i need to do that using iterm_mut and find instead
-        // new_claims.iter_mut().find(|(_, (amount, timestamp))| {
-        //     if *timestamp == current_time.seconds() {
-        //         *amount = amount.checked_add(dust_amount)?;
-        //     }
-        // });
     }
 
     Ok((
