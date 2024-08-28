@@ -23,6 +23,9 @@ pub enum ExecuteMsg {
         campaign_id: u64,
         /// The total claimable amount from the campaign
         total_claimable_amount: Uint128,
+        /// The receiver address of the claimed rewards. If not set, the sender of the message will be the receiver.
+        /// This is useful for allowing a contract to do the claim operation on behalf of a user.
+        receiver: Option<String>,
         /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
         proof: Vec<String>,
     },
