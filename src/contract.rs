@@ -67,7 +67,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Campaigns {
             filter_by,
@@ -78,6 +78,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             filter_by,
             start_after,
             limit,
+        )?)?),
+        QueryMsg::Rewards {
+            campaign_id,
+            total_claimable_amount,
+            receiver,
+            proof,
+        } => Ok(to_json_binary(&queries::query_rewards(
+            deps,
+            env,
+            campaign_id,
+            total_claimable_amount,
+            receiver,
+            proof,
         )?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
     }

@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{
-    ensure, Addr, Coin, Decimal, DepsMut, MessageInfo, StdError, Timestamp, Uint128,
-};
+use cosmwasm_std::{ensure, Addr, Coin, Decimal, Deps, MessageInfo, StdError, Timestamp, Uint128};
 use sha2::Digest;
 
 use crate::error::ContractError;
@@ -79,7 +77,7 @@ const FALLBACK_DISTRIBUTION_SLOT: usize = 0usize;
 
 /// Calculates the amount a user can claim at this point in time
 pub(crate) fn compute_claimable_amount(
-    deps: &DepsMut,
+    deps: Deps,
     campaign: &Campaign,
     current_time: &Timestamp,
     address: &Addr,
@@ -89,8 +87,7 @@ pub(crate) fn compute_claimable_amount(
     let mut new_claims = HashMap::new();
 
     if campaign.has_started(current_time) {
-        let previous_claims_for_address =
-            get_claims_for_address(deps.as_ref(), campaign.id, address)?;
+        let previous_claims_for_address = get_claims_for_address(deps, campaign.id, address)?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()

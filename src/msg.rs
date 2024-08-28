@@ -36,13 +36,26 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(CampaignsResponse)]
+    /// Get campaigns based on the filter, defined by [CampaignFilter].
     Campaigns {
-        /// Get campaigns based on the filter, defined by [CampaignFilter].
+        /// The filter to apply to the campaigns, if any.
         filter_by: Option<CampaignFilter>,
         /// The campaign id to start querying from. Used for paginating results.
         start_after: Option<u64>,
         /// The maximum number of campaigns to return. If not set, the default value is used. Used for paginating results.
         limit: Option<u8>,
+    },
+    #[returns(RewardsResponse)]
+    /// Get the rewards for a specific campaign and receiver address.
+    Rewards {
+        /// The campaign id to query rewards for.
+        campaign_id: u64,
+        /// The total claimable amount for the campaign.
+        total_claimable_amount: Uint128,
+        /// The address to get the rewards for.
+        receiver: String,
+        /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
+        proof: Vec<String>,
     },
 }
 
@@ -61,6 +74,13 @@ pub enum CampaignFilter {
 pub struct CampaignsResponse {
     /// The list of campaigns
     pub campaigns: Vec<Campaign>,
+}
+
+#[cw_serde]
+pub struct RewardsResponse {
+    pub claimed: Vec<Coin>,
+    pub pending: Vec<Coin>,
+    pub available_to_claim: Vec<Coin>,
 }
 
 #[cw_serde]

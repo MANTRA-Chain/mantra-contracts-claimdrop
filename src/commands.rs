@@ -4,7 +4,8 @@ use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
 use crate::state::{
-    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS, CAMPAIGN_COUNT, CLAIMS,
+    get_campaign_by_id, get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS,
+    CAMPAIGN_COUNT, CLAIMS,
 };
 
 /// Manages a campaign
@@ -43,6 +44,7 @@ fn create_campaign(
         .unwrap_or_else(|| info.sender.clone());
 
     let campaign = Campaign::from_params(campaign_params, campaign_id, owner);
+
     CAMPAIGN_COUNT.save(deps.storage, &campaign_id)?;
     CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
 
@@ -63,9 +65,7 @@ fn end_campaign(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = CAMPAIGNS
-        .may_load(deps.storage, campaign_id)?
-        .ok_or(ContractError::CampaignNotFound { campaign_id })?;
+    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
 
     ensure!(
         campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
@@ -113,9 +113,7 @@ pub(crate) fn claim(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = CAMPAIGNS
-        .may_load(deps.storage, campaign_id)?
-        .ok_or(ContractError::CampaignNotFound { campaign_id })?;
+    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
 
     ensure!(
         campaign.has_started(&env.block.time),
@@ -139,7 +137,7 @@ pub(crate) fn claim(
     helpers::validate_claim(&campaign, &receiver, total_claimable_amount, &proof)?;
 
     let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
-        &deps,
+        deps.as_ref(),
         &campaign,
         &env.block.time,
         &receiver,
@@ -157,7 +155,7 @@ pub(crate) fn claim(
 
     println!("new_claims: {:?}", new_claims);
     println!("previous_claims: {:?}", previous_claims);
-
+    //todo remake the update_claims update to be more efficient, doesn't look neat
     let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
 
     println!("updated_claims: {:?}", updated_claims);

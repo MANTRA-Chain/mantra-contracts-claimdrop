@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{Addr, Deps, Order, StdResult, Storage, Uint128};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 use crate::error::ContractError;
 use crate::msg::Campaign;
@@ -18,8 +18,9 @@ pub const CAMPAIGNS: IndexedMap<u64, Campaign, CampaignIndexes> = IndexedMap::ne
             "campaigns",
             "campaigns__owner",
         ),
-        merkle_root: UniqueIndex::new(
-            |c: &Campaign| c.merkle_root.clone(),
+        merkle_root: MultiIndex::new(
+            |_pk, c| c.merkle_root.clone(),
+            "campaigns",
             "campaigns__merkle_root",
         ),
     },
@@ -27,7 +28,7 @@ pub const CAMPAIGNS: IndexedMap<u64, Campaign, CampaignIndexes> = IndexedMap::ne
 
 pub struct CampaignIndexes<'a> {
     pub owner: MultiIndex<'a, String, Campaign, String>,
-    pub merkle_root: UniqueIndex<'a, String, Campaign, String>,
+    pub merkle_root: MultiIndex<'a, String, Campaign, String>,
 }
 
 impl<'a> IndexList<Campaign> for CampaignIndexes<'a> {
@@ -58,9 +59,10 @@ pub fn get_campaign_by_id(
 pub(crate) const MAX_LIMIT: u8 = 50;
 const DEFAULT_LIMIT: u8 = 10;
 
-/// Returns a campaign by owner
+/// Returns campaigns by owner
 pub fn get_campaigns_by_owner(storage: &dyn Storage, owner: String) -> StdResult<Vec<Campaign>> {
     let limit = MAX_LIMIT as usize;
+    // no way to paginate this easily. It will return the last [MAX_LIMIT] campaigns created by the owner
     CAMPAIGNS
         .idx
         .owner
@@ -74,6 +76,7 @@ pub fn get_campaigns_by_owner(storage: &dyn Storage, owner: String) -> StdResult
         .collect()
 }
 
+/// Returns a list of campaigns. Supports pagination with `start_from` and `limit`.
 pub fn get_campaigns(
     storage: &dyn Storage,
     start_from: Option<u64>,
@@ -108,9 +111,7 @@ pub fn get_total_claims_amount_for_address(
     campaign_id: u64,
     address: &Addr,
 ) -> Result<Uint128, ContractError> {
-    let claimed = CLAIMS
-        .may_load(deps.storage, (address.to_string(), campaign_id))?
-        .unwrap_or(HashMap::default());
+    let claimed = get_claims_for_address(deps, campaign_id, address)?;
     let mut total = Uint128::zero();
     for (_, (amount, _)) in claimed.iter() {
         total = total.checked_add(*amount)?;
