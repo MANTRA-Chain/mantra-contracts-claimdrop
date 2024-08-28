@@ -267,3 +267,27 @@ pub fn aggregate_claims(
     }
     Ok(updated_claims)
 }
+
+// todo move this to mantra-std in the future
+/// Validates the contract version and name
+#[macro_export]
+macro_rules! validate_contract {
+    ($deps:expr, $contract_name:expr, $contract_version:expr) => {{
+        let stored_contract_name = CONTRACT.load($deps.storage)?.contract;
+        ensure!(
+            stored_contract_name == $contract_name,
+            StdError::generic_err("Contract name mismatch")
+        );
+
+        let version: Version = $contract_version.parse()?;
+        let storage_version: Version = get_contract_version($deps.storage)?.version.parse()?;
+
+        ensure!(
+            storage_version < version,
+            ContractError::MigrateInvalidVersion {
+                current_version: storage_version,
+                new_version: version,
+            }
+        );
+    }};
+}

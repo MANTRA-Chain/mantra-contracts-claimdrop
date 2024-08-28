@@ -5,7 +5,7 @@ use semver::Version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::{commands, queries};
+use crate::{commands, queries, validate_contract};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:airdrop-manager";
@@ -98,24 +98,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 #[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    //todo write macro for all this contract name/version validation
-    let stored_contract_name = CONTRACT.load(deps.storage)?.contract;
-    ensure!(
-        stored_contract_name == CONTRACT_NAME,
-        StdError::generic_err("Contract name mismatch")
-    );
-
-    let version: Version = CONTRACT_VERSION.parse()?;
-    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
-
-    ensure!(
-        storage_version < version,
-        ContractError::MigrateInvalidVersion {
-            current_version: storage_version,
-            new_version: version,
-        }
-    );
-
+    validate_contract!(deps, CONTRACT_NAME, CONTRACT_VERSION);
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
