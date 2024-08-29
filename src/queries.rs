@@ -44,7 +44,10 @@ pub(crate) fn query_rewards(
     let mut available_to_claim = vec![];
     let mut claimed = vec![];
     let mut pending = vec![];
+    println!(">>>> query rewards");
 
+    println!("campaign.endtime: {:?}", campaign.end_time);
+    println!("current time: {:?}", env.block.time.seconds());
     let receiver = deps.api.addr_validate(&receiver)?;
 
     let total_claimed = get_total_claims_amount_for_address(deps, campaign_id, &receiver)?;

@@ -87,6 +87,14 @@ pub(crate) fn compute_claimable_amount(
     let mut new_claims = HashMap::new();
 
     if campaign.has_started(current_time) {
+        if let Some(cliff_duration) = campaign.cliff_duration {
+            let cliff_end_time = campaign.start_time + cliff_duration;
+            ensure!(
+                current_time.seconds() >= cliff_end_time,
+                ContractError::CliffPeriodNotPassed
+            );
+        }
+
         let previous_claims_for_address = get_claims_for_address(deps, campaign.id, address)?;
 
         for (distribution_slot, distribution) in
@@ -216,23 +224,14 @@ fn get_compensation_for_rounding_errors(
     if campaign.has_ended(current_time) {
         let updated_claims = aggregate_claims(&previous_claims_for_address, new_claims)?;
 
-        println!("updated_claims: {:?}", updated_claims);
-
         let total_claimed = updated_claims
             .iter()
             .fold(Uint128::zero(), |acc, (_, (amount, _))| {
                 acc.checked_add(*amount).unwrap()
             });
 
-        println!("total_claimed loop: {}", total_claimed);
-
         // if the campaign has ended and the user still has dust to claim
         if total_claimed < total_claimable_amount {
-            println!(
-                "total_amount.saturating_sub(total_claimed): {}",
-                total_claimable_amount.saturating_sub(total_claimed)
-            );
-
             let (slot, _) = new_claims
                 .iter()
                 .find(|(_, (_, timestamp))| *timestamp == current_time.seconds())

@@ -488,7 +488,6 @@ fn create_campaign_and_claim_single_distribution_type() {
         )
         .query_campaigns(None, None, None, {
             |result| {
-                println!("{:?}", result);
                 assert_eq!(result.unwrap().campaigns.len(), 1);
             }
         });
@@ -637,7 +636,6 @@ fn create_campaign_and_claim_single_distribution_type() {
         })
         .query_campaigns(None, None, None, {
             |result| {
-                println!("{:?}", result);
                 let response = result.unwrap();
 
                 assert_eq!(response.campaigns.len(), 1);
@@ -1171,6 +1169,404 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 assert_eq!(response.campaigns[0].claimed, coin(45_000u128, "uom"));
             }
         });
+}
+
+#[test]
+fn claim_campaigns_with_cliff() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_airdrop_manager(None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(1460).seconds(), // 4 years
+                    }],
+                    cliff_duration: Some(86_400 * 365), // 1 year cliff
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(1460).seconds(),
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop II".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(10),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(30).seconds(), // 1 month
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(90),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(30).seconds(), // 1 month
+                        },
+                    ],
+                    cliff_duration: Some(86_400 * 7), // 7 days cliff
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(30).seconds(),
+                    merkle_root: "158f7d8f16fb97d0cdc2e04abb304035dc94dff5b9adcb45930539302367e9da"
+                        .to_string(),
+                },
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::CliffPeriodNotPassed { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::CliffPeriodNotPassed"
+                    ),
+                }
+            },
+        )
+        .claim(
+            alice,
+            2,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "301f69b76517f75653649c2d61206c8a8ad885f6733b3a3abe9f3ebfbcf3cb03".to_string(),
+                "68c3150317d0d7fa222307b6f3fac98568d6732ad09f363aba90e15e95a77d1d".to_string(),
+                "eb51f76124a113a2686d550b459e64248bfe364c280de44364010acf99ba6492".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::CliffPeriodNotPassed { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::CliffPeriodNotPassed"
+                    ),
+                }
+            },
+        );
+
+    // move a few days to pass the cliff of campaign 2
+
+    for _ in 0..7 {
+        suite.add_day();
+    }
+
+    suite
+        .claim(
+            alice,
+            2,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "301f69b76517f75653649c2d61206c8a8ad885f6733b3a3abe9f3ebfbcf3cb03".to_string(),
+                "68c3150317d0d7fa222307b6f3fac98568d6732ad09f363aba90e15e95a77d1d".to_string(),
+                "eb51f76124a113a2686d550b459e64248bfe364c280de44364010acf99ba6492".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(
+            2,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "301f69b76517f75653649c2d61206c8a8ad885f6733b3a3abe9f3ebfbcf3cb03".to_string(),
+                "68c3150317d0d7fa222307b6f3fac98568d6732ad09f363aba90e15e95a77d1d".to_string(),
+                "eb51f76124a113a2686d550b459e64248bfe364c280de44364010acf99ba6492".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(1_000u128 + 2_099u128 /*7 * 9_000u128 / 30*/, "uom"),
+                        pending: coins(10_000u128 - 3_099u128 /*7 * 9_000u128 / 30*/, "uom"),
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        );
+
+    // move 23 more days to pass the end time of campaign 2
+    for _ in 0..23 {
+        suite.add_day();
+    }
+
+    suite
+        .query_rewards(
+            2,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "301f69b76517f75653649c2d61206c8a8ad885f6733b3a3abe9f3ebfbcf3cb03".to_string(),
+                "68c3150317d0d7fa222307b6f3fac98568d6732ad09f363aba90e15e95a77d1d".to_string(),
+                "eb51f76124a113a2686d550b459e64248bfe364c280de44364010acf99ba6492".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(1_000u128 + 2_099u128 /*7 * 9_000u128 / 30*/, "uom"),
+                        pending: coins(10_000u128 - 3_099u128 /*7 * 9_000u128 / 30*/, "uom"),
+                        available_to_claim: coins(10_000u128 - 3_099u128, "uom"),
+                    }
+                );
+            },
+        )
+        .claim(
+            alice,
+            2,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "301f69b76517f75653649c2d61206c8a8ad885f6733b3a3abe9f3ebfbcf3cb03".to_string(),
+                "68c3150317d0d7fa222307b6f3fac98568d6732ad09f363aba90e15e95a77d1d".to_string(),
+                "eb51f76124a113a2686d550b459e64248bfe364c280de44364010acf99ba6492".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(
+            2,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "301f69b76517f75653649c2d61206c8a8ad885f6733b3a3abe9f3ebfbcf3cb03".to_string(),
+                "68c3150317d0d7fa222307b6f3fac98568d6732ad09f363aba90e15e95a77d1d".to_string(),
+                "eb51f76124a113a2686d550b459e64248bfe364c280de44364010acf99ba6492".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(10_000u128, "uom"),
+                        pending: vec![],
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        )
+        .query_campaigns(Some(CampaignFilter::CampaignId(2)), None, None, {
+            |result| {
+                let response = result.unwrap();
+                assert_eq!(response.campaigns.len(), 1);
+                assert_eq!(response.campaigns[0].claimed, coin(10_000u128, "uom"));
+            }
+        });
+
+    // move the remaining of the year - 1 day, 341 - 30 - 1 days
+    for _ in 0..334 {
+        suite.add_day();
+    }
+
+    suite.claim(
+        alice,
+        1,
+        Uint128::new(10_000u128),
+        None,
+        vec![
+            "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+            "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+            "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+        ],
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::CliffPeriodNotPassed { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::CliffPeriodNotPassed"),
+            }
+        },
+    );
+
+    // add another day, total days passed 365, ready to claim some
+    suite.add_day();
+
+    suite.claim(
+        alice,
+        1,
+        Uint128::new(10_000u128),
+        None,
+        vec![
+            "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+            "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+            "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+        ],
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
+            |result| {
+                println!("{:?}", result);
+                assert_eq!(
+                    result.unwrap().campaigns[0].claimed,
+                    coin(10_000 / 4, "uom")
+                );
+            }
+        })
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(10_000 / 4, "uom"),
+                        pending: coins(10_000u128 - (10_000 / 4), "uom"),
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        );
+
+    // advance another year
+    for _ in 0..365 {
+        suite.add_day();
+    }
+
+    suite
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
+            |result| {
+                println!("{:?}", result);
+                assert_eq!(
+                    result.unwrap().campaigns[0].claimed,
+                    coin((10_000 / 4) * 2, "uom")
+                );
+            }
+        });
+
+    // advance two more years, so the vesting period should be over
+    for _ in 0..730 {
+        suite.add_day();
+    }
+
+    suite
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins((10_000 / 4) * 2, "uom"),
+                        pending: coins(10_000u128 - ((10_000 / 4) * 2), "uom"),
+                        available_to_claim: coins((10_000 / 4) * 2, "uom"),
+                    }
+                );
+            },
+        )
+        .claim(
+            alice,
+            1,
+            Uint128::new(10_000u128),
+            None,
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+
+                println!(">>>>> add a week and claim");
+            },
+        )
+        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
+            |result| {
+                println!("{:?}", result);
+                assert_eq!(
+                    result.unwrap().campaigns[0].claimed,
+                    coin(10_000u128, "uom")
+                );
+            }
+        })
+        .query_rewards(
+            1,
+            Uint128::new(10_000u128),
+            alice.to_string(),
+            vec![
+                "0fc46dd4b310f23d1020155ba0af2ec432fc7c8d2054dead064b1770ce2a1aee".to_string(),
+                "4d30e2a708ec3a01d5fd01118a9fbb22d4f487e0ca11410c24313dfe738d1263".to_string(),
+                "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap(),
+                    RewardsResponse {
+                        claimed: coins(10_000u128, "uom"),
+                        pending: vec![],
+                        available_to_claim: vec![],
+                    }
+                );
+            },
+        );
 }
 
 #[test]

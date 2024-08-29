@@ -78,6 +78,9 @@ pub enum ContractError {
 
     #[error("There's nothing to claim for the given address")]
     NothingToClaim,
+
+    #[error("The cliff period has not passed yet")]
+    CliffPeriodNotPassed,
 }
 
 impl From<semver::Error> for ContractError {

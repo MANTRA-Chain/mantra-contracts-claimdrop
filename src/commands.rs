@@ -109,7 +109,6 @@ pub(crate) fn claim(
     total_claimable_amount: Uint128,
     receiver: Option<String>,
     proof: Vec<String>,
-    //todo make receiver optional so we can make a contract/gas station pay for the fees
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
