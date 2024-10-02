@@ -63,13 +63,8 @@ pub enum ContractError {
     #[error("Campaign error: {reason}, cannot claim")]
     CampaignError { reason: String },
 
-    #[error(
-        "Invalid distribution order, current start: {current_start}, previous end: {previous_end}"
-    )]
-    InvalidDistributionOrder {
-        current_start: u64,
-        previous_end: u64,
-    },
+    #[error("Invalid distribution times, start time: {start_time}, end time: {end_time}")]
+    InvalidDistributionTimes { start_time: u64, end_time: u64 },
 
     #[error(
         "Overlapping distributions, check the start_time and end_time of the distribution types"

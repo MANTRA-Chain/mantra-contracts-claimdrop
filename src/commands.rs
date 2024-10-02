@@ -122,9 +122,9 @@ pub(crate) fn claim(
     );
 
     ensure!(
-        !campaign.is_closed(),
+        campaign.has_funds_available(),
         ContractError::CampaignError {
-            reason: "no funds available".to_string()
+            reason: "no funds available to claim".to_string()
         }
     );
 
