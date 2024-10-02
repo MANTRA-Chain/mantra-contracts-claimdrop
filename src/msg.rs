@@ -161,12 +161,12 @@ impl Campaign {
 
     /// Checks if the campaign has ended
     pub fn has_ended(&self, current_time: &Timestamp) -> bool {
-        current_time.seconds() >= self.end_time || self.is_closed()
+        current_time.seconds() >= self.end_time
     }
 
-    /// Checks if the campaign has been closed. When a
-    pub fn is_closed(&self) -> bool {
-        self.claimed.amount == self.reward_asset.amount
+    /// Checks if the campaign has funds available
+    pub fn has_funds_available(&self) -> bool {
+        self.claimed.amount < self.reward_asset.amount
     }
 
     /// Checks if the campaign has ended
@@ -291,10 +291,11 @@ impl CampaignParams {
         let mut end_times = vec![];
 
         ensure!(
-            !self.distribution_type.is_empty(),
+            !self.distribution_type.is_empty() && self.distribution_type.len() <= 2,
             ContractError::InvalidCampaignParam {
                 param: "distribution_type".to_string(),
-                reason: "cannot be empty".to_string(),
+                reason: "invalid number of distribution types, should be at least 1, maximum 2"
+                    .to_string(),
             }
         );
 
@@ -324,21 +325,14 @@ impl CampaignParams {
             );
 
             total_percentage = total_percentage.checked_add(*percentage)?;
-            //
-            // if !start_times.is_empty() {
-            //     let current_distribution_type = dist.as_str();
-            //
-            //     let last_distribution_type = match &end_times.last().unwrap() {
-            //         DistributionType::LinearVesting => "LinearVesting",
-            //         DistributionType::LumpSum => "LumpSum",
-            //         DistributionType::PeriodicVesting => "PeriodicVesting",
-            //     };
-            //
-            //     ensure!(
-            //     current_distribution_type != last_distribution_type,
-            //     ContractError::OverlappingDistributions
-            // );
-            // }
+
+            ensure!(
+                end_time > start_time,
+                ContractError::InvalidDistributionTimes {
+                    start_time: *start_time,
+                    end_time: *end_time,
+                }
+            );
 
             start_times.push(start_time);
             end_times.push(*end_time);

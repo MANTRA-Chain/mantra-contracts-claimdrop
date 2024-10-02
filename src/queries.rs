@@ -55,7 +55,7 @@ pub(crate) fn query_rewards(
         claimed.push(coin(total_claimed.u128(), &campaign.reward_asset.denom));
     }
 
-    if !campaign.is_closed() {
+    if campaign.has_funds_available() {
         let pending_rewards = coin(
             total_claimable_amount.saturating_sub(total_claimed).u128(),
             &campaign.reward_asset.denom,
