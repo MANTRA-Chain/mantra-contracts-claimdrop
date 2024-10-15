@@ -5,7 +5,7 @@ use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
 use crate::state::{
     get_campaign_by_id, get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS,
-    CAMPAIGN_COUNT, CLAIMS,
+    CLAIMS,
 };
 
 /// Manages a campaign
@@ -31,12 +31,6 @@ fn create_campaign(
     info: MessageInfo,
     campaign_params: CampaignParams,
 ) -> Result<Response, ContractError> {
-    let campaign_id = CAMPAIGN_COUNT
-        .may_load(deps.storage)?
-        .unwrap_or_default()
-        .checked_add(1u64)
-        .ok_or(ContractError::Overflow)?;
-
     helpers::validate_campaign_params(env.block.time, &info, &campaign_params)?;
 
     let owner = campaign_params
@@ -46,9 +40,23 @@ fn create_campaign(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
-    let campaign = Campaign::from_params(campaign_params, campaign_id, owner);
+    let campaign_id = helpers::compute_campaign_id(
+        &campaign_params.name,
+        &campaign_params.description,
+        &campaign_params.start_time.to_string(),
+        owner.as_str(),
+        &campaign_params.salt,
+    )?;
 
-    CAMPAIGN_COUNT.save(deps.storage, &campaign_id)?;
+    let owner = campaign_params
+        .owner
+        .as_ref()
+        .map(|addr| deps.api.addr_validate(addr))
+        .transpose()?
+        .unwrap_or_else(|| info.sender.clone());
+
+    let campaign = Campaign::from_params(campaign_params, &campaign_id, owner);
+
     CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
 
     //todo potentially end those campaigns that have expired after X months?
@@ -93,18 +101,16 @@ fn topup_campaign(
 fn end_campaign(
     deps: DepsMut,
     info: MessageInfo,
-    campaign_id: u64,
+    campaign_id: String,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
+    let mut campaign = get_campaign_by_id(deps.storage, &campaign_id)?;
 
     ensure!(
         campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
         ContractError::Unauthorized
     );
-
-    //todo grace period to close a campaign once it finishes???
 
     let refund = campaign
         .reward_asset
@@ -123,7 +129,7 @@ fn end_campaign(
     // Set the claimed amount to the total reward amount, so that the campaign is considered finished.
     campaign.claimed = campaign.reward_asset.clone();
 
-    CAMPAIGNS.save(deps.storage, campaign.id, &campaign)?;
+    CAMPAIGNS.save(deps.storage, campaign_id.clone(), &campaign)?;
 
     Ok(Response::default()
         .add_messages(messages)
@@ -137,14 +143,14 @@ pub(crate) fn claim(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    campaign_id: u64,
+    campaign_id: String,
     total_claimable_amount: Uint128,
     receiver: Option<String>,
     proof: Vec<String>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
+    let mut campaign = get_campaign_by_id(deps.storage, &campaign_id)?;
 
     ensure!(
         campaign.has_started(&env.block.time),
@@ -182,7 +188,7 @@ pub(crate) fn claim(
         ContractError::NothingToClaim
     );
 
-    let previous_claims = get_claims_for_address(deps.as_ref(), campaign_id, &receiver)?;
+    let previous_claims = get_claims_for_address(deps.as_ref(), &campaign_id, &receiver)?;
 
     println!("new_claims: {:?}", new_claims);
     println!("previous_claims: {:?}", previous_claims);
@@ -201,20 +207,20 @@ pub(crate) fn claim(
         ContractError::ExceededMaxClaimAmount
     );
 
-    CAMPAIGNS.save(deps.storage, campaign.id, &campaign)?;
+    CAMPAIGNS.save(deps.storage, campaign.id.clone(), &campaign)?;
     CLAIMS.save(
         deps.storage,
-        (receiver.to_string(), campaign.id),
+        (receiver.to_string(), campaign.id.clone()),
         &updated_claims,
     )?;
 
-    let x = get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &receiver)?;
-    println!("total claims for user: {:?}", x);
+    //let x = get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?;
+    //println!("total claims for user: {:?}", x);
 
     // final sanity check to make sure the address can't claim more than the total amount it's entitled to
     ensure!(
         total_claimable_amount
-            >= get_total_claims_amount_for_address(deps.as_ref(), campaign.id, &receiver)?,
+            >= get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?,
         ContractError::ExceededMaxClaimAmount
     );
 

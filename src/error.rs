@@ -46,7 +46,7 @@ pub enum ContractError {
     InvalidCampaignParam { param: String, reason: String },
 
     #[error("Campaign with id {campaign_id} not found")]
-    CampaignNotFound { campaign_id: u64 },
+    CampaignNotFound { campaign_id: String },
 
     #[error("The address have already claimed the given campaign")]
     Claimed,

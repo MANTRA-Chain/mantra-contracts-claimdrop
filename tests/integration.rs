@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::str::FromStr;
 
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
@@ -37,6 +38,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "".to_string(),
                     name: "".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -65,6 +67,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         CampaignAction::CreateCampaign {
             params: CampaignParams {
                 owner: None,
+                salt: "".to_string(),
                 name: "Test Airdrop I".to_string(),
                 description: "".to_string(),
                 reward_asset: coin(100_000, "uom"),
@@ -94,6 +97,37 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "".to_string(),
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(5_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                        end_time: current_time.seconds() + 172_800,
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidRewardAmount"),
+                }
+            },
+        ).manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(5_000, "uom"),
@@ -113,8 +147,8 @@ fn create_campaign_and_claim_single_distribution_type() {
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::InvalidRewardAmount { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::InvalidRewardAmount"),
+                    ContractError::InvalidCampaignParam { param, .. } => { assert_eq!(param, "salt"); }
+                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
                 }
             },
         )
@@ -123,6 +157,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -152,6 +187,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -181,6 +217,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -210,6 +247,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -235,6 +273,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -264,6 +303,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -294,6 +334,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -323,6 +364,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -352,6 +394,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -381,6 +424,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -410,6 +454,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -438,6 +483,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -466,6 +512,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "gm7ki1rn5wo4x5105j8uclbh99s9db7v".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -495,7 +542,7 @@ fn create_campaign_and_claim_single_distribution_type() {
     // claim
     suite.claim(
         alice,
-        1,
+        "1",
         Uint128::new(20_000u128),
         None,
         vec![
@@ -519,7 +566,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         .claim(
             alice,
             // trying to claim a campaign that doesn't exist
-            2,
+            "2",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -537,7 +584,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         )
         .claim(
             alice,
-            1,
+            "1",
             // pretending to be entitled to more tokens than the campaign has to offer for this user
             Uint128::new(20_000u128),
             None,
@@ -557,7 +604,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         )
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             // provide wrong proofs
@@ -576,7 +623,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         )
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             // try claiming for someone else, with the wrong proofs
             Some(bob.to_string()),
@@ -603,7 +650,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         // bob claims for alice
         .claim(
             bob,
-            1,
+            "1",
             Uint128::new(10_000u128),
             Some(alice.to_string()),
             vec![
@@ -623,7 +670,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         })
         .claim(
             bob,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec!["267bf7a7b8f52ece6b04cbddf77c0d0bbc1fc0544e8f68923f95fdd7b9121316".to_string()],
@@ -652,7 +699,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         })
         .claim(
             carol,
-            1,
+            "1",
             Uint128::new(20_000u128),
             None,
             vec![
@@ -689,6 +736,7 @@ fn claim_ended_campaign() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -721,7 +769,7 @@ fn claim_ended_campaign() {
         .add_day()
         .claim(
             bob,
-            1,
+            "1",
             Uint128::new(10_000u128),
             Some(alice.to_string()),
             vec![
@@ -735,7 +783,7 @@ fn claim_ended_campaign() {
         )
         .claim(
             bob,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec!["267bf7a7b8f52ece6b04cbddf77c0d0bbc1fc0544e8f68923f95fdd7b9121316".to_string()],
@@ -754,7 +802,9 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // bob tries to end the campaign
             bob,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &vec![coin(100_000, "uom")],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -767,7 +817,9 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // bob tries to end the campaign
             bob,
-            CampaignAction::EndCampaign { campaign_id: 2 },
+            CampaignAction::EndCampaign {
+                campaign_id: "2".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -780,7 +832,9 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // bob tries to end the campaign
             bob,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -805,7 +859,9 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // alice should be able to, since she is the owner of the contract
             alice,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -832,7 +888,7 @@ fn claim_ended_campaign() {
     // now carol tries to claim but it's too late
     suite.claim(
         carol,
-        1,
+        "1",
         Uint128::new(20_000u128),
         None,
         vec![
@@ -867,6 +923,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         CampaignAction::CreateCampaign {
             params: CampaignParams {
                 owner: None,
+                salt: "".to_string(),
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
                 reward_asset: coin(100_000, "uom"),
@@ -901,7 +958,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
     suite
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -924,7 +981,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             }
         })
         .query_rewards(
-            1,
+            "1",
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -945,7 +1002,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         )
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -967,7 +1024,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         .add_week()
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -983,7 +1040,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         )
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1007,7 +1064,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         .add_day()
         .add_day()
         .query_rewards(
-            1,
+            "1",
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1028,7 +1085,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         )
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1045,7 +1102,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             },
         )
         .query_rewards(
-            1,
+            "1",
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1068,7 +1125,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         .add_week()
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1084,7 +1141,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         .add_day()
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1107,7 +1164,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             }
         })
         .query_rewards(
-            1,
+            "1",
             Uint128::new(35_000u128),
             dan.to_string(),
             vec![
@@ -1128,7 +1185,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         )
         .claim(
             dan,
-            1,
+            "1",
             Uint128::new(35_000u128),
             None,
             vec![
@@ -1142,7 +1199,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             },
         )
         .query_rewards(
-            1,
+            "1",
             Uint128::new(35_000u128),
             dan.to_string(),
             vec![
@@ -1180,6 +1237,8 @@ fn claim_campaigns_with_cliff() {
 
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
+    let campaign_id_1 = RefCell::new("".to_string());
+    let campaign_id_2 = RefCell::new("".to_string());
 
     suite
         .instantiate_airdrop_manager(None)
@@ -1188,6 +1247,7 @@ fn claim_campaigns_with_cliff() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "zkzv117igbvuwqk12a68kx2zj823v7rg".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -1208,11 +1268,15 @@ fn claim_campaigns_with_cliff() {
                 result.unwrap();
             },
         )
+        .query_campaigns(None, None, None, |result| {
+            *campaign_id_1.borrow_mut() = result.unwrap().campaigns[0].id.clone();
+        })
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "zkzv117igbvuwqk12a68kx2zj823v7rg".to_string(),
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -1239,12 +1303,20 @@ fn claim_campaigns_with_cliff() {
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
-        );
+        )
+        .query_campaigns(None, None, None, |result| {
+            let campaigns = result.unwrap().campaigns;
+            let filtered_campaigns: Vec<_> = campaigns
+                .into_iter()
+                .filter(|c| c.id != *campaign_id_1.borrow())
+                .collect();
+            *campaign_id_2.borrow_mut() = filtered_campaigns[0].id.clone();
+        });
 
     suite
         .claim(
             alice,
-            1,
+            &campaign_id_1.borrow(),
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1253,6 +1325,7 @@ fn claim_campaigns_with_cliff() {
                 "af892079af91afa431d8ddadfbc73904876513ed6eb5bcb967e615c178900ccd".to_string(),
             ],
             |result: Result<AppResponse, anyhow::Error>| {
+                println!("{:?}", result);
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
                     ContractError::CliffPeriodNotPassed { .. } => {}
@@ -1264,7 +1337,7 @@ fn claim_campaigns_with_cliff() {
         )
         .claim(
             alice,
-            2,
+            &campaign_id_2.borrow(),
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1292,7 +1365,7 @@ fn claim_campaigns_with_cliff() {
     suite
         .claim(
             alice,
-            2,
+            &campaign_id_2.borrow(),
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1305,7 +1378,7 @@ fn claim_campaigns_with_cliff() {
             },
         )
         .query_rewards(
-            2,
+            &campaign_id_2.borrow(),
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1332,7 +1405,7 @@ fn claim_campaigns_with_cliff() {
 
     suite
         .query_rewards(
-            2,
+            &campaign_id_2.borrow(),
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1353,7 +1426,7 @@ fn claim_campaigns_with_cliff() {
         )
         .claim(
             alice,
-            2,
+            &campaign_id_2.borrow(),
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1366,7 +1439,7 @@ fn claim_campaigns_with_cliff() {
             },
         )
         .query_rewards(
-            2,
+            &campaign_id_2.borrow(),
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1385,13 +1458,20 @@ fn claim_campaigns_with_cliff() {
                 );
             },
         )
-        .query_campaigns(Some(CampaignFilter::CampaignId(2)), None, None, {
-            |result| {
-                let response = result.unwrap();
-                assert_eq!(response.campaigns.len(), 1);
-                assert_eq!(response.campaigns[0].claimed, coin(10_000u128, "uom"));
-            }
-        });
+        .query_campaigns(
+            Some(CampaignFilter::CampaignId(
+                campaign_id_2.borrow().to_string(),
+            )),
+            None,
+            None,
+            {
+                |result| {
+                    let response = result.unwrap();
+                    assert_eq!(response.campaigns.len(), 1);
+                    assert_eq!(response.campaigns[0].claimed, coin(10_000u128, "uom"));
+                }
+            },
+        );
 
     // move the remaining of the year - 1 day, 341 - 30 - 1 days
     for _ in 0..334 {
@@ -1400,7 +1480,7 @@ fn claim_campaigns_with_cliff() {
 
     suite.claim(
         alice,
-        1,
+        &campaign_id_1.borrow(),
         Uint128::new(10_000u128),
         None,
         vec![
@@ -1422,7 +1502,7 @@ fn claim_campaigns_with_cliff() {
 
     suite.claim(
         alice,
-        1,
+        &campaign_id_1.borrow(),
         Uint128::new(10_000u128),
         None,
         vec![
@@ -1436,17 +1516,24 @@ fn claim_campaigns_with_cliff() {
     );
 
     suite
-        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
-            |result| {
-                println!("{:?}", result);
-                assert_eq!(
-                    result.unwrap().campaigns[0].claimed,
-                    coin(10_000 / 4, "uom")
-                );
-            }
-        })
+        .query_campaigns(
+            Some(CampaignFilter::CampaignId(
+                campaign_id_1.borrow().to_string(),
+            )),
+            None,
+            None,
+            {
+                |result| {
+                    println!("{:?}", result);
+                    assert_eq!(
+                        result.unwrap().campaigns[0].claimed,
+                        coin(10_000 / 4, "uom")
+                    );
+                }
+            },
+        )
         .query_rewards(
-            1,
+            &campaign_id_1.borrow(),
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1474,7 +1561,7 @@ fn claim_campaigns_with_cliff() {
     suite
         .claim(
             alice,
-            1,
+            &campaign_id_1.borrow(),
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1486,15 +1573,22 @@ fn claim_campaigns_with_cliff() {
                 result.unwrap();
             },
         )
-        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
-            |result| {
-                println!("{:?}", result);
-                assert_eq!(
-                    result.unwrap().campaigns[0].claimed,
-                    coin((10_000 / 4) * 2, "uom")
-                );
-            }
-        });
+        .query_campaigns(
+            Some(CampaignFilter::CampaignId(
+                campaign_id_1.borrow().to_string(),
+            )),
+            None,
+            None,
+            {
+                |result| {
+                    println!("{:?}", result);
+                    assert_eq!(
+                        result.unwrap().campaigns[0].claimed,
+                        coin((10_000 / 4) * 2, "uom")
+                    );
+                }
+            },
+        );
 
     // advance two more years, so the vesting period should be over
     for _ in 0..730 {
@@ -1503,7 +1597,7 @@ fn claim_campaigns_with_cliff() {
 
     suite
         .query_rewards(
-            1,
+            &campaign_id_1.borrow(),
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1524,7 +1618,7 @@ fn claim_campaigns_with_cliff() {
         )
         .claim(
             alice,
-            1,
+            &campaign_id_1.borrow(),
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1538,17 +1632,24 @@ fn claim_campaigns_with_cliff() {
                 println!(">>>>> add a week and claim");
             },
         )
-        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
-            |result| {
-                println!("{:?}", result);
-                assert_eq!(
-                    result.unwrap().campaigns[0].claimed,
-                    coin(10_000u128, "uom")
-                );
-            }
-        })
+        .query_campaigns(
+            Some(CampaignFilter::CampaignId(
+                campaign_id_1.borrow().to_string(),
+            )),
+            None,
+            None,
+            {
+                |result| {
+                    println!("{:?}", result);
+                    assert_eq!(
+                        result.unwrap().campaigns[0].claimed,
+                        coin(10_000u128, "uom")
+                    );
+                }
+            },
+        )
         .query_rewards(
-            1,
+            &campaign_id_1.borrow(),
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1709,6 +1810,7 @@ fn query_rewards() {
         CampaignAction::CreateCampaign {
             params: CampaignParams {
                 owner: None,
+                salt: "".to_string(),
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
                 reward_asset: coin(100_000, "uom"),
@@ -1740,7 +1842,7 @@ fn query_rewards() {
     suite
         .claim(
             alice,
-            1,
+            "1",
             Uint128::new(10_000u128),
             None,
             vec![
@@ -1753,7 +1855,7 @@ fn query_rewards() {
             },
         )
         .query_rewards(
-            1,
+            "1",
             Uint128::new(35_000u128),
             alice.to_string(),
             vec![
@@ -1771,7 +1873,7 @@ fn query_rewards() {
             },
         )
         .query_rewards(
-            1,
+            "1",
             Uint128::new(20_000u128),
             alice.to_string(),
             vec![
@@ -1789,7 +1891,7 @@ fn query_rewards() {
             },
         )
         .query_rewards(
-            1,
+            "1",
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1810,14 +1912,16 @@ fn query_rewards() {
         )
         .manage_campaign(
             alice,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
         )
         .query_rewards(
-            1,
+            "1",
             Uint128::new(10_000u128),
             alice.to_string(),
             vec![
@@ -1854,6 +1958,7 @@ fn end_campaigns() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "".to_string(),
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -1886,6 +1991,7 @@ fn end_campaigns() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "".to_string(),
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(50_000, "uom"),
@@ -1923,7 +2029,9 @@ fn end_campaigns() {
     suite
         .manage_campaign(
             bob,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1935,7 +2043,9 @@ fn end_campaigns() {
         )
         .manage_campaign(
             bob,
-            CampaignAction::EndCampaign { campaign_id: 2 },
+            CampaignAction::EndCampaign {
+                campaign_id: "2".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1947,7 +2057,9 @@ fn end_campaigns() {
         )
         .manage_campaign(
             dan,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &[coin(100_000, "uom")],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1959,7 +2071,9 @@ fn end_campaigns() {
         )
         .manage_campaign(
             dan,
-            CampaignAction::EndCampaign { campaign_id: 1 },
+            CampaignAction::EndCampaign {
+                campaign_id: "1".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1967,7 +2081,9 @@ fn end_campaigns() {
         )
         .manage_campaign(
             alice, //alice can end the campaign since it's the owner of the contract
-            CampaignAction::EndCampaign { campaign_id: 2 },
+            CampaignAction::EndCampaign {
+                campaign_id: "2".to_string(),
+            },
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1991,6 +2107,7 @@ fn query_campaigns() {
             CampaignAction::CreateCampaign {
                 params: CampaignParams {
                     owner: None,
+                    salt: "".to_string(),
                     name: format!("Test Airdrop {i}"),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
@@ -2033,47 +2150,56 @@ fn query_campaigns() {
                 }
             },
         )
-        .query_campaigns(Some(CampaignFilter::CampaignId(1)), None, None, {
-            |result| {
-                let response = result.unwrap();
+        .query_campaigns(
+            Some(CampaignFilter::CampaignId("1".to_string())),
+            None,
+            None,
+            {
+                |result| {
+                    let response = result.unwrap();
 
-                assert_eq!(response.campaigns.len(), 1);
-                assert_eq!(response.campaigns[0].name, "Test Airdrop 0");
-            }
-        })
-        .query_campaigns(Some(CampaignFilter::CampaignId(80)), None, None, {
-            |result| {
-                let response = result.unwrap();
+                    assert_eq!(response.campaigns.len(), 1);
+                    assert_eq!(response.campaigns[0].name, "Test Airdrop 0");
+                }
+            },
+        )
+        .query_campaigns(
+            Some(CampaignFilter::CampaignId("80".to_string())),
+            None,
+            None,
+            {
+                |result| {
+                    let response = result.unwrap();
 
-                assert_eq!(response.campaigns.len(), 1);
-                assert_eq!(response.campaigns[0].name, "Test Airdrop 79");
-            }
-        })
-        .query_campaigns(Some(CampaignFilter::Owner(dan.to_string())), None, None, {
+                    assert_eq!(response.campaigns.len(), 1);
+                    assert_eq!(response.campaigns[0].name, "Test Airdrop 79");
+                }
+            },
+        )
+        .query_campaigns(
+            Some(CampaignFilter::Owner(dan.to_string())),
+            None,
+            None,
             |result| {
                 let response = result.unwrap();
 
                 assert_eq!(response.campaigns.len(), 50);
-                assert_eq!(response.campaigns.last().unwrap().id, 51);
-                assert_eq!(response.campaigns.first().unwrap().id, 100);
-            }
-        })
-        .query_campaigns(None, Some(20), None, {
-            |result| {
-                let response = result.unwrap();
+                assert_eq!(response.campaigns.last().unwrap().id, "51".to_string());
+                assert_eq!(response.campaigns.first().unwrap().id, "100".to_string());
+            },
+        )
+        .query_campaigns(None, Some("20".to_string()), None, |result| {
+            let response = result.unwrap();
 
-                assert_eq!(response.campaigns.len(), 10);
-                assert_eq!(response.campaigns.first().unwrap().id, 100);
-                assert_eq!(response.campaigns.last().unwrap().id, 91);
-            }
+            assert_eq!(response.campaigns.len(), 10);
+            assert_eq!(response.campaigns.first().unwrap().id, "100".to_string());
+            assert_eq!(response.campaigns.first().unwrap().id, "91".to_string());
         })
-        .query_campaigns(None, Some(20u64), Some(30u8), {
-            |result| {
-                let response = result.unwrap();
+        .query_campaigns(None, Some("20".to_string()), Some(30u8), |result| {
+            let response = result.unwrap();
 
-                assert_eq!(response.campaigns.len(), 30);
-                assert_eq!(response.campaigns.first().unwrap().id, 100);
-                assert_eq!(response.campaigns.last().unwrap().id, 71);
-            }
+            assert_eq!(response.campaigns.len(), 30);
+            assert_eq!(response.campaigns.first().unwrap().id, "100".to_string());
+            assert_eq!(response.campaigns.first().unwrap().id, "71".to_string());
         });
 }
