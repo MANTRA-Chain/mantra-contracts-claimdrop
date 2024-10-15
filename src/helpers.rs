@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
 use crate::state::{get_claims_for_address, Claim, DistributionSlot};
 
-/// Validates the campaign parameters
+/// Validates the provided campaign parameters are valid.
 pub(crate) fn validate_campaign_params(
     current_time: Timestamp,
     info: &MessageInfo,
@@ -18,7 +18,6 @@ pub(crate) fn validate_campaign_params(
     campaign_params.validate_campaign_distribution(current_time)?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_cliff_duration()?;
-    campaign_params.validate_salt()?;
 
     let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
     ensure!(
@@ -33,7 +32,7 @@ pub(crate) fn validate_campaign_params(
 }
 
 /// Validates the merkle root, i.e. checks if it is a valid SHA-256 hash
-pub(crate) fn validate_merkle_root(merkle_root: &String) -> Result<[u8; 32], ContractError> {
+pub(crate) fn validate_merkle_root(merkle_root: &str) -> Result<[u8; 32], ContractError> {
     let mut merkle_root_buf: [u8; 32] = [0; 32];
     hex::decode_to_slice(merkle_root, &mut merkle_root_buf)?;
 
@@ -41,12 +40,13 @@ pub(crate) fn validate_merkle_root(merkle_root: &String) -> Result<[u8; 32], Con
 }
 
 pub(crate) fn validate_claim(
-    campaign: &Campaign,
+    contract_addr: &Addr,
     sender: &Addr,
     amount: Uint128,
     proof: &[String],
+    merkle_root: &str,
 ) -> Result<(), ContractError> {
-    let user_input = format!("{}{}{}", campaign.id, sender, amount);
+    let user_input = format!("{}{}{}", contract_addr, sender, amount);
     let hash = sha2::Sha256::digest(user_input.as_bytes())
         .as_slice()
         .try_into()
@@ -63,7 +63,7 @@ pub(crate) fn validate_claim(
             .map_err(|_| ContractError::WrongHashLength {})
     })?;
 
-    let merkle_root_buf = validate_merkle_root(&campaign.merkle_root)?;
+    let merkle_root_buf = validate_merkle_root(merkle_root)?;
 
     ensure!(
         merkle_root_buf == hash,
@@ -96,7 +96,7 @@ pub(crate) fn compute_claimable_amount(
             );
         }
 
-        let previous_claims_for_address = get_claims_for_address(deps, &campaign.id, address)?;
+        let previous_claims_for_address = get_claims_for_address(deps, address)?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()

@@ -4,8 +4,7 @@ use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
 use crate::state::{
-    get_campaign_by_id, get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGNS,
-    CLAIMS,
+    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGN, CLAIMS,
 };
 
 /// Manages a campaign
@@ -16,11 +15,9 @@ pub(crate) fn manage_campaign(
     campaign_action: CampaignAction,
 ) -> Result<Response, ContractError> {
     match campaign_action {
-        CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, params),
-        CampaignAction::TopUpCampaign { campaign_id } => {
-            topup_campaign(deps, env, info, &campaign_id)
-        }
-        CampaignAction::EndCampaign { campaign_id } => end_campaign(deps, info, &campaign_id),
+        CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
+        CampaignAction::TopUpCampaign {} => topup_campaign(deps, env, info),
+        CampaignAction::EndCampaign {} => end_campaign(deps, info),
     }
 }
 
@@ -31,6 +28,19 @@ fn create_campaign(
     info: MessageInfo,
     campaign_params: CampaignParams,
 ) -> Result<Response, ContractError> {
+    // only the owner of the contract can create a campaign
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    let campaign = CAMPAIGN.may_load(deps.storage)?;
+
+    // only one campaign at a time is allowed
+    ensure!(
+        campaign.is_none(),
+        ContractError::CampaignError {
+            reason: "existing campaign".to_string()
+        }
+    );
+
     helpers::validate_campaign_params(env.block.time, &info, &campaign_params)?;
 
     let owner = campaign_params
@@ -40,24 +50,9 @@ fn create_campaign(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
-    let campaign_id = helpers::compute_campaign_id(
-        &campaign_params.name,
-        &campaign_params.description,
-        &campaign_params.start_time.to_string(),
-        owner.as_str(),
-        &campaign_params.salt,
-    )?;
+    let campaign = Campaign::from_params(campaign_params, owner);
 
-    let owner = campaign_params
-        .owner
-        .as_ref()
-        .map(|addr| deps.api.addr_validate(addr))
-        .transpose()?
-        .unwrap_or_else(|| info.sender.clone());
-
-    let campaign = Campaign::from_params(campaign_params, &campaign_id, owner);
-
-    CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
+    CAMPAIGN.save(deps.storage, &campaign)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "create_campaign".to_string()),
@@ -66,13 +61,8 @@ fn create_campaign(
 }
 
 /// Tops up an existing airdrop campaign.
-fn topup_campaign(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    campaign_id: &str,
-) -> Result<Response, ContractError> {
-    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
+fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    let mut campaign = CAMPAIGN.load(deps.storage)?;
 
     ensure!(campaign.owner == info.sender, ContractError::Unauthorized);
 
@@ -86,7 +76,7 @@ fn topup_campaign(
     let topup = cw_utils::must_pay(&info, &campaign.reward_asset.denom)?;
     campaign.reward_asset.amount = campaign.reward_asset.amount.checked_add(topup)?;
 
-    CAMPAIGNS.save(deps.storage, campaign_id.to_string(), &campaign)?;
+    CAMPAIGN.save(deps.storage, &campaign)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "topup_campaign".to_string()),
@@ -94,16 +84,12 @@ fn topup_campaign(
     ]))
 }
 
-/// Ends an airdrop campaign. Only the owner or the contract admin can end a campaign. The remaining
-/// funds in the campaign are refunded to the owner.
-fn end_campaign(
-    deps: DepsMut,
-    info: MessageInfo,
-    campaign_id: &str,
-) -> Result<Response, ContractError> {
+/// Ends the existing airdrop campaign. Only the owner or the contract admin can end the campaign.
+/// The remaining funds in the campaign are refunded to the owner.
+fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
+    let campaign = CAMPAIGN.load(deps.storage)?;
 
     ensure!(
         campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
@@ -124,16 +110,13 @@ fn end_campaign(
         });
     }
 
-    // Set the claimed amount to the total reward amount, so that the campaign is considered finished.
-    campaign.claimed = campaign.reward_asset.clone();
-
-    CAMPAIGNS.save(deps.storage, campaign_id.to_string(), &campaign)?;
+    CAMPAIGN.remove(deps.storage);
 
     Ok(Response::default()
         .add_messages(messages)
         .add_attributes(vec![
             ("action", "end_campaign".to_string()),
-            ("campaign_id", campaign_id.to_string()),
+            ("campaign", campaign.to_string()),
         ]))
 }
 
@@ -141,14 +124,13 @@ pub(crate) fn claim(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    campaign_id: String,
     total_claimable_amount: Uint128,
     receiver: Option<String>,
     proof: Vec<String>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = get_campaign_by_id(deps.storage, &campaign_id)?;
+    let mut campaign = CAMPAIGN.load(deps.storage)?;
 
     ensure!(
         campaign.has_started(&env.block.time),
@@ -169,7 +151,13 @@ pub(crate) fn claim(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
-    helpers::validate_claim(&campaign, &receiver, total_claimable_amount, &proof)?;
+    helpers::validate_claim(
+        &env.contract.address,
+        &receiver,
+        total_claimable_amount,
+        &proof,
+        &campaign.merkle_root,
+    )?;
 
     let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
         deps.as_ref(),
@@ -186,7 +174,8 @@ pub(crate) fn claim(
         ContractError::NothingToClaim
     );
 
-    let previous_claims = get_claims_for_address(deps.as_ref(), &campaign_id, &receiver)?;
+    // let previous_claims = get_claims_for_address(deps.as_ref(), &campaign_id, &receiver)?;
+    let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
 
     println!("new_claims: {:?}", new_claims);
     println!("previous_claims: {:?}", previous_claims);
@@ -205,20 +194,29 @@ pub(crate) fn claim(
         ContractError::ExceededMaxClaimAmount
     );
 
-    CAMPAIGNS.save(deps.storage, campaign.id.clone(), &campaign)?;
-    CLAIMS.save(
-        deps.storage,
-        (receiver.to_string(), campaign.id.clone()),
-        &updated_claims,
-    )?;
+    CAMPAIGN.save(deps.storage, &campaign)?;
+
+    // CLAIMS.save(
+    //     deps.storage,
+    //     (receiver.to_string(), campaign.id.clone()),
+    //     &updated_claims,
+    // )?;
+
+    CLAIMS.save(deps.storage, receiver.to_string(), &updated_claims)?;
 
     //let x = get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?;
     //println!("total claims for user: {:?}", x);
 
     // final sanity check to make sure the address can't claim more than the total amount it's entitled to
+    // ensure!(
+    //     total_claimable_amount
+    //         >= get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?,
+    //     ContractError::ExceededMaxClaimAmount
+    // );
+
     ensure!(
         total_claimable_amount
-            >= get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?,
+            >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,
         ContractError::ExceededMaxClaimAmount
     );
 
@@ -229,7 +227,6 @@ pub(crate) fn claim(
         })
         .add_attributes(vec![
             ("action", "claim".to_string()),
-            ("campaign_id", campaign_id.to_string()),
             ("receiver", receiver.to_string()),
             ("claimed_amount", claimable_amount.to_string()),
         ]))

@@ -243,7 +243,7 @@ impl TestingSuite {
         result: impl Fn(StdResult<CampaignsResponse>),
     ) -> &mut Self {
         self.query_contract(
-            QueryMsg::Campaigns {
+            QueryMsg::Campaign {
                 filter_by,
                 start_after,
                 limit,
