@@ -1570,6 +1570,131 @@ fn claim_campaigns_with_cliff() {
 }
 
 #[test]
+fn topup_campaigns_with_cliff() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_airdrop_manager(None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop without cliff".to_string(),
+                    // it will be 100_000 in total after topping up
+                    reward_asset: coin(10_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(1460).seconds(), // 4 years
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(1460).seconds(),
+                    merkle_root: "3bbbd2c479fc54a483b3417a25417d2b71dc11a60b32d014ccfaccc8d878ce60"
+                        .to_string(),
+                },
+            },
+            &coins(10_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop II".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    // it will be 100_000 in total after topping up
+                    reward_asset: coin(10_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(10),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(30).seconds(), // 1 month
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(90),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(30).seconds(), // 1 month
+                        },
+                    ],
+                    cliff_duration: Some(86_400 * 7), // 7 days cliff
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(30).seconds(),
+                    merkle_root: "158f7d8f16fb97d0cdc2e04abb304035dc94dff5b9adcb45930539302367e9da"
+                        .to_string(),
+                },
+            },
+            &coins(10_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite.query_campaigns(None, None, None, {
+        |result| {
+            let response = result.unwrap();
+            assert_eq!(response.campaigns.len(), 2);
+
+            assert_eq!(response.campaigns[0].id, 2);
+            assert_eq!(response.campaigns[0].reward_asset, coin(10_000, "uom"));
+        }
+    });
+
+    for _ in 0..7 {
+        suite.add_day();
+    }
+
+    // topup campaign
+
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::TopUpCampaign { campaign_id: 2 },
+            &coins(90_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaigns(Some(CampaignFilter::CampaignId(2)), None, None, {
+            |result| {
+                let response = result.unwrap();
+                assert_eq!(response.campaigns[0].reward_asset, coin(100_000, "uom"));
+            }
+        });
+
+    // go to the time when the campaign already finished. Should fail topping up
+    for _ in 0..23 {
+        suite.add_day();
+    }
+
+    suite.manage_campaign(
+        alice,
+        CampaignAction::TopUpCampaign { campaign_id: 2 },
+        &coins(90_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::CampaignError { reason } => {
+                    assert_eq!(reason, "campaign has ended");
+                }
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        },
+    );
+}
+
+#[test]
 fn query_rewards() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),

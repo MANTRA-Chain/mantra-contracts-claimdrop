@@ -221,6 +221,7 @@ fn get_compensation_for_rounding_errors(
     previous_claims_for_address: HashMap<DistributionSlot, Claim>,
     new_claims: &HashMap<DistributionSlot, Claim>,
 ) -> Result<(Uint128, DistributionSlot), ContractError> {
+    //todo check this, in case the campaign is topped up, does it make sense? shall we prevent the user to topup a campaign after it's ended?
     if campaign.has_ended(current_time) {
         let updated_claims = aggregate_claims(&previous_claims_for_address, new_claims)?;
 

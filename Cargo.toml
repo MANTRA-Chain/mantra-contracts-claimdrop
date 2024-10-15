@@ -1,6 +1,6 @@
 [package]
 name = "airdrop-manager"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Javier C <javier.m.costa@mantra.finance>"]
 edition = "2021"
 
