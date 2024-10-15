@@ -90,6 +90,11 @@ pub enum CampaignAction {
         /// The parameters to create a campaign with
         params: CampaignParams,
     },
+    /// Tops up an existing campaign
+    TopUpCampaign {
+        /// The campaign id to top up
+        campaign_id: u64,
+    },
     /// Ends a campaign
     EndCampaign {
         /// The campaign id to end
@@ -183,7 +188,6 @@ pub struct CampaignParams {
     pub name: String,
     /// The campaign description
     pub description: String,
-    //todo vector of coins? what about cw20 tokens?
     /// The asset to be distributed as reward by the campaign
     pub reward_asset: Coin,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
