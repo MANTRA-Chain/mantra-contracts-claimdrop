@@ -18,6 +18,7 @@ pub(crate) fn validate_campaign_params(
     campaign_params.validate_campaign_distribution(current_time)?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_cliff_duration()?;
+    campaign_params.validate_salt()?;
 
     let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
     ensure!(
@@ -95,7 +96,7 @@ pub(crate) fn compute_claimable_amount(
             );
         }
 
-        let previous_claims_for_address = get_claims_for_address(deps, campaign.id, address)?;
+        let previous_claims_for_address = get_claims_for_address(deps, &campaign.id, address)?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()
@@ -266,6 +267,25 @@ pub fn aggregate_claims(
         updated_claims.insert(*slot, (total_claimed_for_distribution_slot, new_timestamp));
     }
     Ok(updated_claims)
+}
+
+/// Computes the campaign ID based on the campaign name, description, owner and salt.
+pub fn compute_campaign_id(
+    campaign_name: &str,
+    campaign_description: &str,
+    start_time: &str,
+    owner: &str,
+    salt: &str,
+) -> Result<String, ContractError> {
+    let input = format!("{campaign_name}{campaign_description}{start_time}{owner}{salt}");
+    let hash: [u8; 32] = sha2::Sha256::digest(input.as_bytes())
+        .as_slice()
+        .try_into()
+        .map_err(|_| ContractError::WrongHashLength)?;
+
+    let campaign_id = hex::encode(hash);
+
+    Ok(campaign_id)
 }
 
 // todo move this to mantra-std in the future

@@ -11,7 +11,7 @@ use crate::state::{
 pub(crate) fn query_campaigns(
     deps: Deps,
     campaign_filter: Option<CampaignFilter>,
-    start_from: Option<u64>,
+    start_from: Option<String>,
     limit: Option<u8>,
 ) -> Result<CampaignsResponse, ContractError> {
     //do the same as above but matching if campaign_filter is some
@@ -22,7 +22,7 @@ pub(crate) fn query_campaigns(
                 get_campaigns_by_owner(deps.storage, owner)?
             }
             CampaignFilter::CampaignId(campaign_id) => {
-                vec![get_campaign_by_id(deps.storage, campaign_id)?]
+                vec![get_campaign_by_id(deps.storage, &campaign_id)?]
             }
         }
     } else {
@@ -35,12 +35,12 @@ pub(crate) fn query_campaigns(
 pub(crate) fn query_rewards(
     deps: Deps,
     env: Env,
-    campaign_id: u64,
+    campaign_id: String,
     total_claimable_amount: Uint128,
     receiver: String,
     proof: Vec<String>,
 ) -> Result<RewardsResponse, ContractError> {
-    let campaign = get_campaign_by_id(deps.storage, campaign_id)?;
+    let campaign = get_campaign_by_id(deps.storage, &campaign_id)?;
     let mut available_to_claim = vec![];
     let mut claimed = vec![];
     let mut pending = vec![];
@@ -50,7 +50,7 @@ pub(crate) fn query_rewards(
     println!("current time: {:?}", env.block.time.seconds());
     let receiver = deps.api.addr_validate(&receiver)?;
 
-    let total_claimed = get_total_claims_amount_for_address(deps, campaign_id, &receiver)?;
+    let total_claimed = get_total_claims_amount_for_address(deps, &campaign_id, &receiver)?;
     if total_claimed > Uint128::zero() {
         claimed.push(coin(total_claimed.u128(), &campaign.reward_asset.denom));
     }

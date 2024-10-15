@@ -1,16 +1,13 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{Addr, Deps, Order, StdResult, Storage, Uint128};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Map, MultiIndex};
 
 use crate::error::ContractError;
 use crate::msg::Campaign;
 
-/// The number of campaigns created
-pub const CAMPAIGN_COUNT: Item<u64> = Item::new("campaign_count");
-
 /// Indexed Map of campaigns. The key is the campaign id, the value is the [Campaign].
-pub const CAMPAIGNS: IndexedMap<u64, Campaign, CampaignIndexes> = IndexedMap::new(
+pub const CAMPAIGNS: IndexedMap<String, Campaign, CampaignIndexes> = IndexedMap::new(
     "campaigns",
     CampaignIndexes {
         owner: MultiIndex::new(
@@ -43,16 +40,18 @@ impl<'a> IndexList<Campaign> for CampaignIndexes<'a> {
 pub type Claim = (Uint128, u64);
 pub type DistributionSlot = usize;
 
-pub const CLAIMS: Map<(String, u64), HashMap<DistributionSlot, Claim>> = Map::new("claims");
+pub const CLAIMS: Map<(String, String), HashMap<DistributionSlot, Claim>> = Map::new("claims");
 
 /// Returns a campaign by its id
 pub fn get_campaign_by_id(
     storage: &dyn Storage,
-    campaign_id: u64,
+    campaign_id: &str,
 ) -> Result<Campaign, ContractError> {
     CAMPAIGNS
-        .may_load(storage, campaign_id)?
-        .ok_or(ContractError::CampaignNotFound { campaign_id })
+        .may_load(storage, campaign_id.to_string())?
+        .ok_or(ContractError::CampaignNotFound {
+            campaign_id: campaign_id.to_string(),
+        })
 }
 
 // settings for pagination
@@ -79,7 +78,7 @@ pub fn get_campaigns_by_owner(storage: &dyn Storage, owner: String) -> StdResult
 /// Returns a list of campaigns. Supports pagination with `start_from` and `limit`.
 pub fn get_campaigns(
     storage: &dyn Storage,
-    start_from: Option<u64>,
+    start_from: Option<String>,
     limit: Option<u8>,
 ) -> StdResult<Vec<Campaign>> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
@@ -98,17 +97,17 @@ pub fn get_campaigns(
 /// Returns the claims that an address has made for a campaign
 pub fn get_claims_for_address(
     deps: Deps,
-    campaign_id: u64,
+    campaign_id: &str,
     address: &Addr,
 ) -> Result<HashMap<DistributionSlot, Claim>, ContractError> {
-    let claimed = CLAIMS.may_load(deps.storage, (address.to_string(), campaign_id))?;
+    let claimed = CLAIMS.may_load(deps.storage, (address.to_string(), campaign_id.to_string()))?;
     Ok(claimed.unwrap_or_default())
 }
 
 /// Returns the claims that an address has made for a campaign
 pub fn get_total_claims_amount_for_address(
     deps: Deps,
-    campaign_id: u64,
+    campaign_id: &str,
     address: &Addr,
 ) -> Result<Uint128, ContractError> {
     let claimed = get_claims_for_address(deps, campaign_id, address)?;

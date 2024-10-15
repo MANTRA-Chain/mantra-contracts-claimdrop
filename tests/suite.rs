@@ -188,7 +188,7 @@ impl TestingSuite {
     pub(crate) fn claim(
         &mut self,
         sender: &Addr,
-        campaign_id: u64,
+        campaign_id: &str,
         total_claimable_amount: Uint128,
         receiver: Option<String>,
         proof: Vec<String>,
@@ -197,7 +197,7 @@ impl TestingSuite {
         self.execute_contract(
             sender,
             ExecuteMsg::Claim {
-                campaign_id,
+                campaign_id: campaign_id.to_string(),
                 total_claimable_amount,
                 receiver,
                 proof,
@@ -238,7 +238,7 @@ impl TestingSuite {
     pub(crate) fn query_campaigns(
         &mut self,
         filter_by: Option<CampaignFilter>,
-        start_after: Option<u64>,
+        start_after: Option<String>,
         limit: Option<u8>,
         result: impl Fn(StdResult<CampaignsResponse>),
     ) -> &mut Self {
@@ -255,7 +255,7 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_rewards(
         &mut self,
-        campaign_id: u64,
+        campaign_id: &str,
         total_claimable_amount: Uint128,
         receiver: String,
         proof: Vec<String>,
@@ -263,7 +263,7 @@ impl TestingSuite {
     ) -> &mut Self {
         self.query_contract(
             QueryMsg::Rewards {
-                campaign_id,
+                campaign_id: campaign_id.to_string(),
                 total_claimable_amount,
                 receiver,
                 proof,
