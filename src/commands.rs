@@ -18,9 +18,9 @@ pub(crate) fn manage_campaign(
     match campaign_action {
         CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, params),
         CampaignAction::TopUpCampaign { campaign_id } => {
-            topup_campaign(deps, env, info, campaign_id)
+            topup_campaign(deps, env, info, &campaign_id)
         }
-        CampaignAction::EndCampaign { campaign_id } => end_campaign(deps, info, campaign_id),
+        CampaignAction::EndCampaign { campaign_id } => end_campaign(deps, info, &campaign_id),
     }
 }
 
@@ -59,8 +59,6 @@ fn create_campaign(
 
     CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
 
-    //todo potentially end those campaigns that have expired after X months?
-
     Ok(Response::default().add_attributes(vec![
         ("action", "create_campaign".to_string()),
         ("campaign", campaign.to_string()),
@@ -72,7 +70,7 @@ fn topup_campaign(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    campaign_id: u64,
+    campaign_id: &str,
 ) -> Result<Response, ContractError> {
     let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
 
@@ -88,7 +86,7 @@ fn topup_campaign(
     let topup = cw_utils::must_pay(&info, &campaign.reward_asset.denom)?;
     campaign.reward_asset.amount = campaign.reward_asset.amount.checked_add(topup)?;
 
-    CAMPAIGNS.save(deps.storage, campaign_id, &campaign)?;
+    CAMPAIGNS.save(deps.storage, campaign_id.to_string(), &campaign)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "topup_campaign".to_string()),
@@ -101,11 +99,11 @@ fn topup_campaign(
 fn end_campaign(
     deps: DepsMut,
     info: MessageInfo,
-    campaign_id: String,
+    campaign_id: &str,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = get_campaign_by_id(deps.storage, &campaign_id)?;
+    let mut campaign = get_campaign_by_id(deps.storage, campaign_id)?;
 
     ensure!(
         campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
@@ -129,7 +127,7 @@ fn end_campaign(
     // Set the claimed amount to the total reward amount, so that the campaign is considered finished.
     campaign.claimed = campaign.reward_asset.clone();
 
-    CAMPAIGNS.save(deps.storage, campaign_id.clone(), &campaign)?;
+    CAMPAIGNS.save(deps.storage, campaign_id.to_string(), &campaign)?;
 
     Ok(Response::default()
         .add_messages(messages)

@@ -94,7 +94,7 @@ pub enum CampaignAction {
     /// Tops up an existing campaign
     TopUpCampaign {
         /// The campaign id to top up
-        campaign_id: u64,
+        campaign_id: String,
     },
     /// Ends a campaign
     EndCampaign {
