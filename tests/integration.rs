@@ -5,9 +5,7 @@ use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
 
 use airdrop_manager::error::ContractError;
-use airdrop_manager::msg::{
-    CampaignAction, CampaignFilter, CampaignParams, DistributionType, RewardsResponse,
-};
+use airdrop_manager::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 
 use crate::suite::TestingSuite;
 

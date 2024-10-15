@@ -5,8 +5,7 @@ use cw_multi_test::{
 };
 
 use airdrop_manager::msg::{
-    CampaignAction, CampaignFilter, CampaignsResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
-    RewardsResponse,
+    CampaignAction, CampaignResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
@@ -66,9 +65,6 @@ impl TestingSuite {
         let mut senders = vec![];
         let mut balances = vec![];
 
-        // Generate multiple random addresses
-        //todo this should be extracted to a helper function on mantra-std or something.
-
         let sender0 = "mantra1c758pr6v2zpgdl2rg2enmjedfglxjkac8m7syw";
         let sender1 = "mantra1jg390tyu84e86ntmzhakcst8gmxnelycwsatsq";
         let sender2 = "mantra1eujd63rrvtc02mt08qp7wfnuzhscgs3laxdgkx";
@@ -86,19 +82,6 @@ impl TestingSuite {
         balances.push((Addr::unchecked(sender2), initial_balances.clone()));
         balances.push((Addr::unchecked(sender3), initial_balances.clone()));
         balances.push((Addr::unchecked(sender4), initial_balances.clone()));
-
-        // let hrp = "mantra";
-        // for _ in 0..5 {
-        //     let mut data = [0u8; 20];
-        //     rand::thread_rng().fill(&mut data);
-        //
-        //     let hrp = Hrp::parse("mantra").expect("valid hrp");
-        //     let addr = Addr::unchecked(
-        //         bech32::encode::<Bech32>(hrp, &data).expect("failed to encode string"),
-        //     );
-        //     balances.push((addr.clone(), initial_balances.clone()));
-        //     senders.push(addr);
-        // }
 
         let app = AppBuilder::new()
             .with_wasm(WasmKeeper::default())
@@ -188,7 +171,6 @@ impl TestingSuite {
     pub(crate) fn claim(
         &mut self,
         sender: &Addr,
-        campaign_id: &str,
         total_claimable_amount: Uint128,
         receiver: Option<String>,
         proof: Vec<String>,
@@ -197,7 +179,6 @@ impl TestingSuite {
         self.execute_contract(
             sender,
             ExecuteMsg::Claim {
-                campaign_id: campaign_id.to_string(),
                 total_claimable_amount,
                 receiver,
                 proof,
@@ -237,25 +218,14 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_campaigns(
         &mut self,
-        filter_by: Option<CampaignFilter>,
-        start_after: Option<String>,
-        limit: Option<u8>,
-        result: impl Fn(StdResult<CampaignsResponse>),
+        result: impl Fn(StdResult<CampaignResponse>),
     ) -> &mut Self {
-        self.query_contract(
-            QueryMsg::Campaign {
-                filter_by,
-                start_after,
-                limit,
-            },
-            result,
-        )
+        self.query_contract(QueryMsg::Campaign {}, result)
     }
 
     #[track_caller]
     pub(crate) fn query_rewards(
         &mut self,
-        campaign_id: &str,
         total_claimable_amount: Uint128,
         receiver: String,
         proof: Vec<String>,
@@ -263,7 +233,6 @@ impl TestingSuite {
     ) -> &mut Self {
         self.query_contract(
             QueryMsg::Rewards {
-                campaign_id: campaign_id.to_string(),
                 total_claimable_amount,
                 receiver,
                 proof,

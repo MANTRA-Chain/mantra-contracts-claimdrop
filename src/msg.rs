@@ -46,6 +46,16 @@ pub enum QueryMsg {
         /// A Vector with the necessary proofs for the merkle root verification, hex-encoded.
         proof: Vec<String>,
     },
+    #[returns(ClaimedResponse)]
+    /// Get the total amount of tokens claimed on the campaign.
+    Claimed {
+        /// If provided, it will return the tokens claimed by the specified address.
+        address: Option<String>,
+        /// The address to start querying from. Used for paginating results.
+        start_from: Option<String>,
+        /// The maximum number of items to return. If not set, the default value is used. Used for paginating results.
+        limit: Option<u8>,
+    },
 }
 
 #[cw_serde]
@@ -58,6 +68,13 @@ pub struct RewardsResponse {
     pub claimed: Vec<Coin>,
     pub pending: Vec<Coin>,
     pub available_to_claim: Vec<Coin>,
+}
+
+/// Response to the Claimed query.
+#[cw_serde]
+pub struct ClaimedResponse {
+    /// Contains a vector with a tuple with (address, coin) that have been claimed
+    pub claimed: Vec<(String, Coin)>,
 }
 
 #[cw_serde]

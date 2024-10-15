@@ -3,9 +3,7 @@ use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
-use crate::state::{
-    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGN, CLAIMS,
-};
+use crate::state::{get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGN, CLAIMS};
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -174,7 +172,6 @@ pub(crate) fn claim(
         ContractError::NothingToClaim
     );
 
-    // let previous_claims = get_claims_for_address(deps.as_ref(), &campaign_id, &receiver)?;
     let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
 
     println!("new_claims: {:?}", new_claims);
@@ -215,8 +212,7 @@ pub(crate) fn claim(
     // );
 
     ensure!(
-        total_claimable_amount
-            >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,
+        total_claimable_amount >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,
         ContractError::ExceededMaxClaimAmount
     );
 

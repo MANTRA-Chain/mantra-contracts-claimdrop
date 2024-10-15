@@ -1,9 +1,10 @@
-use cosmwasm_std::{coin, Deps, Env, Uint128};
+use cosmwasm_std::{coin, Coin, Deps, Env, Order, Uint128};
+use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{CampaignResponse, RewardsResponse};
-use crate::state::{get_total_claims_amount_for_address, CAMPAIGN};
+use crate::msg::{CampaignResponse, ClaimedResponse, RewardsResponse};
+use crate::state::{get_total_claims_amount_for_address, CAMPAIGN, CLAIMS};
 
 /// Returns the active airdrop campaign.
 pub(crate) fn query_campaign(deps: Deps) -> Result<CampaignResponse, ContractError> {
@@ -67,4 +68,57 @@ pub(crate) fn query_rewards(
         pending,
         available_to_claim,
     })
+}
+
+// settings for pagination
+pub(crate) const MAX_LIMIT: u8 = 100;
+const DEFAULT_LIMIT: u8 = 20;
+
+pub(crate) fn query_claimed(
+    deps: Deps,
+    address: Option<String>,
+    start_from: Option<String>,
+    limit: Option<u8>,
+) -> Result<ClaimedResponse, ContractError> {
+    let mut claimed = vec![];
+
+    if let Some(address) = address {
+        let address = deps.api.addr_validate(&address)?.to_string();
+        let claims = CLAIMS.may_load(deps.storage, address.clone())?;
+
+        if let Some(claims) = claims {
+            //iterate in hashmap and aggregate amount from claim
+            let total_claimed = claims.iter().fold(Uint128::zero(), |acc, (_, (amount, _))| {
+                acc.checked_add(*amount).unwrap()
+            });
+
+            if total_claimed > Uint128::zero() {
+                let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
+                claimed.push((address, coin(total_claimed.u128(), denom)));
+            }
+        }
+    } else {
+        let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+        let start = start_from.map(Bound::exclusive);
+
+        let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
+
+        CLAIMS.range(deps.storage, start, None, Order::Ascending)
+            .take(limit)
+            .map(|item| {
+                let (address, claims) = item?;
+                //iterate in hashmap and aggregate amount from claim
+                let total_claimed = claims.iter().fold(Uint128::zero(), |acc, (_, (amount, _))| {
+                    acc.checked_add(*amount).unwrap()
+                });
+
+                Ok((address, coin(total_claimed.u128(), denom.clone())))
+            })
+            .collect::<Result<Vec<(String, Coin)>, ContractError>>()?
+            .into_iter()
+            .filter(|(_, coin)| coin.amount > Uint128::zero())
+            .for_each(|claim| claimed.push(claim));
+    }
+
+    Ok(ClaimedResponse { claimed })
 }

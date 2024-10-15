@@ -72,6 +72,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             proof,
         )?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+        QueryMsg::Claimed {
+            address,
+            start_from,
+            limit,
+        } => Ok(to_json_binary(&queries::query_claimed(
+            deps,
+            address,
+            start_from,
+            limit,
+        )?)?),
     }
 }
 
