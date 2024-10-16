@@ -5,7 +5,7 @@ use cw_multi_test::{
 };
 
 use airdrop_manager::msg::{
-    CampaignAction, CampaignFilter, CampaignsResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+    CampaignAction, CampaignResponse, ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
     RewardsResponse,
 };
 
@@ -31,17 +31,17 @@ pub struct TestingSuite {
 // helpers
 impl TestingSuite {
     #[track_caller]
-    pub(crate) fn admin(&mut self) -> Addr {
+    pub fn admin(&mut self) -> Addr {
         self.senders.first().unwrap().clone()
     }
 
     #[track_caller]
-    pub(crate) fn get_time(&mut self) -> Timestamp {
+    pub fn get_time(&mut self) -> Timestamp {
         self.app.block_info().time
     }
 
     #[track_caller]
-    pub(crate) fn add_day(&mut self) -> &mut Self {
+    pub fn add_day(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(1);
         self.app.set_block(block_info);
@@ -50,7 +50,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn add_week(&mut self) -> &mut Self {
+    pub fn add_week(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(7);
         self.app.set_block(block_info);
@@ -65,9 +65,6 @@ impl TestingSuite {
     pub fn default_with_balances(initial_balances: Vec<Coin>) -> Self {
         let mut senders = vec![];
         let mut balances = vec![];
-
-        // Generate multiple random addresses
-        //todo this should be extracted to a helper function on mantra-std or something.
 
         let sender0 = "mantra1c758pr6v2zpgdl2rg2enmjedfglxjkac8m7syw";
         let sender1 = "mantra1jg390tyu84e86ntmzhakcst8gmxnelycwsatsq";
@@ -86,19 +83,6 @@ impl TestingSuite {
         balances.push((Addr::unchecked(sender2), initial_balances.clone()));
         balances.push((Addr::unchecked(sender3), initial_balances.clone()));
         balances.push((Addr::unchecked(sender4), initial_balances.clone()));
-
-        // let hrp = "mantra";
-        // for _ in 0..5 {
-        //     let mut data = [0u8; 20];
-        //     rand::thread_rng().fill(&mut data);
-        //
-        //     let hrp = Hrp::parse("mantra").expect("valid hrp");
-        //     let addr = Addr::unchecked(
-        //         bech32::encode::<Bech32>(hrp, &data).expect("failed to encode string"),
-        //     );
-        //     balances.push((addr.clone(), initial_balances.clone()));
-        //     senders.push(addr);
-        // }
 
         let app = AppBuilder::new()
             .with_wasm(WasmKeeper::default())
@@ -174,7 +158,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn manage_campaign(
+    pub fn manage_campaign(
         &mut self,
         sender: &Addr,
         action: CampaignAction,
@@ -185,22 +169,20 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn claim(
+    pub fn claim(
         &mut self,
         sender: &Addr,
-        campaign_id: &str,
         total_claimable_amount: Uint128,
         receiver: Option<String>,
-        proof: Vec<String>,
+        proof: &[&str],
         result: impl ResultHandler,
     ) -> &mut Self {
         self.execute_contract(
             sender,
             ExecuteMsg::Claim {
-                campaign_id: campaign_id.to_string(),
                 total_claimable_amount,
                 receiver,
-                proof,
+                proof: proof.iter().map(|s| s.to_string()).collect(),
             },
             &[],
             result,
@@ -208,7 +190,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn update_ownership(
+    pub fn update_ownership(
         &mut self,
         sender: &Addr,
         action: cw_ownable::Action,
@@ -235,17 +217,43 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_campaigns(
+    pub fn query_campaign(&mut self, result: impl Fn(StdResult<CampaignResponse>)) -> &mut Self {
+        self.query_contract(QueryMsg::Campaign {}, result)
+    }
+
+    #[track_caller]
+    pub fn query_rewards(
         &mut self,
-        filter_by: Option<CampaignFilter>,
-        start_after: Option<String>,
-        limit: Option<u8>,
-        result: impl Fn(StdResult<CampaignsResponse>),
+        total_claimable_amount: Uint128,
+        receiver: &Addr,
+        proof: &[&str],
+        result: impl Fn(StdResult<RewardsResponse>),
     ) -> &mut Self {
         self.query_contract(
-            QueryMsg::Campaigns {
-                filter_by,
-                start_after,
+            QueryMsg::Rewards {
+                total_claimable_amount,
+                receiver: receiver.to_string(),
+                proof: proof.iter().map(|s| s.to_string()).collect(),
+            },
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub fn query_claimed(
+        &mut self,
+        address: Option<&Addr>,
+        start_from: Option<&Addr>,
+        limit: Option<u8>,
+        result: impl Fn(StdResult<ClaimedResponse>),
+    ) -> &mut Self {
+        let address = address.map(|addr| addr.to_string());
+        let start_from = start_from.map(|addr| addr.to_string());
+
+        self.query_contract(
+            QueryMsg::Claimed {
+                address,
+                start_from,
                 limit,
             },
             result,
@@ -253,27 +261,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_rewards(
-        &mut self,
-        campaign_id: &str,
-        total_claimable_amount: Uint128,
-        receiver: String,
-        proof: Vec<String>,
-        result: impl Fn(StdResult<RewardsResponse>),
-    ) -> &mut Self {
-        self.query_contract(
-            QueryMsg::Rewards {
-                campaign_id: campaign_id.to_string(),
-                total_claimable_amount,
-                receiver,
-                proof,
-            },
-            result,
-        )
-    }
-
-    #[track_caller]
-    pub(crate) fn _query_ownership(
+    pub fn _query_ownership(
         &mut self,
         result: impl Fn(StdResult<cw_ownable::Ownership<String>>),
     ) -> &mut Self {
@@ -281,7 +269,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_balance(
+    pub fn query_balance(
         &mut self,
         denom: &str,
         address: &Addr,

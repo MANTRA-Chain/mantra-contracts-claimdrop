@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
 use crate::state::{get_claims_for_address, Claim, DistributionSlot};
 
-/// Validates the campaign parameters
+/// Validates the provided campaign parameters are valid.
 pub(crate) fn validate_campaign_params(
     current_time: Timestamp,
     info: &MessageInfo,
@@ -15,10 +15,9 @@ pub(crate) fn validate_campaign_params(
 ) -> Result<(), ContractError> {
     campaign_params.validate_campaign_name_description()?;
     validate_merkle_root(&campaign_params.merkle_root)?;
-    campaign_params.validate_campaign_distribution(current_time)?;
     campaign_params.validate_campaign_times(current_time)?;
+    campaign_params.validate_campaign_distribution(current_time)?;
     campaign_params.validate_cliff_duration()?;
-    campaign_params.validate_salt()?;
 
     let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
     ensure!(
@@ -33,7 +32,7 @@ pub(crate) fn validate_campaign_params(
 }
 
 /// Validates the merkle root, i.e. checks if it is a valid SHA-256 hash
-pub(crate) fn validate_merkle_root(merkle_root: &String) -> Result<[u8; 32], ContractError> {
+pub(crate) fn validate_merkle_root(merkle_root: &str) -> Result<[u8; 32], ContractError> {
     let mut merkle_root_buf: [u8; 32] = [0; 32];
     hex::decode_to_slice(merkle_root, &mut merkle_root_buf)?;
 
@@ -41,12 +40,13 @@ pub(crate) fn validate_merkle_root(merkle_root: &String) -> Result<[u8; 32], Con
 }
 
 pub(crate) fn validate_claim(
-    campaign: &Campaign,
+    contract_addr: &Addr,
     sender: &Addr,
     amount: Uint128,
     proof: &[String],
+    merkle_root: &str,
 ) -> Result<(), ContractError> {
-    let user_input = format!("{}{}{}", campaign.id, sender, amount);
+    let user_input = format!("{}{}{}", contract_addr, sender, amount);
     let hash = sha2::Sha256::digest(user_input.as_bytes())
         .as_slice()
         .try_into()
@@ -63,7 +63,7 @@ pub(crate) fn validate_claim(
             .map_err(|_| ContractError::WrongHashLength {})
     })?;
 
-    let merkle_root_buf = validate_merkle_root(&campaign.merkle_root)?;
+    let merkle_root_buf = validate_merkle_root(merkle_root)?;
 
     ensure!(
         merkle_root_buf == hash,
@@ -96,15 +96,13 @@ pub(crate) fn compute_claimable_amount(
             );
         }
 
-        let previous_claims_for_address = get_claims_for_address(deps, &campaign.id, address)?;
+        let previous_claims_for_address = get_claims_for_address(deps, address)?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()
         {
-            println!("dist: {:?}", distribution);
             // skip distributions that have not started yet
             if !distribution.has_started(current_time) {
-                println!("distribution not active");
                 continue;
             }
 
@@ -122,8 +120,6 @@ pub(crate) fn compute_claimable_amount(
             if claim_amount == Uint128::zero() {
                 continue;
             }
-
-            println!("{} - claim_amount: {}", distribution_slot, claim_amount);
 
             claimable_amount = claimable_amount.checked_add(claim_amount)?;
 
@@ -172,10 +168,6 @@ fn calculate_claim_amount_for_distribution(
         } => {
             let elapsed_time =
                 if let Some((_, last_claimed)) = previous_claim_for_address_for_distribution {
-                    println!("current_time: {}", current_time.seconds());
-                    println!("end_time: {}", end_time);
-                    println!("last_claimed: {}", last_claimed);
-
                     if last_claimed > end_time {
                         FALLBACK_TIME
                     } else {
@@ -185,28 +177,19 @@ fn calculate_claim_amount_for_distribution(
                     current_time.seconds().min(end_time.to_owned()) - start_time
                 };
 
-            println!("computing LinearVesting");
-
             let vesting_duration = end_time - start_time;
             let vesting_progress = Decimal::from_ratio(elapsed_time, vesting_duration);
-
-            println!("elapsed_time: {}", elapsed_time);
-            println!("vesting_duration: {}", vesting_duration);
-            println!("vesting_progress: {}", vesting_progress);
 
             Ok(percentage
                 .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
                 .checked_mul(vesting_progress)?
                 .to_uint_floor())
         }
-        DistributionType::PeriodicVesting { .. } => unimplemented!(),
         DistributionType::LumpSum { percentage, .. } => {
             // it means the user has already claimed this distribution
             if previous_claim_for_address_for_distribution.is_some() {
                 return Ok(Uint128::zero());
             }
-
-            println!("computing LumpSum");
 
             Ok(percentage
                 .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
@@ -222,7 +205,6 @@ fn get_compensation_for_rounding_errors(
     previous_claims_for_address: HashMap<DistributionSlot, Claim>,
     new_claims: &HashMap<DistributionSlot, Claim>,
 ) -> Result<(Uint128, DistributionSlot), ContractError> {
-    //todo check this, in case the campaign is topped up, does it make sense? shall we prevent the user to topup a campaign after it's ended?
     if campaign.has_ended(current_time) {
         let updated_claims = aggregate_claims(&previous_claims_for_address, new_claims)?;
 
@@ -288,8 +270,8 @@ pub fn compute_campaign_id(
     Ok(campaign_id)
 }
 
-// todo move this to mantra-std in the future
-/// Validates the contract version and name
+/// Validates the contract version and name. To be taken from mantra-std in the future, for now,
+/// it's duplicated from MANTRA-dex.
 #[macro_export]
 macro_rules! validate_contract {
     ($deps:expr, $contract_name:expr, $contract_version:expr) => {{

@@ -38,19 +38,10 @@ pub fn execute(
     match msg {
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
         ExecuteMsg::Claim {
-            campaign_id,
             total_claimable_amount,
             receiver,
             proof,
-        } => commands::claim(
-            deps,
-            env,
-            info,
-            campaign_id,
-            total_claimable_amount,
-            receiver,
-            proof,
-        ),
+        } => commands::claim(deps, env, info, total_claimable_amount, receiver, proof),
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
@@ -68,30 +59,26 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Campaigns {
-            filter_by,
-            start_after,
-            limit,
-        } => Ok(to_json_binary(&queries::query_campaigns(
-            deps,
-            filter_by,
-            start_after,
-            limit,
-        )?)?),
+        QueryMsg::Campaign {} => Ok(to_json_binary(&queries::query_campaign(deps)?)?),
         QueryMsg::Rewards {
-            campaign_id,
             total_claimable_amount,
             receiver,
             proof,
         } => Ok(to_json_binary(&queries::query_rewards(
             deps,
             env,
-            campaign_id,
             total_claimable_amount,
             receiver,
             proof,
         )?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+        QueryMsg::Claimed {
+            address,
+            start_from,
+            limit,
+        } => Ok(to_json_binary(&queries::query_claimed(
+            deps, address, start_from, limit,
+        )?)?),
     }
 }
 
