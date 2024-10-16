@@ -82,6 +82,7 @@ fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
 
     Ok(Response::default().add_attributes(vec![
         ("action", "topup_campaign".to_string()),
+        ("topup", topup.to_string()),
         ("campaign", campaign.to_string()),
     ]))
 }
@@ -105,7 +106,7 @@ fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractEr
     let refund = campaign
         .reward_asset
         .amount
-        .checked_sub(campaign.claimed.amount)?;
+        .saturating_sub(campaign.claimed.amount);
 
     let mut messages = vec![];
 
@@ -125,6 +126,7 @@ fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractEr
         .add_attributes(vec![
             ("action", "end_campaign".to_string()),
             ("campaign", campaign.to_string()),
+            ("refund", refund.to_string()),
         ]))
 }
 
