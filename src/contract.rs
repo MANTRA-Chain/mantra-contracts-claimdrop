@@ -77,10 +77,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             start_from,
             limit,
         } => Ok(to_json_binary(&queries::query_claimed(
-            deps,
-            address,
-            start_from,
-            limit,
+            deps, address, start_from, limit,
         )?)?),
     }
 }

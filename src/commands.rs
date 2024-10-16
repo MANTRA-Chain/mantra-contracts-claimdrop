@@ -60,7 +60,11 @@ fn create_campaign(
 
 /// Tops up an existing airdrop campaign.
 fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    let mut campaign = CAMPAIGN.load(deps.storage)?;
+    let mut campaign = CAMPAIGN
+        .may_load(deps.storage)?
+        .ok_or(ContractError::CampaignError {
+            reason: "there's not an active campaign".to_string(),
+        })?;
 
     ensure!(campaign.owner == info.sender, ContractError::Unauthorized);
 
@@ -87,7 +91,11 @@ fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
 fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let campaign = CAMPAIGN.load(deps.storage)?;
+    let campaign = CAMPAIGN
+        .may_load(deps.storage)?
+        .ok_or(ContractError::CampaignError {
+            reason: "there's not an active campaign".to_string(),
+        })?;
 
     ensure!(
         campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
@@ -128,7 +136,11 @@ pub(crate) fn claim(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut campaign = CAMPAIGN.load(deps.storage)?;
+    let mut campaign = CAMPAIGN
+        .may_load(deps.storage)?
+        .ok_or(ContractError::CampaignError {
+            reason: "there's not an active campaign".to_string(),
+        })?;
 
     ensure!(
         campaign.has_started(&env.block.time),
@@ -165,8 +177,6 @@ pub(crate) fn claim(
         total_claimable_amount,
     )?;
 
-    println!("claimable_amount: {:?}", claimable_amount);
-
     ensure!(
         claimable_amount.amount > Uint128::zero(),
         ContractError::NothingToClaim
@@ -174,12 +184,7 @@ pub(crate) fn claim(
 
     let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
 
-    println!("new_claims: {:?}", new_claims);
-    println!("previous_claims: {:?}", previous_claims);
-    //todo remake the update_claims update to be more efficient, doesn't look neat
     let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
-
-    println!("updated_claims: {:?}", updated_claims);
 
     campaign.claimed.amount = campaign
         .claimed
@@ -193,23 +198,7 @@ pub(crate) fn claim(
 
     CAMPAIGN.save(deps.storage, &campaign)?;
 
-    // CLAIMS.save(
-    //     deps.storage,
-    //     (receiver.to_string(), campaign.id.clone()),
-    //     &updated_claims,
-    // )?;
-
     CLAIMS.save(deps.storage, receiver.to_string(), &updated_claims)?;
-
-    //let x = get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?;
-    //println!("total claims for user: {:?}", x);
-
-    // final sanity check to make sure the address can't claim more than the total amount it's entitled to
-    // ensure!(
-    //     total_claimable_amount
-    //         >= get_total_claims_amount_for_address(deps.as_ref(), &campaign.id, &receiver)?,
-    //     ContractError::ExceededMaxClaimAmount
-    // );
 
     ensure!(
         total_claimable_amount >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,

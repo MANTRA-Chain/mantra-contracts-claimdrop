@@ -272,11 +272,9 @@ impl CampaignParams {
     /// Ensures the distribution type parameters are correct
     pub fn validate_campaign_distribution(
         &self,
-        _current_time: Timestamp,
+        current_time: Timestamp,
     ) -> Result<(), ContractError> {
         let mut total_percentage = Decimal::zero();
-        let mut start_times = vec![];
-        let mut end_times = vec![];
 
         ensure!(
             !self.distribution_type.is_empty() && self.distribution_type.len() <= 2,
@@ -299,12 +297,6 @@ impl CampaignParams {
                     start_time,
                     end_time,
                 } => (percentage, start_time, end_time),
-                DistributionType::PeriodicVesting {
-                    percentage,
-                    start_time,
-                    end_time,
-                    ..
-                } => (percentage, start_time, end_time),
             };
 
             ensure!(
@@ -315,15 +307,20 @@ impl CampaignParams {
             total_percentage = total_percentage.checked_add(*percentage)?;
 
             ensure!(
+                *start_time >= current_time.seconds(),
+                ContractError::InvalidStartDistributionTime {
+                    start_time: *start_time,
+                    current_time: current_time.seconds(),
+                }
+            );
+
+            ensure!(
                 end_time > start_time,
                 ContractError::InvalidDistributionTimes {
                     start_time: *start_time,
                     end_time: *end_time,
                 }
             );
-
-            start_times.push(start_time);
-            end_times.push(*end_time);
         }
 
         ensure!(
@@ -349,17 +346,6 @@ pub enum DistributionType {
         /// The unix timestamp when this distribution type ends, in seconds
         end_time: u64,
     },
-    /// The distribution is done in a periodic vesting schedule
-    PeriodicVesting {
-        /// The percentage of the total reward to be distributed with a linear vesting schedule
-        percentage: Decimal,
-        /// The unix timestamp when this distribution type starts, in seconds
-        start_time: u64,
-        /// The unix timestamp when this distribution type ends, in seconds
-        end_time: u64,
-        /// The duration of each period, in seconds
-        period_duration: u64,
-    },
     /// The distribution is done in a single lump sum, i.e. no vesting period
     LumpSum {
         percentage: Decimal,
@@ -374,7 +360,6 @@ impl DistributionType {
     pub fn as_str(&self) -> &str {
         match self {
             DistributionType::LinearVesting { .. } => "LinearVesting",
-            DistributionType::PeriodicVesting { .. } => "PeriodicVesting",
             DistributionType::LumpSum { .. } => "LumpSum",
         }
     }
@@ -382,7 +367,6 @@ impl DistributionType {
     pub fn has_started(&self, current_time: &Timestamp) -> bool {
         let start_time = match self {
             DistributionType::LinearVesting { start_time, .. } => start_time,
-            DistributionType::PeriodicVesting { start_time, .. } => start_time,
             DistributionType::LumpSum { start_time, .. } => start_time,
         };
 

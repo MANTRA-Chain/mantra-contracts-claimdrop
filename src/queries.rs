@@ -18,14 +18,15 @@ pub(crate) fn query_rewards(
     receiver: String,
     proof: Vec<String>,
 ) -> Result<RewardsResponse, ContractError> {
-    let campaign = CAMPAIGN.load(deps.storage)?;
+    let campaign = CAMPAIGN
+        .may_load(deps.storage)?
+        .ok_or(ContractError::CampaignError {
+            reason: "there's not an active campaign".to_string(),
+        })?;
     let mut available_to_claim = vec![];
     let mut claimed = vec![];
     let mut pending = vec![];
-    println!(">>>> query rewards");
 
-    println!("campaign.endtime: {:?}", campaign.end_time);
-    println!("current time: {:?}", env.block.time.seconds());
     let receiver = deps.api.addr_validate(&receiver)?;
 
     let total_claimed = get_total_claims_amount_for_address(deps, &receiver)?;
@@ -88,9 +89,11 @@ pub(crate) fn query_claimed(
 
         if let Some(claims) = claims {
             //iterate in hashmap and aggregate amount from claim
-            let total_claimed = claims.iter().fold(Uint128::zero(), |acc, (_, (amount, _))| {
-                acc.checked_add(*amount).unwrap()
-            });
+            let total_claimed = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, (_, (amount, _))| {
+                    acc.checked_add(*amount).unwrap()
+                });
 
             if total_claimed > Uint128::zero() {
                 let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
@@ -103,14 +106,17 @@ pub(crate) fn query_claimed(
 
         let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
 
-        CLAIMS.range(deps.storage, start, None, Order::Ascending)
+        CLAIMS
+            .range(deps.storage, start, None, Order::Ascending)
             .take(limit)
             .map(|item| {
                 let (address, claims) = item?;
                 //iterate in hashmap and aggregate amount from claim
-                let total_claimed = claims.iter().fold(Uint128::zero(), |acc, (_, (amount, _))| {
-                    acc.checked_add(*amount).unwrap()
-                });
+                let total_claimed = claims
+                    .iter()
+                    .fold(Uint128::zero(), |acc, (_, (amount, _))| {
+                        acc.checked_add(*amount).unwrap()
+                    });
 
                 Ok((address, coin(total_claimed.u128(), denom.clone())))
             })

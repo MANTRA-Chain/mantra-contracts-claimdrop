@@ -5,7 +5,8 @@ use cw_multi_test::{
 };
 
 use airdrop_manager::msg::{
-    CampaignAction, CampaignResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
+    CampaignAction, CampaignResponse, ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+    RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
@@ -30,17 +31,17 @@ pub struct TestingSuite {
 // helpers
 impl TestingSuite {
     #[track_caller]
-    pub(crate) fn admin(&mut self) -> Addr {
+    pub fn admin(&mut self) -> Addr {
         self.senders.first().unwrap().clone()
     }
 
     #[track_caller]
-    pub(crate) fn get_time(&mut self) -> Timestamp {
+    pub fn get_time(&mut self) -> Timestamp {
         self.app.block_info().time
     }
 
     #[track_caller]
-    pub(crate) fn add_day(&mut self) -> &mut Self {
+    pub fn add_day(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(1);
         self.app.set_block(block_info);
@@ -49,7 +50,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn add_week(&mut self) -> &mut Self {
+    pub fn add_week(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(7);
         self.app.set_block(block_info);
@@ -157,7 +158,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn manage_campaign(
+    pub fn manage_campaign(
         &mut self,
         sender: &Addr,
         action: CampaignAction,
@@ -168,12 +169,12 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn claim(
+    pub fn claim(
         &mut self,
         sender: &Addr,
         total_claimable_amount: Uint128,
         receiver: Option<String>,
-        proof: Vec<String>,
+        proof: &[&str],
         result: impl ResultHandler,
     ) -> &mut Self {
         self.execute_contract(
@@ -181,7 +182,7 @@ impl TestingSuite {
             ExecuteMsg::Claim {
                 total_claimable_amount,
                 receiver,
-                proof,
+                proof: proof.iter().map(|s| s.to_string()).collect(),
             },
             &[],
             result,
@@ -189,7 +190,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn update_ownership(
+    pub fn update_ownership(
         &mut self,
         sender: &Addr,
         action: cw_ownable::Action,
@@ -216,33 +217,51 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_campaigns(
-        &mut self,
-        result: impl Fn(StdResult<CampaignResponse>),
-    ) -> &mut Self {
+    pub fn query_campaign(&mut self, result: impl Fn(StdResult<CampaignResponse>)) -> &mut Self {
         self.query_contract(QueryMsg::Campaign {}, result)
     }
 
     #[track_caller]
-    pub(crate) fn query_rewards(
+    pub fn query_rewards(
         &mut self,
         total_claimable_amount: Uint128,
-        receiver: String,
-        proof: Vec<String>,
+        receiver: &Addr,
+        proof: &[&str],
         result: impl Fn(StdResult<RewardsResponse>),
     ) -> &mut Self {
         self.query_contract(
             QueryMsg::Rewards {
                 total_claimable_amount,
-                receiver,
-                proof,
+                receiver: receiver.to_string(),
+                proof: proof.iter().map(|s| s.to_string()).collect(),
             },
             result,
         )
     }
 
     #[track_caller]
-    pub(crate) fn _query_ownership(
+    pub fn query_claimed(
+        &mut self,
+        address: Option<&Addr>,
+        start_from: Option<&Addr>,
+        limit: Option<u8>,
+        result: impl Fn(StdResult<ClaimedResponse>),
+    ) -> &mut Self {
+        let address = address.map(|addr| addr.to_string());
+        let start_from = start_from.map(|addr| addr.to_string());
+
+        self.query_contract(
+            QueryMsg::Claimed {
+                address,
+                start_from,
+                limit,
+            },
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub fn _query_ownership(
         &mut self,
         result: impl Fn(StdResult<cw_ownable::Ownership<String>>),
     ) -> &mut Self {
@@ -250,7 +269,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_balance(
+    pub fn query_balance(
         &mut self,
         denom: &str,
         address: &Addr,
