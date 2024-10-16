@@ -26,10 +26,6 @@ pub enum ContractError {
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
 
-    //todo try reusing the Uint* errors
-    #[error("An overflow has occurred")]
-    Overflow,
-
     #[error("Invalid distribution percentage, expected: {expected}, actual: {actual}")]
     InvalidDistributionPercentage { expected: Decimal, actual: Decimal },
 
@@ -44,12 +40,6 @@ pub enum ContractError {
 
     #[error("Invalid campaign param {param}, reason: {reason}")]
     InvalidCampaignParam { param: String, reason: String },
-
-    #[error("Campaign with id {campaign_id} not found")]
-    CampaignNotFound { campaign_id: String },
-
-    #[error("The address have already claimed the given campaign")]
-    Claimed,
 
     #[error("Wrong hash length")]
     WrongHashLength,
@@ -68,11 +58,6 @@ pub enum ContractError {
 
     #[error("Invalid start distribution time, start time: {start_time}, current time: {current_time}. The start time needs to be in the future.")]
     InvalidStartDistributionTime { start_time: u64, current_time: u64 },
-
-    #[error(
-        "Overlapping distributions, check the start_time and end_time of the distribution types"
-    )]
-    OverlappingDistributions,
 
     #[error("There's nothing to claim for the given address")]
     NothingToClaim,

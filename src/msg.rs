@@ -63,10 +63,14 @@ pub struct MigrateMsg {}
 
 pub type CampaignResponse = Campaign;
 
+/// Response to the Rewards query.
 #[cw_serde]
 pub struct RewardsResponse {
+    /// The tokens that have been claimed by the address.
     pub claimed: Vec<Coin>,
+    /// The total amount of tokens that is pending to be claimed by the address.
     pub pending: Vec<Coin>,
+    /// The tokens that are available to be claimed by the address.
     pub available_to_claim: Vec<Coin>,
 }
 
@@ -77,6 +81,7 @@ pub struct ClaimedResponse {
     pub claimed: Vec<(String, Coin)>,
 }
 
+/// The campaign action that can be executed with the [ExecuteMsg::ManageCampaign] message.
 #[cw_serde]
 pub enum CampaignAction {
     /// Creates a new campaign
@@ -90,6 +95,7 @@ pub enum CampaignAction {
     EndCampaign {},
 }
 
+/// Represents a campaign.
 #[cw_serde]
 pub struct Campaign {
     /// The campaign owner
@@ -104,15 +110,14 @@ pub struct Campaign {
     pub claimed: Coin,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
     /// The sum of the percentages must be 100.
-    /// The distribution types are applied in the order they are defined.
     pub distribution_type: Vec<DistributionType>,
     /// The duration of the cliff, in seconds
     pub cliff_duration: Option<u64>,
-    /// The campaign start time (unix timestamp)
+    /// The campaign start time (unix timestamp), in seconds
     pub start_time: u64,
-    /// The campaign end time (unix timestamp)
+    /// The campaign end time (unix timestamp), in seconds
     pub end_time: u64,
-    /// The campaign merkle root
+    /// The campaign merkle root for the airdrop
     pub merkle_root: String,
 }
 
@@ -120,8 +125,17 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign: {}, Owner: {}, Reward: {}, Claimed: {}, Start Time: {}, End Time: {}",
-            self.name, self.owner, self.reward_asset, self.claimed, self.start_time, self.end_time
+            "Campaign {{ owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, cliff_duration: {:?}, start_time: {}, end_time: {}, merkle_root: {} }}",
+            self.owner,
+            self.name,
+            self.description,
+            self.reward_asset,
+            self.claimed,
+            self.distribution_type,
+            self.cliff_duration,
+            self.start_time,
+            self.end_time,
+            self.merkle_root
         )
     }
 }
@@ -148,6 +162,11 @@ impl Campaign {
         }
     }
 
+    /// Checks if the campaign has started
+    pub fn has_started(&self, current_time: &Timestamp) -> bool {
+        current_time.seconds() >= self.start_time
+    }
+
     /// Checks if the campaign has ended
     pub fn has_ended(&self, current_time: &Timestamp) -> bool {
         current_time.seconds() >= self.end_time
@@ -157,13 +176,9 @@ impl Campaign {
     pub fn has_funds_available(&self) -> bool {
         self.claimed.amount < self.reward_asset.amount
     }
-
-    /// Checks if the campaign has ended
-    pub fn has_started(&self, current_time: &Timestamp) -> bool {
-        current_time.seconds() >= self.start_time
-    }
 }
 
+/// Represents the parameters to create a campaign with.
 #[cw_serde]
 pub struct CampaignParams {
     /// The campaign owner. If none is provided, the sender of the message will the owner.
@@ -176,13 +191,12 @@ pub struct CampaignParams {
     pub reward_asset: Coin,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
     /// The sum of the percentages must be 100.
-    /// The distribution types are applied in the order they are defined.
     pub distribution_type: Vec<DistributionType>,
     /// The duration of the cliff, in seconds
     pub cliff_duration: Option<u64>,
-    /// The campaign start timestamp, in seconds
+    /// The campaign start time (unix timestamp), in seconds
     pub start_time: u64,
-    /// The campaign end timestamp, in seconds
+    /// The campaign end timestamp (unix timestamp), in seconds
     pub end_time: u64,
     /// The campaign merkle root
     pub merkle_root: String,
@@ -357,13 +371,6 @@ pub enum DistributionType {
 }
 
 impl DistributionType {
-    pub fn as_str(&self) -> &str {
-        match self {
-            DistributionType::LinearVesting { .. } => "LinearVesting",
-            DistributionType::LumpSum { .. } => "LumpSum",
-        }
-    }
-
     pub fn has_started(&self, current_time: &Timestamp) -> bool {
         let start_time = match self {
             DistributionType::LinearVesting { start_time, .. } => start_time,

@@ -39,6 +39,7 @@ pub(crate) fn validate_merkle_root(merkle_root: &str) -> Result<[u8; 32], Contra
     Ok(merkle_root_buf)
 }
 
+/// Validates the claim proof
 pub(crate) fn validate_claim(
     contract_addr: &Addr,
     sender: &Addr,
@@ -73,6 +74,7 @@ pub(crate) fn validate_claim(
     Ok(())
 }
 
+/// Constants used for the fallback distribution slot and time
 const FALLBACK_TIME: u64 = 0u64;
 const FALLBACK_DISTRIBUTION_SLOT: usize = 0usize;
 
@@ -198,6 +200,8 @@ fn calculate_claim_amount_for_distribution(
     }
 }
 
+/// Returns the compensation for rounding errors if the campaign has ended. This is to claim the
+/// dust remaining in the campaign for the user due to rounding errors.
 fn get_compensation_for_rounding_errors(
     campaign: &Campaign,
     current_time: &Timestamp,

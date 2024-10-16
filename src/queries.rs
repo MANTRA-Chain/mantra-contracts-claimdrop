@@ -23,6 +23,7 @@ pub(crate) fn query_rewards(
         .ok_or(ContractError::CampaignError {
             reason: "there's not an active campaign".to_string(),
         })?;
+
     let mut available_to_claim = vec![];
     let mut claimed = vec![];
     let mut pending = vec![];
@@ -82,6 +83,13 @@ pub(crate) fn query_claimed(
     limit: Option<u8>,
 ) -> Result<ClaimedResponse, ContractError> {
     let mut claimed = vec![];
+
+    let campaign = CAMPAIGN.may_load(deps.storage)?;
+
+    // returns empty if the campaign is not set
+    if campaign.is_none() {
+        return Ok(ClaimedResponse { claimed });
+    }
 
     if let Some(address) = address {
         let address = deps.api.addr_validate(&address)?.to_string();
