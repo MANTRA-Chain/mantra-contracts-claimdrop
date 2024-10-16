@@ -6,8 +6,13 @@ use cw_storage_plus::{Item, Map};
 use crate::error::ContractError;
 use crate::msg::Campaign;
 
+/// The campaign item. A single campaign that can be active at a time.
 pub const CAMPAIGN: Item<Campaign> = Item::new("campaign");
 
+/// Contains information about how much has an address claimed for a given distribution type.
+/// The key is the address and the value is a hashmap where the key is the distribution_type index,
+/// and the value is a tuple with the amount claimed and the timestamp at which it was claimed.
+/// Used primarily to compute the correct claim amounts when doing the linear vesting.
 pub const CLAIMS: Map<String, HashMap<DistributionSlot, Claim>> = Map::new("claims");
 
 /// The claim is a tuple of the amount and the timestamp when it was claimed.

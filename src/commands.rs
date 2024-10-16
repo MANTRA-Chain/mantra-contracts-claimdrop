@@ -116,7 +116,9 @@ fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractEr
         });
     }
 
+    // reset the campaign and claims state
     CAMPAIGN.remove(deps.storage);
+    CLAIMS.clear(deps.storage);
 
     Ok(Response::default()
         .add_messages(messages)
