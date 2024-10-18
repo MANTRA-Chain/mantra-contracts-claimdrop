@@ -96,7 +96,7 @@ fn create_multiple_campaigns_fails() {
         })
         .manage_campaign(
             alice,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -124,35 +124,13 @@ fn create_multiple_campaigns_fails() {
             },
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .query_campaign(|result| {
-            let campaign = result.unwrap();
-            assert_eq!(campaign.name, "Test Airdrop II".to_string());
-        });
-
-    suite
-        .manage_campaign(
-            alice,
-            CampaignAction::EndCampaign {},
-            &[],
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .manage_campaign(
-            alice,
-            CampaignAction::EndCampaign {},
-            &[],
-            |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
                     ContractError::CampaignError { reason } => {
-                        assert_eq!(reason, "there's not an active campaign");
+                        assert_eq!(reason, "existing campaign");
                     }
                     _ => panic!("Wrong error type, should return ContractError::CampaignError"),
-                }
+                };
             },
         );
 }
@@ -1253,7 +1231,7 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // bob tries to end the campaign
             bob,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &vec![coin(100_000, "uom")],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1266,7 +1244,7 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // bob tries to end the campaign
             bob,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1304,7 +1282,7 @@ fn claim_ended_campaign() {
         .manage_campaign(
             // alice should be able to, since she is the owner of the contract now
             alice,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1327,7 +1305,7 @@ fn claim_ended_campaign() {
 
             match err {
                 ContractError::CampaignError { reason } => {
-                    assert_eq!(reason, "there's not an active campaign");
+                    assert_eq!(reason, "has been closed, cannot claim");
                 }
                 _ => panic!("Wrong error type, should return ContractError::CampaignError"),
             }
@@ -1949,6 +1927,10 @@ fn topup_campaigns_with_and_without_cliff() {
     ]);
 
     let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let dan = &suite.senders[3].clone();
+    let eva = &suite.senders[4].clone();
     let current_time = &suite.get_time();
 
     suite.instantiate_airdrop_manager(None).manage_campaign(
@@ -1958,7 +1940,7 @@ fn topup_campaigns_with_and_without_cliff() {
                 owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(10_000, "uom"),
+                reward_asset: coin(30_000, "uom"),
                 distribution_type: vec![DistributionType::LinearVesting {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
@@ -1970,7 +1952,7 @@ fn topup_campaigns_with_and_without_cliff() {
                 merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
-        &coins(10_000, "uom"),
+        &coins(30_000, "uom"),
         |result: Result<AppResponse, anyhow::Error>| {
             result.unwrap();
         },
@@ -1978,7 +1960,7 @@ fn topup_campaigns_with_and_without_cliff() {
 
     suite.query_campaign(|result| {
         let campaign = result.unwrap();
-        assert_eq!(campaign.reward_asset, coin(10_000, "uom"));
+        assert_eq!(campaign.reward_asset, coin(30_000, "uom"));
         assert!(campaign.cliff_duration.is_some());
     });
 
@@ -1986,13 +1968,77 @@ fn topup_campaigns_with_and_without_cliff() {
         suite.add_day();
     }
 
-    // topup campaign
-
+    // everybody claims
     suite
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(
+            bob,
+            Uint128::new(10_000u128),
+            None,
+            BOB_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(
+            carol,
+            Uint128::new(20_000u128),
+            None,
+            CAROL_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(
+            dan,
+            Uint128::new(35_000u128),
+            None,
+            DAN_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(
+            eva,
+            Uint128::new(25_000u128),
+            None,
+            EVA_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite.query_campaign(|result| {
+        let campaign = result.unwrap();
+        assert_eq!(campaign.claimed, coin(23_331u128, "uom"));
+    });
+
+    // topup campaign
+    suite
+        .manage_campaign(
+            bob,
+            CampaignAction::TopUpCampaign {},
+            &coins(70_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
         .manage_campaign(
             alice,
             CampaignAction::TopUpCampaign {},
-            &coins(90_000, "uom"),
+            &coins(70_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -2022,20 +2068,12 @@ fn topup_campaigns_with_and_without_cliff() {
         },
     );
 
-    // end campaign
-
-    suite.manage_campaign(
-        alice,
-        CampaignAction::EndCampaign {},
-        &[],
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
-
     let current_time = &suite.get_time();
 
+    // create a new contract / campaign
+
     suite
+        .instantiate_airdrop_manager(None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -2356,22 +2394,22 @@ fn query_rewards() {
         })
         .manage_campaign(
             alice,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
         )
         .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
-            assert!(result
-                .unwrap_err()
-                .to_string()
-                .contains("there's not an active campaign"));
+            let rewards_response = result.unwrap();
+            assert_eq!(rewards_response.claimed, coins(2_500u128, "uom"));
+            assert!(rewards_response.pending.is_empty());
+            assert!(rewards_response.available_to_claim.is_empty());
         });
 }
 
 #[test]
-fn end_campaigns() {
+fn close_campaigns() {
     let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
 
     let alice = &suite.senders[0].clone();
@@ -2416,7 +2454,7 @@ fn end_campaigns() {
     suite
         .manage_campaign(
             bob,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -2428,7 +2466,7 @@ fn end_campaigns() {
         )
         .manage_campaign(
             carol,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -2438,17 +2476,25 @@ fn end_campaigns() {
                 }
             },
         )
+        .query_campaign(|result| {
+            let campaign = result.unwrap();
+            assert!(campaign.closed.is_none());
+        })
         .manage_campaign(
             dan, // dan can end the campaign since it's the owner of the campaign
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
-        );
+        )
+        .query_campaign(|result| {
+            let campaign = result.unwrap();
+            assert!(campaign.closed.is_some());
+        });
 
     // let's create a new campaign
-    suite.manage_campaign(
+    suite.instantiate_airdrop_manager(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2482,7 +2528,7 @@ fn end_campaigns() {
 
     suite.manage_campaign(
         carol, // carol can't since it's not the owner of the contract nor the owner of the campaign
-        CampaignAction::EndCampaign {},
+        CampaignAction::CloseCampaign {},
         &[],
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -2517,7 +2563,7 @@ fn end_campaigns() {
     suite
         .manage_campaign(
             alice, // alice can't since it renounce the ownership of the contract
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -2529,7 +2575,7 @@ fn end_campaigns() {
         )
         .manage_campaign(
             carol, // alice can't since it renounce the ownership of the contract
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2538,7 +2584,7 @@ fn end_campaigns() {
 }
 
 #[test]
-fn cant_query_claims_after_campaign_is_ended() {
+fn can_query_claims_after_campaign_is_closed() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),
         coin(1_000_000_000, "uusdc"),
@@ -2629,8 +2675,7 @@ fn cant_query_claims_after_campaign_is_ended() {
         );
     });
 
-    // ending campaign clears up the state
-
+    // closing campaign
     suite
         .query_campaign(|result| {
             let campaign = result.unwrap();
@@ -2648,7 +2693,7 @@ fn cant_query_claims_after_campaign_is_ended() {
         })
         .manage_campaign(
             dan,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2657,15 +2702,19 @@ fn cant_query_claims_after_campaign_is_ended() {
         .query_balance("uom", dan, |result| {
             assert_eq!(result, Uint128::new(1_000_000_000 - 2_500));
         })
-        .query_claimed(Some(alice), None, None, |result| {
-            let claimed_response = result.unwrap();
-            assert!(claimed_response.claimed.is_empty());
-        })
         .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
-            assert!(result
-                .unwrap_err()
-                .to_string()
-                .contains("there's not an active campaign"));
+            let rewards_response = result.unwrap();
+            assert_eq!(rewards_response.claimed, coins(2_500u128, "uom"));
+            assert!(rewards_response.pending.is_empty());
+            assert!(rewards_response.available_to_claim.is_empty());
+        })
+        .query_claimed(None, None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (alice.to_string(), coin(2_500u128, "uom"))
+            );
         });
 }
 
@@ -2761,7 +2810,7 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
         //end campaign
         .manage_campaign(
             alice,
-            CampaignAction::EndCampaign {},
+            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();

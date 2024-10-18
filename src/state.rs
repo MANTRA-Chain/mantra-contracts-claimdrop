@@ -6,7 +6,7 @@ use cw_storage_plus::{Item, Map};
 use crate::error::ContractError;
 use crate::msg::Campaign;
 
-/// The campaign item. A single campaign that can be active at a time.
+/// The campaign item
 pub const CAMPAIGN: Item<Campaign> = Item::new("campaign");
 
 /// Contains information about how much has an address claimed for a given distribution type.
