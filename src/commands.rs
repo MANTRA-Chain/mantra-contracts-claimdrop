@@ -74,6 +74,13 @@ fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
         }
     );
 
+    ensure!(
+        campaign.closed.is_none(),
+        ContractError::CampaignError {
+            reason: "campaign has been closed".to_string()
+        }
+    );
+
     let topup = cw_utils::must_pay(&info, &campaign.reward_asset.denom)?;
     campaign.reward_asset.amount = campaign.reward_asset.amount.checked_add(topup)?;
 
