@@ -2488,10 +2488,39 @@ fn close_campaigns() {
                 result.unwrap();
             },
         )
+        .manage_campaign(
+            dan, // dan tries closing the campaign again
+            CampaignAction::CloseCampaign {},
+            &[],
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::CampaignError { reason } => {
+                        assert_eq!(reason, "campaign has already been closed");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                }
+            },
+        )
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert!(campaign.closed.is_some());
-        });
+        })
+        // try top up, should fail
+        .manage_campaign(
+            dan,
+            CampaignAction::TopUpCampaign {},
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::CampaignError { reason } => {
+                        assert_eq!(reason, "campaign has been closed");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                }
+            },
+        );
 
     // let's create a new campaign
     suite.instantiate_airdrop_manager(None).manage_campaign(
