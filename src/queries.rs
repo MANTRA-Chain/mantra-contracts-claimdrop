@@ -65,6 +65,13 @@ pub(crate) fn query_rewards(
         }
     }
 
+    // if the campaign is closed, clear the pending and available to claim rewards as there's nothing else
+    // to claim
+    if campaign.closed.is_some() {
+        pending.clear();
+        available_to_claim.clear();
+    }
+
     Ok(RewardsResponse {
         claimed,
         pending,

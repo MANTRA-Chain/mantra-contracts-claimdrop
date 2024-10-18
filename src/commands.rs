@@ -15,7 +15,7 @@ pub(crate) fn manage_campaign(
     match campaign_action {
         CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
         CampaignAction::TopUpCampaign {} => topup_campaign(deps, env, info),
-        CampaignAction::EndCampaign {} => end_campaign(deps, info),
+        CampaignAction::CloseCampaign {} => close_campaign(deps, env, info),
     }
 }
 
@@ -31,7 +31,6 @@ fn create_campaign(
 
     let campaign = CAMPAIGN.may_load(deps.storage)?;
 
-    // only one campaign at a time is allowed
     ensure!(
         campaign.is_none(),
         ContractError::CampaignError {
@@ -87,12 +86,12 @@ fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
     ]))
 }
 
-/// Ends the existing airdrop campaign. Only the owner or the contract admin can end the campaign.
+/// Closes the existing airdrop campaign. Only the owner or the contract admin can end the campaign.
 /// The remaining funds in the campaign are refunded to the owner.
-fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let campaign = CAMPAIGN
+    let mut campaign = CAMPAIGN
         .may_load(deps.storage)?
         .ok_or(ContractError::CampaignError {
             reason: "there's not an active campaign".to_string(),
@@ -117,14 +116,14 @@ fn end_campaign(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractEr
         });
     }
 
-    // reset the campaign and claims state
-    CAMPAIGN.remove(deps.storage);
-    CLAIMS.clear(deps.storage);
+    campaign.closed = Some(env.block.time.seconds());
+
+    CAMPAIGN.save(deps.storage, &campaign)?;
 
     Ok(Response::default()
         .add_messages(messages)
         .add_attributes(vec![
-            ("action", "end_campaign".to_string()),
+            ("action", "close_campaign".to_string()),
             ("campaign", campaign.to_string()),
             ("refund", refund.to_string()),
         ]))
@@ -150,6 +149,13 @@ pub(crate) fn claim(
         campaign.has_started(&env.block.time),
         ContractError::CampaignError {
             reason: "not started".to_string()
+        }
+    );
+
+    ensure!(
+        campaign.closed.is_none(),
+        ContractError::CampaignError {
+            reason: "has been closed, cannot claim".to_string()
         }
     );
 

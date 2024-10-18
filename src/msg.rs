@@ -89,10 +89,10 @@ pub enum CampaignAction {
         /// The parameters to create a campaign with
         params: Box<CampaignParams>,
     },
-    /// Tops up the existing campaign
+    /// Tops up the campaign
     TopUpCampaign {},
-    /// Ends the campaign
-    EndCampaign {},
+    /// Closes the campaign
+    CloseCampaign {},
 }
 
 /// Represents a campaign.
@@ -119,6 +119,8 @@ pub struct Campaign {
     pub end_time: u64,
     /// The campaign merkle root for the airdrop
     pub merkle_root: String,
+    /// The timestamp at which the campaign was closed, in seconds
+    pub closed: Option<u64>,
 }
 
 impl Display for Campaign {
@@ -159,6 +161,7 @@ impl Campaign {
             start_time: params.start_time,
             end_time: params.end_time,
             merkle_root: params.merkle_root,
+            closed: None,
         }
     }
 
