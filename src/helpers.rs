@@ -144,6 +144,10 @@ pub(crate) fn compute_claimable_amount(
                 .ok_or(StdError::generic_err("couldn't find claim"))?;
             *amount = amount.checked_add(rounding_error_compensation_amount)?;
         }
+    } else {
+        return Err(ContractError::CampaignError {
+            reason: "not started".to_string(),
+        });
     }
 
     Ok((

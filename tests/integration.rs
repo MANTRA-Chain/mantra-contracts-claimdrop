@@ -2409,6 +2409,79 @@ fn query_rewards() {
 }
 
 #[test]
+fn query_rewards_fails_when_campaign_has_not_started() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_airdrop_manager(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_asset: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(25),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    },
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(75),
+                        start_time: current_time.plus_days(7).seconds(),
+                        end_time: current_time.plus_days(14).seconds(),
+                    },
+                ],
+                cliff_duration: None,
+                start_time: current_time.plus_days(1).seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+                merkle_root: MERKLE_ROOT.to_string(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::CampaignError { reason } => {
+                        assert_eq!(reason, "not started");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                }
+            },
+        )
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            let err = result.unwrap_err().to_string();
+            assert!(err.contains("not started"));
+        });
+
+    // move some epochs to make campaign active
+    // the query is successful
+    suite
+        .add_week()
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            result.unwrap();
+        });
+}
+
+#[test]
 fn close_campaigns() {
     let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
 
