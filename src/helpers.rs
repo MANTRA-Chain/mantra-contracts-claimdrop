@@ -222,20 +222,18 @@ fn get_compensation_for_rounding_errors(
                 acc.checked_add(*amount).unwrap()
             });
 
-        // if the campaign has ended and the user still has dust to claim
-        if total_claimed < total_claimable_amount {
-            let (slot, _) = new_claims
-                .iter()
-                .find(|(_, (_, timestamp))| *timestamp == current_time.seconds())
-                .unwrap_or((
-                    &FALLBACK_DISTRIBUTION_SLOT,
-                    &(Uint128::zero(), FALLBACK_TIME),
-                ));
-            return Ok((
-                total_claimable_amount.saturating_sub(total_claimed),
-                slot.to_owned(),
+        // get user dust to claim
+        let (slot, _) = new_claims
+            .iter()
+            .find(|(_, (_, timestamp))| *timestamp == current_time.seconds())
+            .unwrap_or((
+                &FALLBACK_DISTRIBUTION_SLOT,
+                &(Uint128::zero(), FALLBACK_TIME),
             ));
-        }
+        return Ok((
+            total_claimable_amount.saturating_sub(total_claimed),
+            slot.to_owned(),
+        ));
     }
 
     Ok((Uint128::zero(), FALLBACK_DISTRIBUTION_SLOT))
