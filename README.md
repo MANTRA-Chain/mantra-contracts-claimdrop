@@ -19,6 +19,7 @@ of the campaign upon creation.
 - The owner of the campaign can top up the campaign with more tokens at any point before the campaign ends.
 - The owner of the campaign or the owner of the contract can close the campaign at any point before the campaign ends. 
 When a campaign is ended, the owner of the campaign will receive the remaining, unclaimed tokens in the campaign.
+- Only a single claim entry per address is allowed.
 
 ## When can it be used?
 
