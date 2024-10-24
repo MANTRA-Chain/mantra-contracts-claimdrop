@@ -5,7 +5,16 @@ const {MerkleTree} = require('merkletreejs');
 
 class AirdropCampaign {
     constructor(items) {
-        const leaves = items.map(i => sha256(i.contract_addr + i.address + i.amount));
+        const addressSet = new Set();
+        const leaves = items.map(i => {
+            const leaf = sha256(i.contract_addr + i.address + i.amount);
+            if (addressSet.has(i.address)) {
+                console.error(`Error: Duplicate entry for address ${i.address}`);
+                process.exit(1);
+            }
+            addressSet.add(i.address);
+            return leaf;
+        });
         this.tree = new MerkleTree(leaves, sha256, {sort: true});
     }
 
