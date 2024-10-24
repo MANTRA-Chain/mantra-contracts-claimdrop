@@ -338,6 +338,14 @@ impl CampaignParams {
                     end_time: *end_time,
                 }
             );
+
+            ensure!(
+                *end_time <= self.end_time,
+                ContractError::InvalidEndDistributionTime {
+                    end_time: *end_time,
+                    campaign_end_time: self.end_time,
+                }
+            );
         }
 
         ensure!(

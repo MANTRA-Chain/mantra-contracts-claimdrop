@@ -3047,3 +3047,95 @@ fn can_claim_dust_without_new_claims() {
             );
         });
 }
+
+#[test]
+fn cant_end_distribution_type_after_campaign() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_airdrop_manager(None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(30).seconds(),
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(7).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidEndDistributionTime { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::InvalidEndDistributionTime"
+                    ),
+                }
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(7).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite.instantiate_airdrop_manager(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop, 土金, ك".to_string(),
+                reward_asset: coin(100_000, "uom"),
+                distribution_type: vec![DistributionType::LinearVesting {
+                    percentage: Decimal::percent(100),
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(6).seconds(),
+                }],
+                cliff_duration: None,
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(7).seconds(),
+                merkle_root: MERKLE_ROOT.to_string(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+}

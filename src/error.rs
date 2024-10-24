@@ -59,6 +59,12 @@ pub enum ContractError {
     #[error("Invalid start distribution time, start time: {start_time}, current time: {current_time}. The start time needs to be in the future.")]
     InvalidStartDistributionTime { start_time: u64, current_time: u64 },
 
+    #[error("Invalid end distribution time, end time: {end_time}, campaign_end_time: {campaign_end_time}. The distribution end time needs to be less or equal to the campaign's end time.")]
+    InvalidEndDistributionTime {
+        end_time: u64,
+        campaign_end_time: u64,
+    },
+
     #[error("There's nothing to claim for the given address")]
     NothingToClaim,
 
