@@ -19,13 +19,13 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    cw_ownable::initialize_owner(
-        deps.storage,
-        deps.api,
-        Some(&msg.owner.unwrap_or(info.sender.into_string())),
-    )?;
+    let owner = msg.owner.unwrap_or(info.sender.into_string());
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&owner))?;
 
-    Ok(Response::default())
+    Ok(Response::default().add_attributes(vec![
+        ("action", "instantiate".to_string()),
+        ("owner", owner),
+    ]))
 }
 
 #[entry_point]
