@@ -42,12 +42,12 @@ pub(crate) fn validate_merkle_root(merkle_root: &str) -> Result<[u8; 32], Contra
 /// Validates the claim proof
 pub(crate) fn validate_claim(
     contract_addr: &Addr,
-    sender: &Addr,
+    receiver: &Addr,
     amount: Uint128,
     proof: &[String],
     merkle_root: &str,
 ) -> Result<(), ContractError> {
-    let user_input = format!("{}{}{}", contract_addr, sender, amount);
+    let user_input = format!("{}{}{}", contract_addr, receiver, amount);
     let hash = sha2::Sha256::digest(user_input.as_bytes())
         .as_slice()
         .try_into()
