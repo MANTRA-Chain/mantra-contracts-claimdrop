@@ -74,8 +74,7 @@ pub(crate) fn validate_claim(
     Ok(())
 }
 
-/// Constants used for the fallback distribution slot and time
-const FALLBACK_TIME: u64 = 0u64;
+/// Constant used for the fallback distribution slot
 const FALLBACK_DISTRIBUTION_SLOT: usize = 0usize;
 
 /// Calculates the amount a user can claim at this point in time
@@ -178,19 +177,15 @@ fn calculate_claim_amount_for_distribution(
             start_time,
             end_time,
         } => {
-            let elapsed_time =
-                if let Some((_, last_claimed)) = previous_claim_for_address_for_distribution {
-                    if last_claimed > end_time {
-                        FALLBACK_TIME
-                    } else {
-                        current_time.seconds().min(end_time.to_owned()) - last_claimed
-                    }
-                } else {
-                    current_time.seconds().min(end_time.to_owned()) - start_time
-                };
+            let elapsed_time = match previous_claim_for_address_for_distribution {
+                Some((_, last_claimed)) if end_time >= last_claimed => {
+                    current_time.seconds().min(end_time.to_owned()) - last_claimed
+                }
+                Some(_) => return Ok(Uint128::zero()), // it means the user has already claimed this distribution
+                None => current_time.seconds().min(end_time.to_owned()) - start_time,
+            };
 
-            let vesting_duration = end_time - start_time;
-            let vesting_progress = Decimal::from_ratio(elapsed_time, vesting_duration);
+            let vesting_progress = Decimal::from_ratio(elapsed_time, end_time - start_time);
 
             Ok(percentage
                 .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
@@ -234,7 +229,7 @@ fn get_compensation_for_rounding_errors(
             .find(|(_, (_, timestamp))| *timestamp == current_time.seconds())
             .unwrap_or((
                 &FALLBACK_DISTRIBUTION_SLOT,
-                &(Uint128::zero(), FALLBACK_TIME),
+                &(Uint128::zero(), Default::default()),
             ));
         return Ok((
             total_claimable_amount.saturating_sub(total_claimed),
