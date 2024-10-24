@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{ensure, Addr, Coin, Decimal, Deps, MessageInfo, StdError, Timestamp, Uint128};
+use cosmwasm_std::{ensure, Addr, Coin, Decimal, Deps, MessageInfo, Timestamp, Uint128};
 use sha2::Digest;
 
 use crate::error::ContractError;
@@ -139,9 +139,15 @@ pub(crate) fn compute_claimable_amount(
         if rounding_error_compensation_amount > Uint128::zero() {
             claimable_amount = claimable_amount.checked_add(rounding_error_compensation_amount)?;
 
-            let (amount, _) = new_claims
-                .get_mut(&slot)
-                .ok_or(StdError::generic_err("couldn't find claim"))?;
+            let (amount, _) = match new_claims.get_mut(&slot) {
+                Some(existing_claim) => existing_claim,
+                None => {
+                    let new_claim = (Uint128::zero(), current_time.seconds());
+                    new_claims.insert(slot, new_claim);
+                    new_claims.get_mut(&slot).unwrap()
+                }
+            };
+
             *amount = amount.checked_add(rounding_error_compensation_amount)?;
         }
     } else {
