@@ -255,25 +255,6 @@ pub fn aggregate_claims(
     Ok(updated_claims)
 }
 
-/// Computes the campaign ID based on the campaign name, description, owner and salt.
-pub fn compute_campaign_id(
-    campaign_name: &str,
-    campaign_description: &str,
-    start_time: &str,
-    owner: &str,
-    salt: &str,
-) -> Result<String, ContractError> {
-    let input = format!("{campaign_name}{campaign_description}{start_time}{owner}{salt}");
-    let hash: [u8; 32] = sha2::Sha256::digest(input.as_bytes())
-        .as_slice()
-        .try_into()
-        .map_err(|_| ContractError::WrongHashLength)?;
-
-    let campaign_id = hex::encode(hash);
-
-    Ok(campaign_id)
-}
-
 /// Validates the contract version and name. To be taken from mantra-std in the future, for now,
 /// it's duplicated from MANTRA-dex.
 #[macro_export]
