@@ -6,7 +6,8 @@ use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 
 use crate::hashes::{
-    ALICE_PROOFS, BOB_PROOFS, BROKEN_PROOFS, CAROL_PROOFS, DAN_PROOFS, EVA_PROOFS, MERKLE_ROOT,
+    ALICE_PROOFS, ALICE_PROOFS_X, BOB_PROOFS, BROKEN_PROOFS, CAROL_PROOFS, DAN_PROOFS, EVA_PROOFS,
+    MERKLE_ROOT, MERKLE_ROOT_X,
 };
 use airdrop_manager::error::ContractError;
 use airdrop_manager::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
@@ -2957,4 +2958,92 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                 }
             },
         );
+}
+
+#[test]
+fn can_claim_dust_without_new_claims() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(23, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(60).seconds(),
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(60).seconds(),
+                    merkle_root: MERKLE_ROOT_X.to_string(),
+                }),
+            },
+            &coins(23, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaign(|result| {
+            let campaign = result.unwrap();
+            assert_eq!(campaign.name, "Test Airdrop I");
+        });
+
+    for _ in 0..59 {
+        suite.add_day();
+    }
+
+    suite
+        .claim(
+            alice,
+            Uint128::new(17u128),
+            Some(alice.to_string()),
+            ALICE_PROOFS_X,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_claimed(Some(alice), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (alice.to_string(), coin(16u128, "uom"))
+            );
+        });
+
+    suite.add_week();
+
+    // executing the claiming here, will result on the compute_claimable_amount::new_claims being empty,
+    // as the claim_amount will be zero, while the rounding_error_compensation_amount will be 1.
+    suite
+        .claim(
+            alice,
+            Uint128::new(17u128),
+            Some(alice.to_string()),
+            ALICE_PROOFS_X,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_claimed(Some(alice), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (alice.to_string(), coin(17u128, "uom"))
+            );
+        });
 }
