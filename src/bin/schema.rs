@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use airdrop_manager::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use claimdrop_contract::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

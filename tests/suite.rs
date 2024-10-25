@@ -4,20 +4,20 @@ use cw_multi_test::{
     WasmKeeper,
 };
 
-use airdrop_manager::msg::{
+use claimdrop_contract::msg::{
     CampaignAction, CampaignResponse, ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
     RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
 
-pub fn airdrop_manager_contract() -> Box<dyn Contract<Empty>> {
+pub fn claimdrop_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        airdrop_manager::contract::execute,
-        airdrop_manager::contract::instantiate,
-        airdrop_manager::contract::query,
+        claimdrop_contract::contract::execute,
+        claimdrop_contract::contract::instantiate,
+        claimdrop_contract::contract::query,
     )
-    .with_migrate(airdrop_manager::contract::migrate);
+    .with_migrate(claimdrop_contract::contract::migrate);
 
     Box::new(contract)
 }
@@ -25,7 +25,7 @@ pub fn airdrop_manager_contract() -> Box<dyn Contract<Empty>> {
 pub struct TestingSuite {
     app: MantraApp,
     pub senders: Vec<Addr>,
-    pub airdrop_manager_addr: Addr,
+    pub claimdrop_contract_addr: Addr,
 }
 
 // helpers
@@ -98,25 +98,25 @@ impl TestingSuite {
         TestingSuite {
             app,
             senders,
-            airdrop_manager_addr: Addr::unchecked(""),
+            claimdrop_contract_addr: Addr::unchecked(""),
         }
     }
 
     #[track_caller]
-    pub fn instantiate_airdrop_manager(&mut self, owner: Option<String>) -> &mut Self {
+    pub fn instantiate_claimdrop_contract(&mut self, owner: Option<String>) -> &mut Self {
         let msg = InstantiateMsg { owner };
 
-        let airdrop_manager_code_id = self.app.store_code(airdrop_manager_contract());
+        let claimdrop_contract_code_id = self.app.store_code(claimdrop_contract());
         let admin = self.admin();
 
-        self.airdrop_manager_addr = self
+        self.claimdrop_contract_addr = self
             .app
             .instantiate_contract(
-                airdrop_manager_code_id,
+                claimdrop_contract_code_id,
                 admin.clone(),
                 &msg,
                 &[],
-                "mantra-airdrop-manager",
+                "mantra-claimdrop-contract",
                 Some(admin.into_string()),
             )
             .unwrap();
@@ -149,7 +149,7 @@ impl TestingSuite {
     ) -> &mut Self {
         result.handle_result(self.app.execute_contract(
             sender.clone(),
-            self.airdrop_manager_addr.clone(),
+            self.claimdrop_contract_addr.clone(),
             &msg,
             funds,
         ));
@@ -209,7 +209,7 @@ impl TestingSuite {
         let response: StdResult<T> = self
             .app
             .wrap()
-            .query_wasm_smart(&self.airdrop_manager_addr, &msg);
+            .query_wasm_smart(&self.claimdrop_contract_addr, &msg);
 
         result(response);
 

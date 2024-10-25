@@ -1,4 +1,4 @@
-# Airdrop Manager Scripts
+# Claimdrop Contract Scripts
 
 These scripts are meant to help you to generate the Merkle data you need when creating an airdrop campaign.
 
@@ -19,3 +19,9 @@ mantra1j28m8g0afvfr23423k5wypfykqrxsu94xhxvxdeyrfc4jkqm7zhqckdf5w,mantra16qtk5fn
 according to the csv data.
 
 Use the merkle root when creating an airdrop campaign, and the merkle proofs to claim the airdrop with a given address.
+
+Note: **Only a single claim entry per address should be registered in the csv file**. If an address has multiple entries, 
+please consolidate them into a single entry, otherwise there will be issues at the contract level as the claims are 
+considered to be unique in the contract.
+
+The merkle_root.js scripts validates addresses have a single entry in the csv file.
