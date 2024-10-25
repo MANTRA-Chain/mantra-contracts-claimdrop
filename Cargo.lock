@@ -15,29 +15,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "airdrop-manager"
-version = "0.1.3"
-dependencies = [
- "anyhow",
- "bech32",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-migrate-error-derive",
- "cw-multi-test",
- "cw-ownable",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "hex",
- "rand",
- "schemars",
- "semver",
- "serde",
- "sha2",
- "thiserror",
-]
-
-[[package]]
 name = "allocator-api2"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -226,6 +203,29 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "claimdrop-contract"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "bech32",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-migrate-error-derive",
+ "cw-multi-test",
+ "cw-ownable",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "hex",
+ "rand",
+ "schemars",
+ "semver",
+ "serde",
+ "sha2",
+ "thiserror",
+]
 
 [[package]]
 name = "const-oid"

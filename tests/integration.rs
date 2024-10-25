@@ -9,8 +9,8 @@ use crate::hashes::{
     ALICE_PROOFS, ALICE_PROOFS_X, BOB_PROOFS, BROKEN_PROOFS, CAROL_PROOFS, DAN_PROOFS, EVA_PROOFS,
     MERKLE_ROOT, MERKLE_ROOT_X,
 };
-use airdrop_manager::error::ContractError;
-use airdrop_manager::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
+use claimdrop_contract::error::ContractError;
+use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 
 use crate::suite::TestingSuite;
 
@@ -18,9 +18,9 @@ mod hashes;
 mod suite;
 
 #[test]
-fn instantiate_airdrop_manager() {
+fn instantiate_claimdrop_contract() {
     let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
-    suite.instantiate_airdrop_manager(None);
+    suite.instantiate_claimdrop_contract(None);
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn create_multiple_campaigns_fails() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -148,7 +148,7 @@ fn cant_create_campaign_if_not_owner() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
         .manage_campaign(
             bob,
             CampaignAction::CreateCampaign {
@@ -194,7 +194,7 @@ fn validate_campaign_params() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
         // name & description
         .manage_campaign(
             alice,
@@ -965,7 +965,7 @@ fn cant_claim_without_campaign() {
     let alice = &suite.senders[0].clone();
 
     suite
-        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
         .claim(
             alice,
             Uint128::new(20_000u128),
@@ -996,7 +996,7 @@ fn create_campaign_and_claim_single_distribution_type() {
     let carol = &suite.senders[2].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(Some(alice.to_string()));
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
 
     suite.manage_campaign(
         alice,
@@ -1164,7 +1164,7 @@ fn claim_ended_campaign() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(dan.to_string()))
+        .instantiate_claimdrop_contract(Some(dan.to_string()))
         .manage_campaign(
             dan,
             CampaignAction::CreateCampaign {
@@ -1329,7 +1329,7 @@ fn query_claimed() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(dan.to_string()))
+        .instantiate_claimdrop_contract(Some(dan.to_string()))
         .manage_campaign(
             dan,
             CampaignAction::CreateCampaign {
@@ -1564,7 +1564,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -1771,7 +1771,7 @@ fn claim_campaign_with_cliff() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -1934,7 +1934,7 @@ fn topup_campaigns_with_and_without_cliff() {
     let eva = &suite.senders[4].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2074,7 +2074,7 @@ fn topup_campaigns_with_and_without_cliff() {
     // create a new contract / campaign
 
     suite
-        .instantiate_airdrop_manager(None)
+        .instantiate_claimdrop_contract(None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -2132,9 +2132,9 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
     let eva = &suite.senders[4].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None);
+    suite.instantiate_claimdrop_contract(None);
 
-    let contract = suite.airdrop_manager_addr.clone();
+    let contract = suite.claimdrop_contract_addr.clone();
 
     suite
         .manage_campaign(
@@ -2325,7 +2325,7 @@ fn query_rewards() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2419,7 +2419,7 @@ fn query_rewards_fails_when_campaign_has_not_started() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2492,7 +2492,7 @@ fn close_campaigns() {
     let dan = &suite.senders[3].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2597,7 +2597,7 @@ fn close_campaigns() {
         );
 
     // let's create a new campaign
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2699,7 +2699,7 @@ fn can_query_claims_after_campaign_is_closed() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(dan.to_string()))
+        .instantiate_claimdrop_contract(Some(dan.to_string()))
         .manage_campaign(
             dan,
             CampaignAction::CreateCampaign {
@@ -2832,7 +2832,7 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
     let bob = &suite.senders[1].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
@@ -2971,7 +2971,7 @@ fn can_claim_dust_without_new_claims() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -3058,7 +3058,7 @@ fn cant_end_distribution_type_after_campaign() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_airdrop_manager(None)
+        .instantiate_claimdrop_contract(None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -3114,7 +3114,7 @@ fn cant_end_distribution_type_after_campaign() {
             },
         );
 
-    suite.instantiate_airdrop_manager(None).manage_campaign(
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {

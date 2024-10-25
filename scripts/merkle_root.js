@@ -3,7 +3,7 @@ const Papa = require('papaparse');
 const sha256 = require('crypto-js/sha256');
 const {MerkleTree} = require('merkletreejs');
 
-class AirdropCampaign {
+class ClaimdropCampaign {
     constructor(items) {
         const addressSet = new Set();
         const leaves = items.map(i => {
@@ -39,6 +39,6 @@ receivers = Papa.parse(csvData, {
     skipEmptyLines: true,
 }).data;
 
-const airdrop = new AirdropCampaign(receivers);
-const merkleRoot = airdrop.getMerkleRoot();
+const claimdrop = new ClaimdropCampaign(receivers);
+const merkleRoot = claimdrop.getMerkleRoot();
 console.log('Merkle Root:', merkleRoot);

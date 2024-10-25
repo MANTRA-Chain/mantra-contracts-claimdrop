@@ -1,8 +1,8 @@
-# Airdrop Manager
+# Claimdrop Contract
 
 To foster widespread token distribution, incentivize participation, and drive network adoption.
 
-The Airdrop Manager contract can be used to distribute tokens to a list of addresses. The contract uses a Merkle tree to 
+The Claimdrop Contract can be used to distribute tokens to a list of addresses. The contract uses a Merkle tree to 
 store the list of addresses and their corresponding token amounts. The root of the Merkle tree is stored on the contract's 
 campaign and is used to verify the validity of the proofs submitted by the recipients.
 

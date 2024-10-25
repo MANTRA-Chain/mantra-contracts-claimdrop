@@ -3,7 +3,7 @@ const Papa = require('papaparse');
 const sha256 = require('crypto-js/sha256');
 const {MerkleTree} = require('merkletreejs');
 
-class AirdropCampaign {
+class ClaimdropCampaign {
     constructor(items) {
         const leaves = items.map(i => sha256(i.contract_addr + i.address + i.amount));
         this.tree = new MerkleTree(leaves, sha256, {sort: true});
@@ -21,7 +21,7 @@ class AirdropCampaign {
 // see merkle_data.csv for an example
 const file = 'merkle_data.csv';
 
-// the contract address of the airdrop manager hosting the airdrop campaign,
+// the contract address of the claimdrop contract hosting the airdrop campaign
 const contractAddress = 'mantra1j28m8g0afvfr23423k5wypfykqrxsu94xhxvxdeyrfc4jkqm7zhqckdf5w';
 
 // the address of the recipient you want to make the proof for
@@ -42,6 +42,6 @@ receivers = Papa.parse(csvData, {
     skipEmptyLines: true,
 }).data;
 
-const airdrop = new AirdropCampaign(receivers);
-const proof = airdrop.getMerkleProof({contract_addr: contractAddress, address, amount});
+const claimdrop = new ClaimdropCampaign(receivers);
+const proof = claimdrop.getMerkleProof({contract_addr: contractAddress, address, amount});
 console.log('Merkle Proof:', proof);
