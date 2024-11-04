@@ -66,14 +66,197 @@ fn bug_large_numbers() {
         },
     );
 
-    suite.query_rewards(Uint128::new(alice_amount), &alice, alice_proofs, |result| {
-        assert_eq!(
-            result.unwrap(),
-            RewardsResponse {
-                claimed: coins(0, denom),
-                pending: coins(10_000u128 - 2_500u128, denom),
-                available_to_claim: vec![],
-            }
-        );
-    });
+    suite
+        .query_rewards(Uint128::new(alice_amount), &alice, alice_proofs, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: vec![],
+                    pending: coins(alice_amount, denom),
+                    available_to_claim: coins(alice_amount, denom),
+                }
+            );
+        })
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::zero());
+        })
+        .claim(
+            &alice,
+            Uint128::new(alice_amount),
+            None,
+            alice_proofs,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::new(alice_amount));
+        });
+}
+
+#[allow(clippy::inconsistent_digit_grouping)]
+#[test]
+fn bug_large_numbers_2() {
+    let alice = Addr::unchecked("mantra13qtg0gys4lfxccjeqed3vrdgmp7g5kzcmf7kjm");
+    let denom = "factory/mantra1ady9vl53r6ct6kxklhgxvtnscmszryl8nnzule/ausdy";
+
+    // 100 trillion
+    let amount: u128 = 100_000_000_000_000_000000000000000000;
+    let alice_amount: u128 = 70_000_000_000_000_000000000000000000;
+    let merkle_root = "02524f88aa9126d536439a2961c5b1a342cfa792e3447251658cfdc3ac94c9ca";
+    let alice_proofs: &[&str] = &[
+        "1bc5a0524fc64283f032b343849694d597ad97ce610b56fa64cbcad9efa9032a",
+        "d3fafecc7b46d0b0b0ac9a0689e8c63f07868dc48af91bcdfee98e0225e76212",
+        "efd074c475dd84fcdae3e32bd38b0476725cf775abe198d1456a0d79cb34bcbc",
+    ];
+    let mut suite = TestingSuite::default_with_balances(vec![coin(amount, denom)]);
+
+    let owner = &suite.senders[0].clone();
+
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        owner,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with no cliff".to_string(),
+                reward_asset: coin(amount, denom),
+                distribution_type: vec![DistributionType::LinearVesting {
+                    percentage: Decimal::percent(100),
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(7).seconds(),
+                }],
+                cliff_duration: None,
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(7).seconds(),
+                merkle_root: merkle_root.to_string(),
+            }),
+        },
+        &coins(amount, denom),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite.add_day();
+
+    suite
+        .query_rewards(Uint128::new(alice_amount), &alice, alice_proofs, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: vec![],
+                    pending: coins(alice_amount, denom),
+                    available_to_claim: coins(9_999_999_999_999_999990000000000000, denom),
+                }
+            );
+        })
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::zero());
+        })
+        .claim(
+            &alice,
+            Uint128::new(alice_amount),
+            None,
+            alice_proofs,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::new(9_999_999_999_999_999990000000000000));
+        });
+
+    suite.add_week();
+
+    suite
+        .claim(
+            &alice,
+            Uint128::new(alice_amount),
+            None,
+            alice_proofs,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::new(alice_amount));
+        });
+}
+
+#[allow(clippy::inconsistent_digit_grouping)]
+#[test]
+fn bug_large_numbers_3() {
+    let alice = Addr::unchecked("mantra13qtg0gys4lfxccjeqed3vrdgmp7g5kzcmf7kjm");
+    let denom = "factory/mantra1ady9vl53r6ct6kxklhgxvtnscmszryl8nnzule/ausdy";
+
+    // 100 trillion
+    let amount: u128 = 340_000_000_000_000_000000000000000000;
+    let alice_amount: u128 = 340_000_000_000_000_000000000000000000;
+    let merkle_root = "8b66d676be020440db214ab0180f7ff3ca4c4027578c7d1a0b848d6183a03c66";
+    let alice_proofs: &[&str] = &[
+        "7e7c9f5bc7318cd3ab9c8db2cd2bd42665195fca1d0b527b99ce884ddcf92dc9",
+        "fd1bbfb458f6f1e75a8fc7566f3552fb16ff3967c933e0e0883aa2d1c7144558",
+    ];
+    let mut suite = TestingSuite::default_with_balances(vec![coin(amount, denom)]);
+
+    let owner = &suite.senders[0].clone();
+
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        owner,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with no cliff".to_string(),
+                reward_asset: coin(amount, denom),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::percent(100),
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(7).seconds(),
+                }],
+                cliff_duration: None,
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(7).seconds(),
+                merkle_root: merkle_root.to_string(),
+            }),
+        },
+        &coins(amount, denom),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite.add_day();
+
+    suite
+        .query_rewards(Uint128::new(alice_amount), &alice, alice_proofs, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: vec![],
+                    pending: coins(alice_amount, denom),
+                    available_to_claim: coins(alice_amount, denom),
+                }
+            );
+        })
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::zero());
+        })
+        .claim(
+            &alice,
+            Uint128::new(alice_amount),
+            None,
+            alice_proofs,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance(denom, &alice, |balance| {
+            assert_eq!(balance, Uint128::new(alice_amount));
+        });
 }

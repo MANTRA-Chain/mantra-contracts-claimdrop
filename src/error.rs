@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, OverflowError, StdError, Uint128};
+use cosmwasm_std::{ConversionOverflowError, Decimal, OverflowError, StdError, Uint128};
 use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
@@ -22,6 +22,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
+
+    #[error("{0}")]
+    ConversionOverflowError(#[from] ConversionOverflowError),
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
