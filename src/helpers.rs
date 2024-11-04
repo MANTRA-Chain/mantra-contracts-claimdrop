@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{ensure, Addr, Coin, Decimal, Deps, MessageInfo, Timestamp, Uint128};
+use cosmwasm_std::{
+    ensure, Addr, Coin, Decimal256, Deps, MessageInfo, Timestamp, Uint128, Uint256,
+};
 use sha2::Digest;
 
 use crate::error::ContractError;
@@ -185,12 +187,20 @@ fn calculate_claim_amount_for_distribution(
                 None => current_time.seconds().min(end_time.to_owned()) - start_time,
             };
 
-            let vesting_progress = Decimal::from_ratio(elapsed_time, end_time - start_time);
+            let vesting_progress = Decimal256::from_ratio(
+                Uint256::from(elapsed_time),
+                Uint256::from(end_time - start_time),
+            );
 
-            Ok(percentage
-                .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
-                .checked_mul(vesting_progress)?
-                .to_uint_floor())
+            Ok(Uint128::try_from(
+                Decimal256::from(*percentage)
+                    .checked_mul(Decimal256::from_ratio(
+                        Uint256::from_uint128(total_claimable_amount),
+                        Uint256::one(),
+                    ))?
+                    .checked_mul(vesting_progress)?
+                    .to_uint_floor(),
+            )?)
         }
         DistributionType::LumpSum { percentage, .. } => {
             // it means the user has already claimed this distribution
@@ -198,9 +208,14 @@ fn calculate_claim_amount_for_distribution(
                 return Ok(Uint128::zero());
             }
 
-            Ok(percentage
-                .checked_mul(Decimal::from_ratio(total_claimable_amount, Uint128::one()))?
-                .to_uint_floor())
+            Ok(Uint128::try_from(
+                Decimal256::from(*percentage)
+                    .checked_mul(Decimal256::from_ratio(
+                        Uint256::from_uint128(total_claimable_amount),
+                        Uint256::one(),
+                    ))?
+                    .to_uint_floor(),
+            )?)
         }
     }
 }
@@ -231,6 +246,7 @@ fn get_compensation_for_rounding_errors(
                 &FALLBACK_DISTRIBUTION_SLOT,
                 &(Uint128::zero(), Default::default()),
             ));
+
         return Ok((
             total_claimable_amount.saturating_sub(total_claimed),
             slot.to_owned(),
