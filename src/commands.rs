@@ -249,3 +249,20 @@ pub(crate) fn claim(
             ("claimed_amount", claimable_amount.to_string()),
         ]))
 }
+
+/// Updates the proxy address that is allowed to execute the Claim message.
+pub(crate) fn update_proxy(
+    deps: DepsMut,
+    info: MessageInfo,
+    proxy: String,
+) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    let proxy = deps.api.addr_validate(&proxy)?;
+    PROXY.save(deps.storage, &proxy)?;
+
+    Ok(Response::default().add_attributes(vec![
+        ("action", "update_proxy".to_string()),
+        ("proxy", proxy.to_string()),
+    ]))
+}

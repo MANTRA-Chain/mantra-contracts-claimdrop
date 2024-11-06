@@ -3164,11 +3164,12 @@ fn only_proxy_can_claim_if_set_claim_dust_without_new_claims() {
     ]);
 
     let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
     let proxy = &suite.senders[3].clone();
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()), Some(proxy.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -3202,12 +3203,43 @@ fn only_proxy_can_claim_if_set_claim_dust_without_new_claims() {
         suite.add_day();
     }
 
-    // alice can't claim herself as the proxy is set
+    // alice can claim herself as the proxy has not been set yet
     suite.claim(
         alice,
         Uint128::new(10_000u128),
         Some(alice.to_string()),
         ALICE_PROOFS,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .update_proxy(
+            bob,
+            proxy.to_string(),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            },
+        )
+        .update_proxy(
+            alice,
+            proxy.to_string(),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    // bob can't claim himself as the proxy has been set
+    suite.claim(
+        bob,
+        Uint128::new(10_000u128),
+        None,
+        BOB_PROOFS,
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             match err {
@@ -3221,8 +3253,8 @@ fn only_proxy_can_claim_if_set_claim_dust_without_new_claims() {
     suite.claim(
         proxy,
         Uint128::new(10_000u128),
-        Some(alice.to_string()),
-        ALICE_PROOFS,
+        Some(bob.to_string()),
+        BOB_PROOFS,
         |result: Result<AppResponse, anyhow::Error>| {
             result.unwrap();
         },

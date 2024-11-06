@@ -194,6 +194,16 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    pub fn update_proxy(
+        &mut self,
+        sender: &Addr,
+        proxy: String,
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        self.execute_contract(sender, ExecuteMsg::UpdateProxy { proxy }, &[], result)
+    }
+
+    #[track_caller]
     pub fn update_ownership(
         &mut self,
         sender: &Addr,

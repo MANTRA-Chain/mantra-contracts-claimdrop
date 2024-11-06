@@ -29,6 +29,10 @@ pub enum ExecuteMsg {
         /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
         proof: Vec<String>,
     },
+    UpdateProxy {
+        /// The new proxy address
+        proxy: String,
+    },
 }
 
 #[cw_ownable_query]

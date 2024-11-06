@@ -8,7 +8,7 @@ use crate::state::PROXY;
 use crate::{commands, queries, validate_contract};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "mantra_claimdrop-contract";
+const CONTRACT_NAME: &str = "mantra:claimdrop_contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
@@ -61,6 +61,7 @@ pub fn execute(
                 )?,
             )
         }
+        ExecuteMsg::UpdateProxy { proxy } => commands::update_proxy(deps, info, proxy),
     }
 }
 
