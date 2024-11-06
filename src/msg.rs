@@ -9,9 +9,7 @@ use crate::error::ContractError;
 #[cw_serde]
 pub struct InstantiateMsg {
     /// Owner of the contract. If not set, it is the sender of the Instantiate message.
-    pub owner: Option<String>,
-    /// If set, the address that is allowed to execute the Claim message.
-    pub proxy: Option<String>,
+    pub owner: Option<String>
 }
 
 #[cw_ownable_execute]
@@ -29,8 +27,9 @@ pub enum ExecuteMsg {
         /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
         proof: Vec<String>,
     },
-    UpdateProxy {
-        /// The new proxy address
+    /// Sets the proxy address that is allowed to execute the Claim message.
+    SetProxy {
+        /// The proxy address
         proxy: String,
     },
 }

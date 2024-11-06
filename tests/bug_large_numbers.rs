@@ -42,7 +42,7 @@ fn bug_large_numbers() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(None, None)
+        .instantiate_claimdrop_contract(None)
         .manage_campaign(
             owner,
             CampaignAction::CreateCampaign {
@@ -118,7 +118,7 @@ fn bug_large_numbers_2() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(None, None)
+        .instantiate_claimdrop_contract(None)
         .manage_campaign(
             owner,
             CampaignAction::CreateCampaign {
@@ -211,7 +211,7 @@ fn bug_large_numbers_3() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(None, None)
+        .instantiate_claimdrop_contract(None)
         .manage_campaign(
             owner,
             CampaignAction::CreateCampaign {

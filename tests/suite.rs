@@ -106,9 +106,8 @@ impl TestingSuite {
     pub fn instantiate_claimdrop_contract(
         &mut self,
         owner: Option<String>,
-        proxy: Option<String>,
     ) -> &mut Self {
-        let msg = InstantiateMsg { owner, proxy };
+        let msg = InstantiateMsg { owner };
 
         let claimdrop_contract_code_id = self.app.store_code(claimdrop_contract());
         let admin = self.admin();
@@ -194,13 +193,13 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub fn update_proxy(
+    pub fn set_proxy(
         &mut self,
         sender: &Addr,
         proxy: String,
         result: impl ResultHandler,
     ) -> &mut Self {
-        self.execute_contract(sender, ExecuteMsg::UpdateProxy { proxy }, &[], result)
+        self.execute_contract(sender, ExecuteMsg::SetProxy { proxy }, &[], result)
     }
 
     #[track_caller]

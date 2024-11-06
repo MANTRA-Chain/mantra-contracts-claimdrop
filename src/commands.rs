@@ -250,8 +250,8 @@ pub(crate) fn claim(
         ]))
 }
 
-/// Updates the proxy address that is allowed to execute the Claim message.
-pub(crate) fn update_proxy(
+/// Sets the proxy address that is allowed to execute the Claim message.
+pub(crate) fn set_proxy(
     deps: DepsMut,
     info: MessageInfo,
     proxy: String,
@@ -262,7 +262,7 @@ pub(crate) fn update_proxy(
     PROXY.save(deps.storage, &proxy)?;
 
     Ok(Response::default().add_attributes(vec![
-        ("action", "update_proxy".to_string()),
+        ("action", "set_proxy".to_string()),
         ("proxy", proxy.to_string()),
     ]))
 }
