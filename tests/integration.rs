@@ -20,7 +20,7 @@ mod suite;
 #[test]
 fn instantiate_claimdrop_contract() {
     let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
-    suite.instantiate_claimdrop_contract(None);
+    suite.instantiate_claimdrop_contract(None, None);
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn create_multiple_campaigns_fails() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -148,7 +148,7 @@ fn cant_create_campaign_if_not_owner() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         .manage_campaign(
             bob,
             CampaignAction::CreateCampaign {
@@ -194,7 +194,7 @@ fn validate_campaign_params() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         // name & description
         .manage_campaign(
             alice,
@@ -965,7 +965,7 @@ fn cant_claim_without_campaign() {
     let alice = &suite.senders[0].clone();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         .claim(
             alice,
             Uint128::new(20_000u128),
@@ -996,7 +996,7 @@ fn create_campaign_and_claim_single_distribution_type() {
     let carol = &suite.senders[2].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()), None);
 
     suite.manage_campaign(
         alice,
@@ -1164,7 +1164,7 @@ fn claim_ended_campaign() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(dan.to_string()))
+        .instantiate_claimdrop_contract(Some(dan.to_string()), None)
         .manage_campaign(
             dan,
             CampaignAction::CreateCampaign {
@@ -1329,7 +1329,7 @@ fn query_claimed() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(dan.to_string()))
+        .instantiate_claimdrop_contract(Some(dan.to_string()), None)
         .manage_campaign(
             dan,
             CampaignAction::CreateCampaign {
@@ -1564,7 +1564,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -1771,30 +1771,32 @@ fn claim_campaign_with_cliff() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LinearVesting {
-                    percentage: Decimal::percent(100),
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(1460).seconds(), // 4 years
+                    }],
+                    cliff_duration: Some(86_400 * 365), // 1 year cliff
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(1460).seconds(), // 4 years
-                }],
-                cliff_duration: Some(86_400 * 365), // 1 year cliff
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(1460).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    end_time: current_time.plus_days(1460).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     // can't claim before the cliff period is over
     suite.claim(
@@ -1934,30 +1936,32 @@ fn topup_campaigns_with_and_without_cliff() {
     let eva = &suite.senders[4].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(30_000, "uom"),
-                distribution_type: vec![DistributionType::LinearVesting {
-                    percentage: Decimal::percent(100),
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(30_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(30).seconds(), // a month
+                    }],
+                    cliff_duration: Some(86_400 * 7), // 7 days cliff
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(30).seconds(), // a month
-                }],
-                cliff_duration: Some(86_400 * 7), // 7 days cliff
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(30).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(30_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    end_time: current_time.plus_days(30).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(30_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.query_campaign(|result| {
         let campaign = result.unwrap();
@@ -2074,7 +2078,7 @@ fn topup_campaigns_with_and_without_cliff() {
     // create a new contract / campaign
 
     suite
-        .instantiate_claimdrop_contract(None)
+        .instantiate_claimdrop_contract(None, None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -2132,7 +2136,7 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
     let eva = &suite.senders[4].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None);
+    suite.instantiate_claimdrop_contract(None, None);
 
     let contract = suite.claimdrop_contract_addr.clone();
 
@@ -2325,37 +2329,39 @@ fn query_rewards() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                    },
-                ],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite
         .claim(
@@ -2419,37 +2425,39 @@ fn query_rewards_fails_when_campaign_has_not_started() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                    },
-                ],
-                cliff_duration: None,
-                start_time: current_time.plus_days(1).seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite
         .claim(
@@ -2492,37 +2500,39 @@ fn close_campaigns() {
     let dan = &suite.senders[3].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: Some(dan.to_string()),
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                    },
-                ],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: Some(dan.to_string()),
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     //end campaign
     suite
@@ -2597,37 +2607,39 @@ fn close_campaigns() {
         );
 
     // let's create a new campaign
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: Some(dan.to_string()),
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                    },
-                ],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: Some(dan.to_string()),
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.manage_campaign(
         carol, // carol can't since it's not the owner of the contract nor the owner of the campaign
@@ -2699,7 +2711,7 @@ fn can_query_claims_after_campaign_is_closed() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(dan.to_string()))
+        .instantiate_claimdrop_contract(Some(dan.to_string()), None)
         .manage_campaign(
             dan,
             CampaignAction::CreateCampaign {
@@ -2832,37 +2844,39 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
     let bob = &suite.senders[1].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop, 土金, ك".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                    },
-                ],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(7).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                        },
+                    ],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.add_week();
 
@@ -2971,7 +2985,7 @@ fn can_claim_dust_without_new_claims() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .instantiate_claimdrop_contract(Some(alice.to_string()), None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -3058,7 +3072,7 @@ fn cant_end_distribution_type_after_campaign() {
     let current_time = &suite.get_time();
 
     suite
-        .instantiate_claimdrop_contract(None)
+        .instantiate_claimdrop_contract(None, None)
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
@@ -3114,26 +3128,101 @@ fn cant_end_distribution_type_after_campaign() {
             },
         );
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop, 土金, ك".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LinearVesting {
-                    percentage: Decimal::percent(100),
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(6).seconds(),
+                    }],
+                    cliff_duration: None,
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(6).seconds(),
-                }],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(7).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
-            }),
+                    end_time: current_time.plus_days(7).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+}
+
+#[test]
+fn only_proxy_can_claim_if_set_claim_dust_without_new_claims() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let proxy = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()), Some(proxy.to_string()))
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000u128, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(60).seconds(),
+                    }],
+                    cliff_duration: None,
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(60).seconds(),
+                    merkle_root: MERKLE_ROOT.to_string(),
+                }),
+            },
+            &coins(100_000u128, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaign(|result| {
+            let campaign = result.unwrap();
+            assert_eq!(campaign.name, "Test Airdrop I");
+        });
+
+    for _ in 0..59 {
+        suite.add_day();
+    }
+
+    // alice can't claim herself as the proxy is set
+    suite.claim(
+        alice,
+        Uint128::new(10_000u128),
+        Some(alice.to_string()),
+        ALICE_PROOFS,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::Unauthorized { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+            }
         },
-        &coins(100_000, "uom"),
+    );
+
+    // the proxy can claim though
+    suite.claim(
+        proxy,
+        Uint128::new(10_000u128),
+        Some(alice.to_string()),
+        ALICE_PROOFS,
         |result: Result<AppResponse, anyhow::Error>| {
             result.unwrap();
         },

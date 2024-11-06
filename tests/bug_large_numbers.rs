@@ -41,30 +41,32 @@ fn bug_large_numbers() {
 
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        owner,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with no cliff".to_string(),
-                reward_asset: coin(amount, denom),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::percent(100),
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            owner,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with no cliff".to_string(),
+                    reward_asset: coin(amount, denom),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    }],
+                    cliff_duration: None,
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(7).seconds(),
-                }],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-                merkle_root: merkle_root.to_string(),
-            }),
-        },
-        &coins(amount, denom),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    end_time: current_time.plus_days(14).seconds(),
+                    merkle_root: merkle_root.to_string(),
+                }),
+            },
+            &coins(amount, denom),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite
         .query_rewards(Uint128::new(alice_amount), &alice, alice_proofs, |result| {
@@ -115,30 +117,32 @@ fn bug_large_numbers_2() {
 
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        owner,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with no cliff".to_string(),
-                reward_asset: coin(amount, denom),
-                distribution_type: vec![DistributionType::LinearVesting {
-                    percentage: Decimal::percent(100),
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            owner,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with no cliff".to_string(),
+                    reward_asset: coin(amount, denom),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    }],
+                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
-                }],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(7).seconds(),
-                merkle_root: merkle_root.to_string(),
-            }),
-        },
-        &coins(amount, denom),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    merkle_root: merkle_root.to_string(),
+                }),
+            },
+            &coins(amount, denom),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.add_day();
 
@@ -206,30 +210,32 @@ fn bug_large_numbers_3() {
 
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        owner,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with no cliff".to_string(),
-                reward_asset: coin(amount, denom),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::percent(100),
+    suite
+        .instantiate_claimdrop_contract(None, None)
+        .manage_campaign(
+            owner,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with no cliff".to_string(),
+                    reward_asset: coin(amount, denom),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                    }],
+                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
-                }],
-                cliff_duration: None,
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(7).seconds(),
-                merkle_root: merkle_root.to_string(),
-            }),
-        },
-        &coins(amount, denom),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    merkle_root: merkle_root.to_string(),
+                }),
+            },
+            &coins(amount, denom),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.add_day();
 

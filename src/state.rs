@@ -6,6 +6,9 @@ use cw_storage_plus::{Item, Map};
 use crate::error::ContractError;
 use crate::msg::Campaign;
 
+/// The proxy that is allowed to execute the Claim message.
+pub const PROXY: Item<Addr> = Item::new("proxy");
+
 /// The campaign item
 pub const CAMPAIGN: Item<Campaign> = Item::new("campaign");
 

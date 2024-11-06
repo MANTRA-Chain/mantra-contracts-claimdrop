@@ -3,7 +3,9 @@ use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{Campaign, CampaignAction, CampaignParams};
-use crate::state::{get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGN, CLAIMS};
+use crate::state::{
+    get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGN, CLAIMS, PROXY,
+};
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -152,6 +154,13 @@ pub(crate) fn claim(
     proof: Vec<String>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
+
+    let proxy = PROXY.may_load(deps.storage)?;
+
+    // if there is any, only the proxy can execute the claim function
+    if let Some(proxy) = proxy {
+        ensure!(proxy == info.sender, ContractError::Unauthorized);
+    }
 
     let mut campaign = CAMPAIGN
         .may_load(deps.storage)?

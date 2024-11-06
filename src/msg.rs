@@ -10,6 +10,8 @@ use crate::error::ContractError;
 pub struct InstantiateMsg {
     /// Owner of the contract. If not set, it is the sender of the Instantiate message.
     pub owner: Option<String>,
+    /// If set, the address that is allowed to execute the Claim message.
+    pub proxy: Option<String>,
 }
 
 #[cw_ownable_execute]

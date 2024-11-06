@@ -4,6 +4,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::state::PROXY;
 use crate::{commands, queries, validate_contract};
 
 // version info for migration info
@@ -21,6 +22,10 @@ pub fn instantiate(
 
     let owner = msg.owner.unwrap_or(info.sender.into_string());
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(&owner))?;
+
+    if let Some(proxy) = msg.proxy {
+        PROXY.save(deps.storage, &deps.api.addr_validate(&proxy)?)?;
+    }
 
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
