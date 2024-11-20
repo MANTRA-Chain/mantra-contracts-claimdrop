@@ -111,8 +111,6 @@ pub struct Campaign {
     /// The ways the reward is distributed, which are defined by the [DistributionType].
     /// The sum of the percentages must be 100.
     pub distribution_type: Vec<DistributionType>,
-    /// The duration of the cliff, in seconds
-    pub cliff_duration: Option<u64>,
     /// The campaign start time (unix timestamp), in seconds
     pub start_time: u64,
     /// The campaign end time (unix timestamp), in seconds
@@ -127,17 +125,17 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign {{ owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, cliff_duration: {:?}, start_time: {}, end_time: {}, merkle_root: {} }}",
+            "Campaign {{ owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, merkle_root: {}, closed: {:?} }}",
             self.owner,
             self.name,
             self.description,
             self.reward_asset,
             self.claimed,
             self.distribution_type,
-            self.cliff_duration,
             self.start_time,
             self.end_time,
-            self.merkle_root
+            self.merkle_root,
+            self.closed
         )
     }
 }
@@ -157,7 +155,6 @@ impl Campaign {
                 amount: Uint128::zero(),
             },
             distribution_type: params.distribution_type,
-            cliff_duration: params.cliff_duration,
             start_time: params.start_time,
             end_time: params.end_time,
             merkle_root: params.merkle_root,
@@ -195,8 +192,6 @@ pub struct CampaignParams {
     /// The ways the reward is distributed, which are defined by the [DistributionType].
     /// The sum of the percentages must be 100.
     pub distribution_type: Vec<DistributionType>,
-    /// The duration of the cliff, in seconds
-    pub cliff_duration: Option<u64>,
     /// The campaign start time (unix timestamp), in seconds
     pub start_time: u64,
     /// The campaign end timestamp (unix timestamp), in seconds
@@ -263,34 +258,8 @@ impl CampaignParams {
         Ok(())
     }
 
-    /// Validates the cliff duration
-    pub fn validate_cliff_duration(&self) -> Result<(), ContractError> {
-        if let Some(cliff_duration) = self.cliff_duration {
-            ensure!(
-                cliff_duration > 0,
-                ContractError::InvalidCampaignParam {
-                    param: "cliff_duration".to_string(),
-                    reason: "cannot be zero".to_string(),
-                }
-            );
-
-            ensure!(
-                cliff_duration < self.end_time - self.start_time,
-                ContractError::InvalidCampaignParam {
-                    param: "cliff_duration".to_string(),
-                    reason: "cannot be greater or equal than the campaign duration".to_string(),
-                }
-            );
-        }
-
-        Ok(())
-    }
-
     /// Ensures the distribution type parameters are correct
-    pub fn validate_campaign_distribution(
-        &self,
-        current_time: Timestamp,
-    ) -> Result<(), ContractError> {
+    pub fn validate_campaign_distribution(&self) -> Result<(), ContractError> {
         let mut total_percentage = Decimal::zero();
 
         ensure!(
@@ -303,17 +272,17 @@ impl CampaignParams {
         );
 
         for dist in self.distribution_type.iter() {
-            let (percentage, start_time, end_time) = match dist {
+            let (percentage, start_time, end_time, cliff_duration) = match dist {
                 DistributionType::LinearVesting {
                     percentage,
                     start_time,
                     end_time,
-                } => (percentage, start_time, end_time),
+                    cliff_duration,
+                } => (percentage, start_time, Some(end_time), cliff_duration),
                 DistributionType::LumpSum {
                     percentage,
                     start_time,
-                    end_time,
-                } => (percentage, start_time, end_time),
+                } => (percentage, start_time, None, &None),
             };
 
             ensure!(
@@ -324,28 +293,53 @@ impl CampaignParams {
             total_percentage = total_percentage.checked_add(*percentage)?;
 
             ensure!(
-                *start_time >= current_time.seconds(),
+                *start_time >= self.start_time,
                 ContractError::InvalidStartDistributionTime {
                     start_time: *start_time,
-                    current_time: current_time.seconds(),
+                    campaign_start_time: self.start_time,
                 }
             );
 
-            ensure!(
-                end_time > start_time,
-                ContractError::InvalidDistributionTimes {
-                    start_time: *start_time,
-                    end_time: *end_time,
-                }
-            );
+            // validate the end time. Applies for the linear vesting distribution type only
+            if let Some(end_time) = end_time {
+                ensure!(
+                    end_time > start_time,
+                    ContractError::InvalidDistributionTimes {
+                        start_time: *start_time,
+                        end_time: *end_time,
+                    }
+                );
 
-            ensure!(
-                *end_time <= self.end_time,
-                ContractError::InvalidEndDistributionTime {
-                    end_time: *end_time,
-                    campaign_end_time: self.end_time,
-                }
-            );
+                ensure!(
+                    *end_time <= self.end_time,
+                    ContractError::InvalidEndDistributionTime {
+                        end_time: *end_time,
+                        campaign_end_time: self.end_time,
+                    }
+                );
+            }
+
+            // validate the cliff duration
+            if let Some(cliff_duration) = cliff_duration {
+                ensure!(
+                    *cliff_duration > 0u64,
+                    ContractError::InvalidCampaignParam {
+                        param: "cliff_duration".to_string(),
+                        reason: "cannot be zero".to_string(),
+                    }
+                );
+
+                ensure!(
+                    // it is safe to unwrap because this cliff validation only applies for linear vesting,
+                    // which contains an end_time
+                    *cliff_duration < end_time.unwrap() - start_time,
+                    ContractError::InvalidCampaignParam {
+                        param: "cliff_duration".to_string(),
+                        reason: "cannot be greater or equal than the distribution duration"
+                            .to_string(),
+                    }
+                );
+            }
         }
 
         ensure!(
@@ -370,14 +364,14 @@ pub enum DistributionType {
         start_time: u64,
         /// The unix timestamp when this distribution type ends, in seconds
         end_time: u64,
+        /// The duration of the cliff, in seconds
+        cliff_duration: Option<u64>,
     },
     /// The distribution is done in a single lump sum, i.e. no vesting period
     LumpSum {
         percentage: Decimal,
         /// The unix timestamp when this distribution type starts, in seconds
         start_time: u64,
-        /// The unix timestamp when this distribution type ends, in seconds
-        end_time: u64,
     },
 }
 

@@ -1,4 +1,4 @@
-use crate::hashes::{ALICE_PROOFS, ALICE_PROOFS_X, MERKLE_ROOT, MERKLE_ROOT_X};
+use crate::hashes::{ALICE_PROOFS_X, MERKLE_ROOT_X};
 use crate::suite::TestingSuite;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
@@ -31,8 +31,8 @@ fn can_claim_dust_after_vesting_ends() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(60).seconds(),
+                        cliff_duration: None,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(90).seconds(),
                     merkle_root: MERKLE_ROOT_X.to_string(),
@@ -71,8 +71,8 @@ fn can_claim_dust_after_vesting_ends() {
             );
         });
 
-    /// This will make it 60 days, so the vesting will fully end, while the campaign is about to end
-    /// in 30 days.
+    // This will make it 60 days, so the vesting will fully end, while the campaign is about to end
+    // in 30 days.
     suite.add_day();
 
     // executing the claiming here, will result on the compute_claimable_amount::new_claims being empty,
@@ -131,15 +131,14 @@ fn can_claim_dust_after_vesting_ends_2() {
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
                             start_time: current_time.seconds(),
-                            end_time: current_time.plus_days(60).seconds(),
                         },
                         DistributionType::LinearVesting {
                             percentage: Decimal::percent(75),
                             start_time: current_time.seconds(),
                             end_time: current_time.plus_days(60).seconds(),
+                            cliff_duration: None,
                         },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(90).seconds(),
                     merkle_root: MERKLE_ROOT_X.to_string(),
@@ -178,8 +177,8 @@ fn can_claim_dust_after_vesting_ends_2() {
             );
         });
 
-    /// This will make it 60 days, so the vesting will fully end, while the campaign is about to end
-    /// in 30 days.
+    // This will make it 60 days, so the vesting will fully end, while the campaign is about to end
+    // in 30 days.
     for _ in 0..30 {
         suite.add_day();
     }

@@ -18,8 +18,7 @@ pub(crate) fn validate_campaign_params(
     campaign_params.validate_campaign_name_description()?;
     validate_merkle_root(&campaign_params.merkle_root)?;
     campaign_params.validate_campaign_times(current_time)?;
-    campaign_params.validate_campaign_distribution(current_time)?;
-    campaign_params.validate_cliff_duration()?;
+    campaign_params.validate_campaign_distribution()?;
 
     let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
     ensure!(
@@ -91,14 +90,6 @@ pub(crate) fn compute_claimable_amount(
     let mut new_claims = HashMap::new();
 
     if campaign.has_started(current_time) {
-        if let Some(cliff_duration) = campaign.cliff_duration {
-            let cliff_end_time = campaign.start_time + cliff_duration;
-            ensure!(
-                current_time.seconds() >= cliff_end_time,
-                ContractError::CliffPeriodNotPassed
-            );
-        }
-
         let previous_claims_for_address = get_claims_for_address(deps, address)?;
 
         for (distribution_slot, distribution) in
@@ -107,6 +98,21 @@ pub(crate) fn compute_claimable_amount(
             // skip distributions that have not started yet
             if !distribution.has_started(current_time) {
                 continue;
+            }
+
+            // check if the cliff period has passed for linear vesting distributions
+            if let DistributionType::LinearVesting {
+                cliff_duration: Some(cliff_duration),
+                start_time,
+                ..
+            } = distribution
+            {
+                let cliff_end_time = start_time + cliff_duration;
+
+                // if the cliff period has not passed yet, skip
+                if current_time.seconds() < cliff_end_time {
+                    continue;
+                }
             }
 
             let previous_claim_for_address_for_distribution =
@@ -178,6 +184,7 @@ fn calculate_claim_amount_for_distribution(
             percentage,
             start_time,
             end_time,
+            ..
         } => {
             let elapsed_time = match previous_claim_for_address_for_distribution {
                 Some((_, last_claimed)) if end_time >= last_claimed => {
