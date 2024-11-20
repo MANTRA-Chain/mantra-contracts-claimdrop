@@ -1,7 +1,7 @@
 [package]
 name = "claimdrop-contract"
 description = "The Claimdrop Contract allows for the creation of airdrop campaigns using merkle roots."
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Javier C <javier.m.costa@mantra.finance>"]
 edition = "2021"
 
