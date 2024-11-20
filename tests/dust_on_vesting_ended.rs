@@ -1,4 +1,4 @@
-use crate::hashes::{ALICE_PROOFS, ALICE_PROOFS_X, MERKLE_ROOT, MERKLE_ROOT_X};
+use crate::hashes::{ALICE_PROOFS_X, MERKLE_ROOT_X};
 use crate::suite::TestingSuite;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
@@ -31,8 +31,8 @@ fn can_claim_dust_after_vesting_ends() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(60).seconds(),
+                        cliff_duration: None,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(90).seconds(),
                     merkle_root: MERKLE_ROOT_X.to_string(),
@@ -137,9 +137,9 @@ fn can_claim_dust_after_vesting_ends_2() {
                             percentage: Decimal::percent(75),
                             start_time: current_time.seconds(),
                             end_time: current_time.plus_days(60).seconds(),
+                            cliff_duration: None,
                         },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(90).seconds(),
                     merkle_root: MERKLE_ROOT_X.to_string(),

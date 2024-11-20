@@ -48,7 +48,6 @@ fn create_multiple_campaigns_fails() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
@@ -73,7 +72,6 @@ fn create_multiple_campaigns_fails() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
@@ -116,7 +114,6 @@ fn create_multiple_campaigns_fails() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
@@ -162,7 +159,6 @@ fn cant_create_campaign_if_not_owner() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a2835f4d5c3b7f9f58ec60e85a52e6e24985777540a214ee4080431bacf4882a"
@@ -209,7 +205,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a2835f4d5c3b7f9f58ec60e85a52e6e24985777540a214ee4080431bacf4882a"
@@ -240,7 +235,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a2835f4d5c3b7f9f58ec60e85a52e6e24985777540a214ee4080431bacf4882a"
@@ -272,7 +266,6 @@ fn validate_campaign_params() {
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                 }],
-                cliff_duration: None,
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
                 merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -308,7 +301,6 @@ fn validate_campaign_params() {
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                 }],
-                cliff_duration: None,
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
                 merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -335,13 +327,12 @@ fn validate_campaign_params() {
                     owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000, "uom"),
+                    reward_asset: coin(5_000u128, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: ""
@@ -364,13 +355,12 @@ fn validate_campaign_params() {
                     owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000, "uom"),
+                    reward_asset: coin(5_000u128, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fda"
@@ -393,13 +383,12 @@ fn validate_campaign_params() {
                     owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000, "uom"),
+                    reward_asset: coin(5_000u128, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797ebaf820af47b0044cd910339cb4fda"
@@ -429,7 +418,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 172_800,
                     end_time: current_time.seconds() + 1,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -461,7 +449,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() - 100,
                     end_time: current_time.seconds() + 1,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -490,7 +477,6 @@ fn validate_campaign_params() {
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
                     distribution_type: vec![],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -533,7 +519,6 @@ fn validate_campaign_params() {
                         end_time: current_time.seconds() + 172_800,
                     },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -565,7 +550,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -597,7 +581,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -629,7 +612,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -658,7 +640,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() - 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -688,7 +669,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds(),
                         end_time: current_time.seconds() - 1,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -719,14 +699,12 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     },
-
                         DistributionType::LumpSum {
                             percentage: Decimal::one(),
                             start_time: current_time.seconds() + 1,
                             end_time: current_time.seconds() + 172_800,
                         }
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -754,7 +732,6 @@ fn validate_campaign_params() {
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                 }],
-                cliff_duration: None,
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
                 merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -770,71 +747,6 @@ fn validate_campaign_params() {
             }
         },
     )
-        // cliff duration
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params: Box::new(CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
-                    }],
-                    cliff_duration: Some(0u64),
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::InvalidCampaignParam { param, reason } => {
-                        assert_eq!(param, "cliff_duration");
-                        assert_eq!(reason, "cannot be zero");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
-                }
-            },
-        )
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params: Box::new(CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
-                    }],
-                    cliff_duration: Some(172_801u64),
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::InvalidCampaignParam { param, reason } => {
-                        assert_eq!(param, "cliff_duration");
-                        assert_eq!(reason, "cannot be greater or equal than the campaign duration");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
-                }
-            },
-        )
         // reward
         .manage_campaign(
             alice,
@@ -843,13 +755,12 @@ fn validate_campaign_params() {
                     owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000, "uusdc"),
+                    reward_asset: coin(5_000u128, "uusdc"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -877,13 +788,12 @@ fn validate_campaign_params() {
                     owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000, "uom"),
+                    reward_asset: coin(5_000u128, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -912,7 +822,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
@@ -925,6 +834,71 @@ fn validate_campaign_params() {
                 match err {
                     ContractError::InvalidRewardAmount { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::InvalidRewardAmount"),
+                }
+            },
+        )
+        //cliff
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                        end_time: current_time.seconds() + 172_800,
+                        cliff_duration: Some(0u64),
+                    }],
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
+                        .to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { param, reason } => {
+                        assert_eq!(param, "cliff_duration");
+                        assert_eq!(reason, "cannot be zero");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
+                }
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(7).seconds(),
+                        cliff_duration: Some(7 * 86_400u64),
+                    }],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(7).seconds(),
+                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
+                        .to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { param, reason } => {
+                        assert_eq!(param, "cliff_duration");
+                        assert_eq!(reason, "cannot be greater or equal than the distribution duration");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
                 }
             },
         )
@@ -941,7 +915,6 @@ fn validate_campaign_params() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
@@ -952,7 +925,8 @@ fn validate_campaign_params() {
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
-        );
+        )
+    ;
 }
 
 #[test]
@@ -1011,7 +985,6 @@ fn create_campaign_and_claim_single_distribution_type() {
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                 }],
-                cliff_duration: None,
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -1178,7 +1151,6 @@ fn claim_ended_campaign() {
                         start_time: current_time.seconds() + 1,
                         end_time: current_time.seconds() + 172_800,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -1233,7 +1205,7 @@ fn claim_ended_campaign() {
             // bob tries to end the campaign
             bob,
             CampaignAction::CloseCampaign {},
-            &vec![coin(100_000, "uom")],
+            &[coin(100_000, "uom")],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -1348,9 +1320,9 @@ fn query_claimed() {
                             percentage: Decimal::percent(75),
                             start_time: current_time.plus_days(7).seconds(),
                             end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: None,
                         },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -1583,9 +1555,9 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                             percentage: Decimal::percent(75),
                             start_time: current_time.plus_days(7).seconds(),
                             end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: None,
                         },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -1783,8 +1755,8 @@ fn claim_campaign_with_cliff() {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(1460).seconds(), // 4 years
+                    cliff_duration: Some(86_400 * 365),               // 1 year cliff
                 }],
-                cliff_duration: Some(86_400 * 365), // 1 year cliff
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(1460).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -1805,8 +1777,8 @@ fn claim_campaign_with_cliff() {
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             match err {
-                ContractError::CliffPeriodNotPassed { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::CliffPeriodNotPassed"),
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
             }
         },
     );
@@ -1826,8 +1798,8 @@ fn claim_campaign_with_cliff() {
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             match err {
-                ContractError::CliffPeriodNotPassed { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::CliffPeriodNotPassed"),
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
             }
         },
     );
@@ -1921,6 +1893,381 @@ fn claim_campaign_with_cliff() {
 }
 
 #[test]
+fn claim_campaign_with_vesting_cliff_and_lump_sum() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_asset: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(50),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(1460).seconds(), // 4 years
+                        cliff_duration: Some(86_400 * 365),               // 1 year cliff
+                    },
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(50),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(1460).seconds(), // 4 years
+                    },
+                ],
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(1460).seconds(),
+                merkle_root: MERKLE_ROOT.to_string(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // The lump sum should be claimable right away, as it is not affected by the vesting cliff
+    suite
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_claimed(Some(alice), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (alice.to_string(), coin(5_000u128, "uom"))
+            );
+        });
+
+    // move a few days to pass the cliff
+
+    // move the remaining of the year - 1 day, 365 - 1 day
+    for _ in 0..364 {
+        suite.add_day();
+    }
+
+    suite.claim(
+        alice,
+        Uint128::new(10_000u128),
+        None,
+        ALICE_PROOFS,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        },
+    );
+
+    // add another day, total days passed 365, ready to claim some
+    suite.add_day();
+
+    suite.claim(
+        alice,
+        Uint128::new(10_000u128),
+        None,
+        ALICE_PROOFS,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .query_campaign(|result| {
+            assert_eq!(
+                result.unwrap().claimed,
+                coin(5_000u128 + 5_000u128 / 4, "uom")
+            );
+        })
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: coins(5_000u128 + 5_000u128 / 4, "uom"),
+                    pending: coins(10_000u128 - (5_000u128 + 5_000u128 / 4), "uom"),
+                    available_to_claim: vec![],
+                }
+            );
+        });
+
+    // advance another year
+    for _ in 0..365 {
+        suite.add_day();
+    }
+
+    suite
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaign(|result| {
+            assert_eq!(
+                result.unwrap().claimed,
+                coin(5_000u128 + (2 * 5_000u128 / 4), "uom")
+            );
+        });
+
+    // advance two more years, so the vesting period should be over
+    for _ in 0..730 {
+        suite.add_day();
+    }
+
+    suite
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: coins(5_000u128 + (2 * 5_000u128 / 4), "uom"),
+                    pending: coins(10_000u128 - (5_000u128 + (2 * 5_000u128 / 4)), "uom"),
+                    available_to_claim: coins(2 * 5_000u128 / 4, "uom"),
+                }
+            );
+        })
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        // add a week and claim
+        .query_campaign(|result| {
+            assert_eq!(result.unwrap().claimed, coin(10_000u128, "uom"));
+        })
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: coins(10_000u128, "uom"),
+                    pending: vec![],
+                    available_to_claim: vec![],
+                }
+            );
+        });
+}
+#[test]
+fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_asset: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(50),
+                        start_time: current_time.plus_days(30).seconds(),
+                        end_time: current_time.plus_days(60).seconds(), // 30 days duration
+                        cliff_duration: Some(86_400 * 7),               // 7 days cliff
+                    },
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(50),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(60).seconds(),
+                    },
+                ],
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(90).seconds(),
+                merkle_root: MERKLE_ROOT.to_string(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // The lump sum should be claimable right away, as it is not affected by the vesting cliff
+    suite
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_claimed(Some(alice), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (alice.to_string(), coin(5_000u128, "uom"))
+            );
+        });
+
+    // move a few days to pass the cliff
+
+    // move the remaining of the 30 days - 1 day
+    for _ in 0..29 {
+        suite.add_day();
+    }
+
+    suite.claim(
+        alice,
+        Uint128::new(10_000u128),
+        None,
+        ALICE_PROOFS,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        },
+    );
+
+    // add another day, total days passed 30, now the cliff starts ticking
+    suite.add_day();
+
+    suite.claim(
+        alice,
+        Uint128::new(10_000u128),
+        None,
+        ALICE_PROOFS,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        },
+    );
+
+    // move mid-way the cliff, there should be nothing to claim yet
+    for _ in 0..6 {
+        suite.add_day();
+    }
+
+    suite.query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        assert_eq!(
+            result.unwrap(),
+            RewardsResponse {
+                claimed: coins(5_000u128, "uom"),
+                pending: coins(10_000u128 - 5_000u128, "uom"),
+                available_to_claim: vec![],
+            }
+        );
+    });
+
+    // move a day to pass the cliff
+    suite.add_day();
+
+    suite.query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        assert_eq!(
+            result.unwrap(),
+            RewardsResponse {
+                claimed: coins(5_000u128, "uom"),
+                pending: coins(10_000u128 - 5_000u128, "uom"),
+                available_to_claim: coins(7 * 5_000u128 / 30u128, "uom"),
+            }
+        );
+    });
+
+    // advance another week
+    for _ in 0..7 {
+        suite.add_day();
+    }
+
+    suite
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_campaign(|result| {
+            assert_eq!(
+                result.unwrap().claimed,
+                coin(5_000u128 + (2 * 7 * 5_000u128 / 30u128), "uom")
+            );
+        });
+
+    // advance two more weeks, so the linear vesting should be over
+    for _ in 0..16 {
+        suite.add_day();
+    }
+
+    suite
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: coins(5_000u128 + (2 * 7 * 5_000u128 / 30u128), "uom"),
+                    pending: coins(
+                        10_000u128 - (5_000u128 + (2 * 7 * 5_000u128 / 30u128)),
+                        "uom"
+                    ),
+                    available_to_claim: coins(
+                        10_000u128 - (5_000u128 + (2 * 7 * 5_000u128 / 30u128)),
+                        "uom"
+                    ),
+                }
+            );
+        })
+        .claim(
+            alice,
+            Uint128::new(10_000u128),
+            None,
+            ALICE_PROOFS,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        // add a week and claim
+        .query_campaign(|result| {
+            assert_eq!(result.unwrap().claimed, coin(10_000u128, "uom"));
+        })
+        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+            assert_eq!(
+                result.unwrap(),
+                RewardsResponse {
+                    claimed: coins(10_000u128, "uom"),
+                    pending: vec![],
+                    available_to_claim: vec![],
+                }
+            );
+        });
+}
+
+#[test]
 fn topup_campaigns_with_and_without_cliff() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),
@@ -1946,8 +2293,8 @@ fn topup_campaigns_with_and_without_cliff() {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(30).seconds(), // a month
+                    cliff_duration: Some(86_400 * 7),               // 7 days cliff
                 }],
-                cliff_duration: Some(86_400 * 7), // 7 days cliff
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(30).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -1962,7 +2309,6 @@ fn topup_campaigns_with_and_without_cliff() {
     suite.query_campaign(|result| {
         let campaign = result.unwrap();
         assert_eq!(campaign.reward_asset, coin(30_000, "uom"));
-        assert!(campaign.cliff_duration.is_some());
     });
 
     for _ in 0..7 {
@@ -2087,8 +2433,8 @@ fn topup_campaigns_with_and_without_cliff() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(30).seconds(), // a month
+                        cliff_duration: None,                           // no cliff
                     }],
-                    cliff_duration: None, // no cliff
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(30).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -2102,7 +2448,6 @@ fn topup_campaigns_with_and_without_cliff() {
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert_eq!(campaign.reward_asset, coin(50_000, "uom"));
-            assert!(campaign.cliff_duration.is_none());
         })
         .manage_campaign(
             alice,
@@ -2149,8 +2494,8 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(30).seconds(), // a month
+                        cliff_duration: Some(86_400 * 7),               // 7 days cliff
                     }],
-                    cliff_duration: Some(86_400 * 7), // 7 days cliff
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(30).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -2343,9 +2688,9 @@ fn query_rewards() {
                         percentage: Decimal::percent(75),
                         start_time: current_time.plus_days(7).seconds(),
                         end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
                     },
                 ],
-                cliff_duration: None,
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -2437,9 +2782,9 @@ fn query_rewards_fails_when_campaign_has_not_started() {
                         percentage: Decimal::percent(75),
                         start_time: current_time.plus_days(7).seconds(),
                         end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
                     },
                 ],
-                cliff_duration: None,
                 start_time: current_time.plus_days(1).seconds(),
                 end_time: current_time.plus_days(14).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -2510,9 +2855,9 @@ fn close_campaigns() {
                         percentage: Decimal::percent(75),
                         start_time: current_time.plus_days(7).seconds(),
                         end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
                     },
                 ],
-                cliff_duration: None,
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -2615,9 +2960,9 @@ fn close_campaigns() {
                         percentage: Decimal::percent(75),
                         start_time: current_time.plus_days(7).seconds(),
                         end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
                     },
                 ],
-                cliff_duration: None,
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -2718,9 +3063,9 @@ fn can_query_claims_after_campaign_is_closed() {
                             percentage: Decimal::percent(75),
                             start_time: current_time.plus_days(7).seconds(),
                             end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: None,
                         },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -2850,9 +3195,9 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                         percentage: Decimal::percent(75),
                         start_time: current_time.plus_days(7).seconds(),
                         end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
                     },
                 ],
-                cliff_duration: None,
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
@@ -2938,9 +3283,9 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                             percentage: Decimal::percent(75),
                             start_time: current_time.plus_days(7).seconds(),
                             end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: None,
                         },
                     ],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -2984,8 +3329,8 @@ fn can_claim_dust_without_new_claims() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(60).seconds(),
+                        cliff_duration: None,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(60).seconds(),
                     merkle_root: MERKLE_ROOT_X.to_string(),
@@ -3071,8 +3416,8 @@ fn cant_end_distribution_type_after_campaign() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(30).seconds(),
+                        cliff_duration: None,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -3101,8 +3446,8 @@ fn cant_end_distribution_type_after_campaign() {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
                         end_time: current_time.plus_days(7).seconds(),
+                        cliff_duration: None,
                     }],
-                    cliff_duration: None,
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
                     merkle_root: MERKLE_ROOT.to_string(),
@@ -3126,8 +3471,8 @@ fn cant_end_distribution_type_after_campaign() {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(6).seconds(),
+                    cliff_duration: None,
                 }],
-                cliff_duration: None,
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(7).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
