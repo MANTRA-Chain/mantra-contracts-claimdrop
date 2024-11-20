@@ -220,8 +220,8 @@ fn calculate_claim_amount_for_distribution(
     }
 }
 
-/// Returns the compensation for rounding errors if the campaign has ended. This is to claim the
-/// dust remaining in the campaign for the user due to rounding errors.
+/// Returns the compensation for rounding errors if the distribution types have ended. This is to claim
+/// the potential remaining dust in the campaign for the user due to rounding errors.
 fn get_compensation_for_rounding_errors(
     campaign: &Campaign,
     current_time: &Timestamp,
@@ -229,7 +229,7 @@ fn get_compensation_for_rounding_errors(
     previous_claims_for_address: HashMap<DistributionSlot, Claim>,
     new_claims: &HashMap<DistributionSlot, Claim>,
 ) -> Result<(Uint128, DistributionSlot), ContractError> {
-    if campaign.has_ended(current_time) {
+    if distribution_types_ended(campaign, current_time) {
         let updated_claims = aggregate_claims(&previous_claims_for_address, new_claims)?;
 
         let total_claimed = updated_claims
@@ -254,6 +254,31 @@ fn get_compensation_for_rounding_errors(
     }
 
     Ok((Uint128::zero(), FALLBACK_DISTRIBUTION_SLOT))
+}
+
+/// Checks if all distribution types have ended
+fn distribution_types_ended(campaign: &Campaign, current_time: &Timestamp) -> bool {
+    let mut distribution_types_ended = true;
+
+    for distribution_type in campaign.distribution_type.iter() {
+        match distribution_type {
+            DistributionType::LinearVesting { end_time, .. } => {
+                if *end_time > current_time.seconds() {
+                    distribution_types_ended = false;
+                }
+            }
+            DistributionType::LumpSum { start_time, .. } => {
+                // if the lumpsum distribution has not started yet, it means it has not ended as
+                // by the time this function is called, the lumpsum distribution was already
+                // processed and rewards paid out
+                if *start_time > current_time.seconds() {
+                    distribution_types_ended = false;
+                }
+            }
+        }
+    }
+
+    distribution_types_ended
 }
 
 /// Aggregates the new claims with the existing claims
