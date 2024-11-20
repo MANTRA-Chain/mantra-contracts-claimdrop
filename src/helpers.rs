@@ -18,7 +18,7 @@ pub(crate) fn validate_campaign_params(
     campaign_params.validate_campaign_name_description()?;
     validate_merkle_root(&campaign_params.merkle_root)?;
     campaign_params.validate_campaign_times(current_time)?;
-    campaign_params.validate_campaign_distribution(current_time)?;
+    campaign_params.validate_campaign_distribution()?;
 
     let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
     ensure!(

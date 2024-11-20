@@ -46,7 +46,6 @@ fn create_multiple_campaigns_fails() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -70,7 +69,6 @@ fn create_multiple_campaigns_fails() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -112,7 +110,6 @@ fn create_multiple_campaigns_fails() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -157,7 +154,6 @@ fn cant_create_campaign_if_not_owner() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -203,7 +199,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -233,7 +228,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -264,7 +258,6 @@ fn validate_campaign_params() {
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::one(),
                     start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
                 }],
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
@@ -299,7 +292,6 @@ fn validate_campaign_params() {
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::one(),
                     start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
                 }],
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
@@ -331,7 +323,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -359,7 +350,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -387,7 +377,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -416,7 +405,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 172_800,
                     end_time: current_time.seconds() + 1,
@@ -447,7 +435,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() - 100,
                     end_time: current_time.seconds() + 1,
@@ -506,17 +493,14 @@ fn validate_campaign_params() {
                         DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     },
                         DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     },
                         DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     },
                     ],
                     start_time: current_time.seconds() + 1,
@@ -548,7 +532,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -579,7 +562,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::from_str("0.2").unwrap(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -610,7 +592,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::zero(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -638,7 +619,33 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() - 1,
-                        end_time: current_time.seconds() + 172_800,
+                    }],
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
+                        .to_string(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidStartDistributionTime {..} => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidStartDistributionTime"),
+                }
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds(),
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -664,45 +671,14 @@ fn validate_campaign_params() {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
                     reward_asset: coin(100_000, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.seconds() - 1,
-                    }],
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::InvalidDistributionTimes {..} => {}
-                    _ => panic!("Wrong error type, should return ContractError::InvalidDistributionTimes"),
-                }
-            },
-        )
-
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params: Box::new(CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
                         percentage: Decimal::from_str("0.5").unwrap(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     },
                         DistributionType::LumpSum {
                             percentage: Decimal::one(),
                             start_time: current_time.seconds() + 1,
-                            end_time: current_time.seconds() + 172_800,
                         }
                     ],
                     start_time: current_time.seconds() + 1,
@@ -730,7 +706,6 @@ fn validate_campaign_params() {
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::one(),
                     start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
                 }],
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
@@ -759,7 +734,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -792,7 +766,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -820,7 +793,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -913,7 +885,6 @@ fn validate_campaign_params() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -927,6 +898,48 @@ fn validate_campaign_params() {
             },
         )
     ;
+}
+
+#[test]
+fn cannot_start_distribution_in_past() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    owner: None,
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_asset: coin(23, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.minus_days(10).seconds(),
+                        end_time: current_time.plus_days(60).seconds(),
+                        cliff_duration: None,
+                    }],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(60).seconds(),
+                    merkle_root: MERKLE_ROOT_X.to_string(),
+                }),
+            },
+            &coins(23, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidStartDistributionTime { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidStartDistributionTime"),
+                }
+            },
+        );
 }
 
 #[test]
@@ -983,7 +996,6 @@ fn create_campaign_and_claim_single_distribution_type() {
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::one(),
                     start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
                 }],
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
@@ -1149,7 +1161,6 @@ fn claim_ended_campaign() {
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
-                        end_time: current_time.seconds() + 172_800,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
@@ -1314,7 +1325,6 @@ fn query_claimed() {
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
                             start_time: current_time.seconds(),
-                            end_time: current_time.plus_days(7).seconds(),
                         },
                         DistributionType::LinearVesting {
                             percentage: Decimal::percent(75),
@@ -1549,7 +1559,6 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
                             start_time: current_time.seconds(),
-                            end_time: current_time.plus_days(7).seconds(),
                         },
                         DistributionType::LinearVesting {
                             percentage: Decimal::percent(75),
@@ -1920,7 +1929,6 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(50),
                         start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(1460).seconds(), // 4 years
                     },
                 ],
                 start_time: current_time.seconds(),
@@ -2096,7 +2104,6 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(50),
                         start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(60).seconds(),
                     },
                 ],
                 start_time: current_time.seconds(),
@@ -2682,7 +2689,6 @@ fn query_rewards() {
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
                         start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
                     },
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(75),
@@ -2775,18 +2781,17 @@ fn query_rewards_fails_when_campaign_has_not_started() {
                 distribution_type: vec![
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
+                        start_time: current_time.plus_days(1).seconds(),
                     },
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
+                        start_time: current_time.plus_days(8).seconds(),
+                        end_time: current_time.plus_days(15).seconds(),
                         cliff_duration: None,
                     },
                 ],
                 start_time: current_time.plus_days(1).seconds(),
-                end_time: current_time.plus_days(14).seconds(),
+                end_time: current_time.plus_days(15).seconds(),
                 merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
@@ -2849,7 +2854,6 @@ fn close_campaigns() {
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
                         start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
                     },
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(75),
@@ -2954,7 +2958,6 @@ fn close_campaigns() {
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
                         start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
                     },
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(75),
@@ -3057,7 +3060,6 @@ fn can_query_claims_after_campaign_is_closed() {
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
                             start_time: current_time.seconds(),
-                            end_time: current_time.plus_days(7).seconds(),
                         },
                         DistributionType::LinearVesting {
                             percentage: Decimal::percent(75),
@@ -3189,7 +3191,6 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
                         start_time: current_time.seconds(),
-                        end_time: current_time.plus_days(7).seconds(),
                     },
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(75),
@@ -3277,7 +3278,6 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
                             start_time: current_time.seconds(),
-                            end_time: current_time.plus_days(7).seconds(),
                         },
                         DistributionType::LinearVesting {
                             percentage: Decimal::percent(75),

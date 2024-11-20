@@ -52,7 +52,6 @@ fn bug_large_numbers() {
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(7).seconds(),
                 }],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
@@ -216,7 +215,6 @@ fn bug_large_numbers_3() {
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(7).seconds(),
                 }],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(7).seconds(),

@@ -259,10 +259,7 @@ impl CampaignParams {
     }
 
     /// Ensures the distribution type parameters are correct
-    pub fn validate_campaign_distribution(
-        &self,
-        current_time: Timestamp,
-    ) -> Result<(), ContractError> {
+    pub fn validate_campaign_distribution(&self) -> Result<(), ContractError> {
         let mut total_percentage = Decimal::zero();
 
         ensure!(
@@ -281,12 +278,11 @@ impl CampaignParams {
                     start_time,
                     end_time,
                     cliff_duration,
-                } => (percentage, start_time, end_time, cliff_duration),
+                } => (percentage, start_time, Some(end_time), cliff_duration),
                 DistributionType::LumpSum {
                     percentage,
                     start_time,
-                    end_time,
-                } => (percentage, start_time, end_time, &None),
+                } => (percentage, start_time, None, &None),
             };
 
             ensure!(
@@ -297,30 +293,33 @@ impl CampaignParams {
             total_percentage = total_percentage.checked_add(*percentage)?;
 
             ensure!(
-                *start_time >= current_time.seconds(),
+                *start_time >= self.start_time,
                 ContractError::InvalidStartDistributionTime {
                     start_time: *start_time,
-                    current_time: current_time.seconds(),
+                    campaign_start_time: self.start_time,
                 }
             );
 
-            ensure!(
-                end_time > start_time,
-                ContractError::InvalidDistributionTimes {
-                    start_time: *start_time,
-                    end_time: *end_time,
-                }
-            );
+            // validate the end time. Applies for the linear vesting distribution type only
+            if let Some(end_time) = end_time {
+                ensure!(
+                    end_time > start_time,
+                    ContractError::InvalidDistributionTimes {
+                        start_time: *start_time,
+                        end_time: *end_time,
+                    }
+                );
 
-            ensure!(
-                *end_time <= self.end_time,
-                ContractError::InvalidEndDistributionTime {
-                    end_time: *end_time,
-                    campaign_end_time: self.end_time,
-                }
-            );
+                ensure!(
+                    *end_time <= self.end_time,
+                    ContractError::InvalidEndDistributionTime {
+                        end_time: *end_time,
+                        campaign_end_time: self.end_time,
+                    }
+                );
+            }
 
-            // Validates the cliff duration
+            // validate the cliff duration
             if let Some(cliff_duration) = cliff_duration {
                 ensure!(
                     *cliff_duration > 0u64,
@@ -331,7 +330,9 @@ impl CampaignParams {
                 );
 
                 ensure!(
-                    *cliff_duration < end_time - start_time,
+                    // it is safe to unwrap because this cliff validation only applies for linear vesting,
+                    // which contains an end_time
+                    *cliff_duration < end_time.unwrap() - start_time,
                     ContractError::InvalidCampaignParam {
                         param: "cliff_duration".to_string(),
                         reason: "cannot be greater or equal than the distribution duration"
@@ -371,9 +372,6 @@ pub enum DistributionType {
         percentage: Decimal,
         /// The unix timestamp when this distribution type starts, in seconds
         start_time: u64,
-        //todo remove?
-        /// The unix timestamp when this distribution type ends, in seconds
-        end_time: u64,
     },
 }
 
