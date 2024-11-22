@@ -80,14 +80,14 @@ pub(crate) fn query_rewards(
 }
 
 // settings for pagination
-pub(crate) const MAX_LIMIT: u8 = 100;
-const DEFAULT_LIMIT: u8 = 20;
+pub(crate) const MAX_LIMIT: u16 = 5_000;
+const DEFAULT_LIMIT: u16 = 100;
 
 pub(crate) fn query_claimed(
     deps: Deps,
     address: Option<String>,
     start_from: Option<String>,
-    limit: Option<u8>,
+    limit: Option<u16>,
 ) -> Result<ClaimedResponse, ContractError> {
     let mut claimed = vec![];
 
