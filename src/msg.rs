@@ -54,7 +54,7 @@ pub enum QueryMsg {
         /// The address to start querying from. Used for paginating results.
         start_from: Option<String>,
         /// The maximum number of items to return. If not set, the default value is used. Used for paginating results.
-        limit: Option<u8>,
+        limit: Option<u16>,
     },
 }
 
