@@ -244,7 +244,7 @@ impl TestingSuite {
         &mut self,
         address: Option<&Addr>,
         start_from: Option<&Addr>,
-        limit: Option<u8>,
+        limit: Option<u16>,
         result: impl Fn(StdResult<ClaimedResponse>),
     ) -> &mut Self {
         let address = address.map(|addr| addr.to_string());
