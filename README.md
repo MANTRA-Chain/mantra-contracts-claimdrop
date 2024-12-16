@@ -1,10 +1,9 @@
 # Claimdrop Contract
 
-To foster widespread token distribution, incentivize participation, and drive network adoption.
-
-The Claimdrop Contract can be used to distribute tokens to a list of addresses. The contract uses a Merkle tree to 
-store the list of addresses and their corresponding token amounts. The root of the Merkle tree is stored on the contract's 
-campaign and is used to verify the validity of the proofs submitted by the recipients.
+The Claimdrop Contract is a smart contract designed to distribute tokens to a list of addresses in a secure and 
+efficient manner. The contract uses a Merkle tree to store the list of addresses and their corresponding token amounts. 
+The root of the Merkle tree is stored on the contract's campaign and is used to verify the validity of the proofs 
+submitted by the recipients.
 
 ## Features
 
@@ -26,3 +25,8 @@ When a campaign is ended, the owner of the campaign will receive the remaining, 
 **Scenario 1:** Gendrop distribution of tokens via a linear (eg. 1 year) vesting airdrop to early investors.
 
 **Scenario 2:** Post Gendrop rewarding active liquidity providers with quarterly token allocations over 1 year based on their pool shares.
+
+## Resources
+
+1. [Website](https://mantra.zone/)
+2. [Docs](https://docs.mantrachain.io/mantra-smart-contracts/claimdrop_contract)
