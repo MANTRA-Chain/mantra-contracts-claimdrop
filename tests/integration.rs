@@ -6,8 +6,8 @@ use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 
 use crate::hashes::{
-    ALICE_PROOFS, ALICE_PROOFS_X, BOB_PROOFS, BROKEN_PROOFS, CAROL_PROOFS, DAN_PROOFS, EVA_PROOFS,
-    MERKLE_ROOT, MERKLE_ROOT_X,
+    ALICE_PROOFS, ALICE_PROOFS_SINGLE, ALICE_PROOFS_X, BOB_PROOFS, BROKEN_PROOFS, CAROL_PROOFS,
+    DAN_PROOFS, EVA_PROOFS, MERKLE_ROOT, MERKLE_ROOT_SINGLE, MERKLE_ROOT_X,
 };
 use claimdrop_contract::error::ContractError;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
@@ -2758,6 +2758,69 @@ fn query_rewards() {
             assert!(rewards_response.pending.is_empty());
             assert!(rewards_response.available_to_claim.is_empty());
         });
+}
+
+#[test]
+fn query_rewards_single_user() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                owner: None,
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_asset: coin(100, "uom"),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::percent(100),
+                    start_time: current_time.seconds(),
+                }],
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+                merkle_root: MERKLE_ROOT_SINGLE.to_string(),
+            }),
+        },
+        &coins(100, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .query_rewards(
+            Uint128::new(100u128),
+            alice,
+            ALICE_PROOFS_SINGLE,
+            |result| {
+                let rewards_response = result.unwrap();
+                println!("{:?}", rewards_response);
+            },
+        )
+        .claim(
+            alice,
+            Uint128::new(100u128),
+            None,
+            ALICE_PROOFS_SINGLE,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(
+            Uint128::new(100u128),
+            alice,
+            ALICE_PROOFS_SINGLE,
+            |result| {
+                let rewards_response = result.unwrap();
+                println!("{:?}", rewards_response);
+            },
+        );
 }
 
 #[test]
