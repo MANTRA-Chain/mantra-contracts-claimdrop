@@ -38,3 +38,8 @@ pub const ALICE_PROOFS_X: &[&str] = &[
     "d3fafecc7b46d0b0b0ac9a0689e8c63f07868dc48af91bcdfee98e0225e76212",
     "efd074c475dd84fcdae3e32bd38b0476725cf775abe198d1456a0d79cb34bcbc",
 ];
+
+pub const MERKLE_ROOT_SINGLE: &str =
+    "f7943f94409c4b351b2f4549d36df1a81b85ebd4ed64112c94c4529f90e9739f";
+
+pub const ALICE_PROOFS_SINGLE: &[&str] = &[];
