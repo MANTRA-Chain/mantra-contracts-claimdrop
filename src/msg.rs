@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{ensure, Addr, Coin, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{ensure, Coin, Decimal, Timestamp, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 use crate::error::ContractError;
@@ -133,8 +133,6 @@ pub enum CampaignAction {
 /// Represents a campaign.
 #[cw_serde]
 pub struct Campaign {
-    /// The campaign owner
-    pub owner: Addr,
     /// The campaign name
     pub name: String,
     /// The campaign description
@@ -158,8 +156,7 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign {{ owner: {}, name: {}, description: {}, reward_denom: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
-            self.owner,
+            "Campaign {{ name: {}, description: {}, reward_denom: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
             self.name,
             self.description,
             self.reward_denom,
@@ -174,11 +171,10 @@ impl Display for Campaign {
 
 impl Campaign {
     /// Creates a new campaign from the given parameters
-    pub fn from_params(params: CampaignParams, owner: Addr) -> Self {
+    pub fn from_params(params: CampaignParams) -> Self {
         let reward_denom = params.reward_denom.clone();
 
         Campaign {
-            owner,
             name: params.name,
             description: params.description,
             reward_denom: params.reward_denom,
@@ -207,8 +203,6 @@ impl Campaign {
 /// Represents the parameters to create a campaign with.
 #[cw_serde]
 pub struct CampaignParams {
-    /// The campaign owner. If none is provided, the sender of the message will the owner.
-    pub owner: Option<String>,
     /// The campaign name
     pub name: String,
     /// The campaign description

@@ -1,5 +1,4 @@
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
-use cw_ownable::assert_owner;
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -29,7 +28,7 @@ fn create_campaign(
     info: MessageInfo,
     campaign_params: CampaignParams,
 ) -> Result<Response, ContractError> {
-    // only the owner of the contract can create a campaign
+    // only the owner can create a campaign
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let campaign: Option<Campaign> = CAMPAIGN.may_load(deps.storage)?;
@@ -43,15 +42,7 @@ fn create_campaign(
 
     helpers::validate_campaign_params(env.block.time, &campaign_params)?;
 
-    let owner = campaign_params
-        .owner
-        .as_ref()
-        .map(|addr| deps.api.addr_validate(addr))
-        .transpose()?
-        .unwrap_or_else(|| info.sender.clone());
-
-    let campaign = Campaign::from_params(campaign_params, owner);
-
+    let campaign = Campaign::from_params(campaign_params);
     CAMPAIGN.save(deps.storage, &campaign)?;
 
     Ok(Response::default().add_attributes(vec![
@@ -64,17 +55,13 @@ fn create_campaign(
 /// The remaining funds in the campaign are refunded to the owner.
 fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let mut campaign = CAMPAIGN
         .may_load(deps.storage)?
         .ok_or(ContractError::CampaignError {
             reason: "there's not an active campaign".to_string(),
         })?;
-
-    ensure!(
-        campaign.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
-        ContractError::Unauthorized
-    );
 
     ensure!(
         campaign.closed.is_none(),
@@ -90,8 +77,10 @@ fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
     let mut messages = vec![];
 
     if !refund.amount.is_zero() {
+        let owner = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
+
         messages.push(BankMsg::Send {
-            to_address: campaign.owner.to_string(),
+            to_address: owner.to_string(),
             amount: vec![refund.clone()],
         });
     }
@@ -225,7 +214,7 @@ pub fn upload_allocations(
     allocations: Vec<(String, Uint128)>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
-    assert_owner(deps.storage, &info.sender)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     // Check if campaign has started
     let campaign = CAMPAIGN.load(deps.storage)?;
@@ -262,7 +251,7 @@ pub fn replace_address(
     new_address: String,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
-    assert_owner(deps.storage, &info.sender)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     // if the old address has claims, we need to move them to the new address
     let claims = get_claims_for_address(deps.as_ref(), &deps.api.addr_validate(&old_address)?)?;
@@ -307,7 +296,7 @@ pub fn blacklist_address(
     blacklist: bool,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
-    assert_owner(deps.storage, &info.sender)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     if blacklist {
         BLACKLIST.save(deps.storage, &address, &true)?;
