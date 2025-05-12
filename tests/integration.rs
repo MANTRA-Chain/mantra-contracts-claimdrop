@@ -5,14 +5,10 @@ use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 
-use crate::hashes::{
-    ALICE_PROOFS, ALICE_PROOFS_SINGLE, ALICE_PROOFS_X, BOB_PROOFS, BROKEN_PROOFS, CAROL_PROOFS,
-    DAN_PROOFS, EVA_PROOFS, MERKLE_ROOT, MERKLE_ROOT_SINGLE, MERKLE_ROOT_X,
-};
+use crate::suite::TestingSuite;
 use claimdrop_contract::error::ContractError;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
-
-use crate::suite::TestingSuite;
+use claimdrop_contract::queries::query_allocation;
 
 mod hashes;
 mod suite;
@@ -39,18 +35,16 @@ fn create_multiple_campaigns_fails() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -62,18 +56,16 @@ fn create_multiple_campaigns_fails() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -103,18 +95,16 @@ fn create_multiple_campaigns_fails() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -147,18 +137,16 @@ fn cant_create_campaign_if_not_owner() {
             bob,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a2835f4d5c3b7f9f58ec60e85a52e6e24985777540a214ee4080431bacf4882a"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -192,18 +180,16 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a2835f4d5c3b7f9f58ec60e85a52e6e24985777540a214ee4080431bacf4882a"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -218,21 +204,49 @@ fn validate_campaign_params() {
                 }
             },
         ).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "%WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5DK%WEmpcQxf5ONYNy1Gj2m#\
+                    w7oauP6E5OUoZM1n7AnTRDX9sSd5D%WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5D\
+                    %WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5D".to_string(),
+                description: "This is an airdrop, 土金, ك".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::one(),
+                    start_time: current_time.seconds() + 1,
+                }],
+                start_time: current_time.seconds() + 1,
+                end_time: current_time.seconds() + 172_800,
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::InvalidCampaignParam { param, reason } => {
+                    assert_eq!(param, "name");
+                    assert_eq!(reason, "cannot be longer than 200 characters");
+                }
+                _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
+            }
+        },
+    )
+        .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
-                    name: "%WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5DK".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    name: "Test Airdrop I".to_string(),
+                    description: "".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a2835f4d5c3b7f9f58ec60e85a52e6e24985777540a214ee4080431bacf4882a"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -240,156 +254,57 @@ fn validate_campaign_params() {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
                     ContractError::InvalidCampaignParam { param, reason } => {
-                        assert_eq!(param, "name");
-                        assert_eq!(reason, "cannot be longer than 50 characters");
+                        assert_eq!(param, "description");
+                        assert_eq!(reason, "cannot be empty");
                     }
                     _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
                 }
             },
         )
         .manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::one(),
-                    start_time: current_time.seconds() + 1,
-                }],
-                start_time: current_time.seconds() + 1,
-                end_time: current_time.seconds() + 172_800,
-                merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                    .to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::InvalidCampaignParam { param, reason } => {
-                    assert_eq!(param, "description");
-                    assert_eq!(reason, "cannot be empty");
-                }
-                _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
-            }
-        },
-    )
-        .manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                owner: None,
-                name: "Test Airdrop I".to_string(),
-                description: "bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
+                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
                 bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
                 bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
                 bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
                 bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP1".to_string(),
-                reward_asset: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::one(),
-                    start_time: current_time.seconds() + 1,
-                }],
-                start_time: current_time.seconds() + 1,
-                end_time: current_time.seconds() + 172_800,
-                merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                    .to_string(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::InvalidCampaignParam { param, reason } => {
-                    assert_eq!(param, "description");
-                    assert_eq!(reason, "cannot be longer than 500 characters");
-                }
-                _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
-            }
-        },
-    )
-        // merkle root
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params:Box::new( CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000u128, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: ""
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::FromHexError { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::FromHexError"),
-                }
-            },
-        )
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params:Box::new( CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000u128, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds() + 1,
-                    }],
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fda"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::FromHexError { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::FromHexError"),
-                }
-            },
-        )
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params:Box::new( CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000u128, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds() + 1,
-                    }],
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797ebaf820af47b0044cd910339cb4fda"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::FromHexError { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::FromHexError"),
+                    ContractError::InvalidCampaignParam { param, reason } => {
+                        assert_eq!(param, "description");
+                        assert_eq!(reason, "cannot be longer than 2000 characters");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
                 }
             },
         )
@@ -398,18 +313,16 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 172_800,
                     end_time: current_time.seconds() + 1,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -428,18 +341,16 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() - 100,
                     end_time: current_time.seconds() + 1,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -459,15 +370,13 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -482,61 +391,57 @@ fn validate_campaign_params() {
                 }
             },
         ).manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params: Box::new(CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
-                    distribution_type: vec![
-                        DistributionType::LumpSum {
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop, 土金, ك".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
                     },
-                        DistributionType::LumpSum {
+                    DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
                     },
-                        DistributionType::LumpSum {
+                    DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
                     },
-                    ],
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::InvalidCampaignParam { param, reason } => {
-                        assert_eq!(param, "distribution_type");
-                        assert_eq!(reason, "invalid number of distribution types, should be at least 1, maximum 2");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
+                ],
+                start_time: current_time.seconds() + 1,
+                end_time: current_time.seconds() + 172_800,
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::InvalidCampaignParam { param, reason } => {
+                    assert_eq!(param, "distribution_type");
+                    assert_eq!(reason, "invalid number of distribution types, should be at least 1, maximum 2");
                 }
-            },
-        )
+                _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
+            }
+        },
+    )
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::from_str("2").unwrap(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -555,18 +460,16 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::from_str("0.2").unwrap(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -585,25 +488,23 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::zero(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::ZeroDistributionPercentage  => {}
+                    ContractError::ZeroDistributionPercentage => {}
                     _ => panic!("Wrong error type, should return ContractError::ZeroDistributionPercentage"),
                 }
             },
@@ -612,25 +513,23 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() - 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::InvalidStartDistributionTime {..} => {}
+                    ContractError::InvalidStartDistributionTime { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::InvalidStartDistributionTime"),
                 }
             },
@@ -639,25 +538,23 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds(),
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
                 }),
             },
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::InvalidStartDistributionTime {..} => {}
+                    ContractError::InvalidStartDistributionTime { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::InvalidStartDistributionTime"),
                 }
             },
@@ -667,15 +564,15 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
-                        percentage: Decimal::from_str("0.5").unwrap(),
-                        start_time: current_time.seconds() + 1,
-                    },
+                            percentage: Decimal::from_str("0.5").unwrap(),
+                            start_time: current_time.seconds() + 1,
+                        },
                         DistributionType::LumpSum {
                             percentage: Decimal::one(),
                             start_time: current_time.seconds() + 1,
@@ -683,8 +580,7 @@ fn validate_campaign_params() {
                     ],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
+
                 }),
             },
             &coins(100_000, "uom"),
@@ -699,18 +595,16 @@ fn validate_campaign_params() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::one(),
                     start_time: current_time.seconds() + 1,
                 }],
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
-                merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                    .to_string(),
             }),
         },
         &[],
@@ -726,19 +620,18 @@ fn validate_campaign_params() {
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
-                params:Box::new( CampaignParams {
-                    owner: None,
+                params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000u128, "uusdc"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
+
                 }),
             },
             &coins(100_000, "uom"),
@@ -755,69 +648,15 @@ fn validate_campaign_params() {
                 }
             },
         )
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params:Box::new( CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(5_000u128, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds() + 1,
-                    }],
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::InvalidRewardAmount { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::InvalidRewardAmount"),
-                }
-            },
-        )
-        .manage_campaign(
-            alice,
-            CampaignAction::CreateCampaign {
-                params:Box::new( CampaignParams {
-                    owner: None,
-                    name: "Test Airdrop I".to_string(),
-                    description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_001, "uom"),
-                    distribution_type: vec![DistributionType::LumpSum {
-                        percentage: Decimal::one(),
-                        start_time: current_time.seconds() + 1,
-                    }],
-                    start_time: current_time.seconds() + 1,
-                    end_time: current_time.seconds() + 172_800,
-                    merkle_root: "a79197d1f2f90797e65c545a99662630da89baf820af47b0044cd910339cb4fd"
-                        .to_string(),
-                }),
-            },
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::InvalidRewardAmount { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::InvalidRewardAmount"),
-                }
-            },
-        )
         //cliff
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
@@ -826,8 +665,7 @@ fn validate_campaign_params() {
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
-                        .to_string(),
+
                 }),
             },
             &coins(100_000, "uom"),
@@ -846,10 +684,10 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds(),
@@ -858,8 +696,7 @@ fn validate_campaign_params() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
-                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
-                        .to_string(),
+
                 }),
             },
             &coins(100_000, "uom"),
@@ -878,23 +715,77 @@ fn validate_campaign_params() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: "87bb9bf2d62ff8430e314a0d18d3134dd01afd98b75b487337a677322d20ad3d"
-                        .to_string(),
+
                 }),
             },
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
+            },
+        )
+        // rewards
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop II".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: "uosmo".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                    }],
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { reason, .. } => {
+                        assert_eq!(reason, "reward denom mismatch");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                };
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop II".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(0, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                    }],
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { reason, .. } => {
+                        assert_eq!(reason, "cannot be zero");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                };
             },
         )
     ;
@@ -916,10 +807,10 @@ fn cannot_start_distribution_in_past() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(23, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.minus_days(10).seconds(),
@@ -928,10 +819,9 @@ fn cannot_start_distribution_in_past() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(60).seconds(),
-                    merkle_root: MERKLE_ROOT_X.to_string(),
                 }),
             },
-            &coins(23, "uom"),
+            &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -953,22 +843,16 @@ fn cant_claim_without_campaign() {
 
     suite
         .instantiate_claimdrop_contract(Some(alice.to_string()))
-        .claim(
-            alice,
-            Uint128::new(20_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                match err {
-                    ContractError::CampaignError { reason } => {
-                        assert_eq!(reason, "there's not an active campaign");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            match err {
+                ContractError::CampaignError { reason } => {
+                    assert_eq!(reason, "there's not an active campaign");
                 }
-            },
-        );
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        });
 }
 
 #[test]
@@ -989,17 +873,16 @@ fn create_campaign_and_claim_single_distribution_type() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::one(),
                     start_time: current_time.seconds() + 1,
                 }],
                 start_time: current_time.seconds() + 1,
                 end_time: current_time.seconds() + 172_800,
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -1009,71 +892,20 @@ fn create_campaign_and_claim_single_distribution_type() {
     );
 
     // claim
-    suite.claim(
-        alice,
-        Uint128::new(20_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-            match err {
-                ContractError::CampaignError { reason } => {
-                    assert_eq!(reason, "not started");
-                }
-                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+        match err {
+            ContractError::CampaignError { reason } => {
+                assert_eq!(reason, "not started");
             }
-        },
-    );
+            _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+        }
+    });
 
     suite.add_day();
 
     suite
-        .claim(
-            alice,
-            // pretending to be entitled to more tokens than the campaign has to offer for this user
-            Uint128::new(20_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::MerkleRootVerificationFailed { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::MerkleRootVerificationFailed"),
-                }
-            },
-        )
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            // provide wrong proofs
-            BROKEN_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::MerkleRootVerificationFailed { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::MerkleRootVerificationFailed"),
-                }
-            },
-        )
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            // try claiming for someone else, with the wrong proofs
-            Some(bob.to_string()),
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::MerkleRootVerificationFailed { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::MerkleRootVerificationFailed"),
-                }
-            },
-        )
         .query_balance("uom", alice, |balance| {
             assert_eq!(balance, Uint128::new(999_900_000));
         })
@@ -1083,9 +915,7 @@ fn create_campaign_and_claim_single_distribution_type() {
         // bob claims for alice
         .claim(
             bob,
-            Uint128::new(10_000u128),
             Some(alice.to_string()),
-            ALICE_PROOFS,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -1096,23 +926,16 @@ fn create_campaign_and_claim_single_distribution_type() {
         .query_balance("uom", bob, |balance| {
             assert_eq!(balance, Uint128::new(1_000_000_000));
         })
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_balance("uom", bob, |balance| {
             assert_eq!(balance, Uint128::new(1_000_010_000));
         })
         .query_campaign(|result| {
-                let campaign = result.unwrap();
-                assert_eq!(campaign.claimed, coin(20_000u128, "uom"));
-            }
-        );
+            let campaign = result.unwrap();
+            assert_eq!(campaign.claimed, coin(20_000u128, "uom"));
+        });
 
     suite
         .add_week()
@@ -1121,15 +944,9 @@ fn create_campaign_and_claim_single_distribution_type() {
         .query_balance("uom", carol, |balance| {
             assert_eq!(balance, Uint128::new(1_000_000_000));
         })
-        .claim(
-            carol,
-            Uint128::new(20_000u128),
-            None,
-            CAROL_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_balance("uom", carol, |balance| {
             assert_eq!(balance, Uint128::new(1_000_020_000));
         });
@@ -1154,17 +971,16 @@ fn claim_ended_campaign() {
             dan,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
                         percentage: Decimal::one(),
                         start_time: current_time.seconds() + 1,
                     }],
                     start_time: current_time.seconds() + 1,
                     end_time: current_time.seconds() + 172_800,
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -1182,9 +998,7 @@ fn claim_ended_campaign() {
         .add_day()
         .claim(
             bob,
-            Uint128::new(10_000u128),
             Some(alice.to_string()),
-            ALICE_PROOFS,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -1195,15 +1009,9 @@ fn claim_ended_campaign() {
         .query_balance("uom", alice, |balance| {
             assert_eq!(balance, Uint128::new(1_000_010_000));
         })
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_balance("uom", bob, |balance| {
             assert_eq!(balance, Uint128::new(1_000_010_000));
         })
@@ -1233,8 +1041,8 @@ fn claim_ended_campaign() {
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::Unauthorized { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
                 }
             },
         )
@@ -1279,22 +1087,16 @@ fn claim_ended_campaign() {
         });
 
     // now carol tries to claim but it's too late
-    suite.claim(
-        carol,
-        Uint128::new(20_000u128),
-        None,
-        CAROL_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+    suite.claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-            match err {
-                ContractError::CampaignError { reason } => {
-                    assert_eq!(reason, "has been closed, cannot claim");
-                }
-                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+        match err {
+            ContractError::CampaignError { reason } => {
+                assert_eq!(reason, "has been closed, cannot claim");
             }
-        },
-    );
+            _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+        }
+    });
 }
 
 #[test]
@@ -1317,10 +1119,10 @@ fn query_claimed() {
             dan,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
@@ -1335,7 +1137,6 @@ fn query_claimed() {
                     ],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -1357,9 +1158,7 @@ fn query_claimed() {
     suite
         .claim(
             bob, //bob claims for alice
-            Uint128::new(10_000u128),
             Some(alice.to_string()),
-            ALICE_PROOFS,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -1382,9 +1181,7 @@ fn query_claimed() {
         .add_day()
         .claim(
             alice,
-            Uint128::new(10_000u128),
             Some(alice.to_string()),
-            ALICE_PROOFS,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -1397,15 +1194,9 @@ fn query_claimed() {
                 (alice.to_string(), coin(2_500u128 + 1071u128 * 2, "uom"))
             );
         })
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_claimed(Some(bob), None, None, |result| {
             let claimed_response = result.unwrap();
             assert_eq!(claimed_response.claimed.len(), 1usize);
@@ -1422,9 +1213,7 @@ fn query_claimed() {
     suite
         .claim(
             alice,
-            Uint128::new(10_000u128),
             Some(alice.to_string()),
-            ALICE_PROOFS,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -1437,42 +1226,18 @@ fn query_claimed() {
                 (alice.to_string(), coin(10_000u128, "uom"))
             );
         })
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            carol,
-            Uint128::new(20_000u128),
-            None,
-            CAROL_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            dan,
-            Uint128::new(35_000u128),
-            None,
-            DAN_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            eva,
-            Uint128::new(25_000u128),
-            None,
-            EVA_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(dan, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(eva, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_claimed(Some(eva), None, None, |result| {
             let claimed_response = result.unwrap();
             assert_eq!(claimed_response.claimed.len(), 1usize);
@@ -1551,10 +1316,10 @@ fn create_campaign_and_claim_multiple_distribution_types() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
@@ -1569,7 +1334,6 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                     ],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -1581,21 +1345,15 @@ fn create_campaign_and_claim_multiple_distribution_types() {
     suite.add_day();
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert_eq!(campaign.claimed, coin(2_500u128, "uom"));
         })
         // trying to claim again without moving time, should err
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1605,48 +1363,30 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 }
             );
         })
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
         .add_week()
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         // trying to claim again without moving time, should err
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
         .add_day()
         .add_day()
         .add_day()
         .add_day()
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1656,17 +1396,11 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 }
             );
         })
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         // add 2 more weeks and claim, the campaign should have finished by then
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1678,36 +1412,24 @@ fn create_campaign_and_claim_multiple_distribution_types() {
         })
         .add_week()
         .add_week()
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         // add a day and try claiming again, should err
         .add_day()
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert_eq!(campaign.claimed, coin(10_000u128, "uom"));
         })
         // dan claiming all at once
-        .query_rewards(Uint128::new(35_000u128), dan, DAN_PROOFS, |result| {
+        .query_rewards(dan, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1717,16 +1439,10 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 }
             );
         })
-        .claim(
-            dan,
-            Uint128::new(35_000u128),
-            None,
-            DAN_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .query_rewards(Uint128::new(35_000u128), dan, DAN_PROOFS, |result| {
+        .claim(dan, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .query_rewards(dan, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1756,10 +1472,10 @@ fn claim_campaign_with_cliff() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LinearVesting {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
@@ -1768,7 +1484,6 @@ fn claim_campaign_with_cliff() {
                 }],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(1460).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -1778,19 +1493,13 @@ fn claim_campaign_with_cliff() {
     );
 
     // can't claim before the cliff period is over
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::NothingToClaim { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-            }
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        match err {
+            ContractError::NothingToClaim { .. } => {}
+            _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+        }
+    });
 
     // move a few days to pass the cliff
 
@@ -1799,38 +1508,26 @@ fn claim_campaign_with_cliff() {
         suite.add_day();
     }
 
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::NothingToClaim { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-            }
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        match err {
+            ContractError::NothingToClaim { .. } => {}
+            _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+        }
+    });
 
     // add another day, total days passed 365, ready to claim some
     suite.add_day();
 
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        result.unwrap();
+    });
 
     suite
         .query_campaign(|result| {
             assert_eq!(result.unwrap().claimed, coin(10_000 / 4, "uom"));
         })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1847,15 +1544,9 @@ fn claim_campaign_with_cliff() {
     }
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_campaign(|result| {
             assert_eq!(result.unwrap().claimed, coin((10_000 / 4) * 2, "uom"));
         });
@@ -1866,7 +1557,7 @@ fn claim_campaign_with_cliff() {
     }
 
     suite
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1876,20 +1567,14 @@ fn claim_campaign_with_cliff() {
                 }
             );
         })
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         // add a week and claim
         .query_campaign(|result| {
             assert_eq!(result.unwrap().claimed, coin(10_000u128, "uom"));
         })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -1915,10 +1600,10 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(50),
@@ -1933,7 +1618,6 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
                 ],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(1460).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -1944,15 +1628,9 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
 
     // The lump sum should be claimable right away, as it is not affected by the vesting cliff
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_claimed(Some(alice), None, None, |result| {
             let claimed_response = result.unwrap();
             assert_eq!(claimed_response.claimed.len(), 1usize);
@@ -1969,32 +1647,20 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
         suite.add_day();
     }
 
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::NothingToClaim { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-            }
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        match err {
+            ContractError::NothingToClaim { .. } => {}
+            _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+        }
+    });
 
     // add another day, total days passed 365, ready to claim some
     suite.add_day();
 
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        result.unwrap();
+    });
 
     suite
         .query_campaign(|result| {
@@ -2003,7 +1669,7 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
                 coin(5_000u128 + 5_000u128 / 4, "uom")
             );
         })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -2020,15 +1686,9 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
     }
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_campaign(|result| {
             assert_eq!(
                 result.unwrap().claimed,
@@ -2042,7 +1702,7 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
     }
 
     suite
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -2052,20 +1712,14 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
                 }
             );
         })
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         // add a week and claim
         .query_campaign(|result| {
             assert_eq!(result.unwrap().claimed, coin(10_000u128, "uom"));
         })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -2090,10 +1744,10 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LinearVesting {
                         percentage: Decimal::percent(50),
@@ -2108,7 +1762,6 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
                 ],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(90).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -2119,15 +1772,9 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
 
     // The lump sum should be claimable right away, as it is not affected by the vesting cliff
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_claimed(Some(alice), None, None, |result| {
             let claimed_response = result.unwrap();
             assert_eq!(claimed_response.claimed.len(), 1usize);
@@ -2144,43 +1791,31 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
         suite.add_day();
     }
 
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::NothingToClaim { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-            }
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        match err {
+            ContractError::NothingToClaim { .. } => {}
+            _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+        }
+    });
 
     // add another day, total days passed 30, now the cliff starts ticking
     suite.add_day();
 
-    suite.claim(
-        alice,
-        Uint128::new(10_000u128),
-        None,
-        ALICE_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::NothingToClaim { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-            }
-        },
-    );
+    suite.claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        match err {
+            ContractError::NothingToClaim { .. } => {}
+            _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+        }
+    });
 
     // move mid-way the cliff, there should be nothing to claim yet
     for _ in 0..6 {
         suite.add_day();
     }
 
-    suite.query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+    suite.query_rewards(alice, |result| {
         assert_eq!(
             result.unwrap(),
             RewardsResponse {
@@ -2194,7 +1829,7 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
     // move a day to pass the cliff
     suite.add_day();
 
-    suite.query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+    suite.query_rewards(alice, |result| {
         assert_eq!(
             result.unwrap(),
             RewardsResponse {
@@ -2211,15 +1846,9 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
     }
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         .query_campaign(|result| {
             assert_eq!(
                 result.unwrap().claimed,
@@ -2233,7 +1862,7 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
     }
 
     suite
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -2249,20 +1878,14 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
                 }
             );
         })
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         // add a week and claim
         .query_campaign(|result| {
             assert_eq!(result.unwrap().claimed, coin(10_000u128, "uom"));
         })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -2292,10 +1915,10 @@ fn topup_campaigns_with_and_without_cliff() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(30_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LinearVesting {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
@@ -2304,7 +1927,6 @@ fn topup_campaigns_with_and_without_cliff() {
                 }],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(30).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(30_000, "uom"),
@@ -2315,7 +1937,7 @@ fn topup_campaigns_with_and_without_cliff() {
 
     suite.query_campaign(|result| {
         let campaign = result.unwrap();
-        assert_eq!(campaign.reward_asset, coin(30_000, "uom"));
+        assert_eq!(campaign.total_reward, coin(30_000, "uom"));
     });
 
     for _ in 0..7 {
@@ -2324,103 +1946,45 @@ fn topup_campaigns_with_and_without_cliff() {
 
     // everybody claims
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            carol,
-            Uint128::new(20_000u128),
-            None,
-            CAROL_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            dan,
-            Uint128::new(35_000u128),
-            None,
-            DAN_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            eva,
-            Uint128::new(25_000u128),
-            None,
-            EVA_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        );
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(dan, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(eva, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        });
 
     suite.query_campaign(|result| {
         let campaign = result.unwrap();
         assert_eq!(campaign.claimed, coin(23_331u128, "uom"));
     });
 
+    let contract = suite.claimdrop_contract_addr.clone();
     // topup campaign
     suite
-        .manage_campaign(
-            bob,
-            CampaignAction::TopUpCampaign {},
-            &coins(70_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::Unauthorized { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
-                }
-            },
-        )
-        .manage_campaign(
+        .top_up_campaign(
             alice,
-            CampaignAction::TopUpCampaign {},
             &coins(70_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
         )
-        .query_campaign(|result| {
-            let campaign = result.unwrap();
-            assert_eq!(campaign.reward_asset, coin(100_000, "uom"));
+        .query_balance("uom", &contract, |result| {
+            assert_eq!(result, Uint128::new(100_000u128));
         });
 
-    // go to the time when the campaign already finished. Should fail topping up
+    // go to the time when the campaign already finished
     for _ in 0..23 {
         suite.add_day();
     }
-
-    suite.manage_campaign(
-        alice,
-        CampaignAction::TopUpCampaign {},
-        &coins(90_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            match err {
-                ContractError::CampaignError { reason } => {
-                    assert_eq!(reason, "campaign has ended");
-                }
-                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
-            }
-        },
-    );
 
     let current_time = &suite.get_time();
 
@@ -2432,10 +1996,10 @@ fn topup_campaigns_with_and_without_cliff() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop without cliff".to_string(),
-                    reward_asset: coin(50_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
@@ -2444,7 +2008,6 @@ fn topup_campaigns_with_and_without_cliff() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(30).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(50_000, "uom"),
@@ -2452,21 +2015,18 @@ fn topup_campaigns_with_and_without_cliff() {
                 result.unwrap();
             },
         )
-        .query_campaign(|result| {
-            let campaign = result.unwrap();
-            assert_eq!(campaign.reward_asset, coin(50_000, "uom"));
+        .query_balance("uom", &contract, |result| {
+            assert_eq!(result, Uint128::new(50_000u128));
         })
-        .manage_campaign(
+        .top_up_campaign(
             alice,
-            CampaignAction::TopUpCampaign {},
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
         )
-        .query_campaign(|result| {
-            let campaign = result.unwrap();
-            assert_eq!(campaign.reward_asset, coin(150_000, "uom"));
+        .query_balance("uom", &contract, |result| {
+            assert_eq!(result, Uint128::new(150_000u128));
         });
 }
 
@@ -2493,10 +2053,10 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
-                    reward_asset: coin(10_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
@@ -2505,7 +2065,6 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(30).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(10_000, "uom"),
@@ -2514,18 +2073,16 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
             },
         )
         // topup campaign
-        .manage_campaign(
+        .top_up_campaign(
             alice,
-            CampaignAction::TopUpCampaign {},
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
         );
 
-    suite.query_campaign(|result| {
-        let campaign = result.unwrap();
-        assert_eq!(campaign.reward_asset, coin(110_000, "uom"));
+    suite.query_balance("uom", &contract, |result| {
+        assert_eq!(result, Uint128::new(110_000));
     });
 
     // move a month
@@ -2536,51 +2093,21 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
     // everybody claims they whole amount
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            carol,
-            Uint128::new(20_000u128),
-            None,
-            CAROL_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            dan,
-            Uint128::new(35_000u128),
-            None,
-            DAN_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .claim(
-            eva,
-            Uint128::new(25_000u128),
-            None,
-            EVA_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        );
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(dan, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .claim(eva, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        });
 
     suite.query_campaign(|result| {
         let campaign = result.unwrap();
@@ -2596,71 +2123,41 @@ fn topup_campaign_with_more_funds_than_the_merkle_proof_dictates() {
 
     // trying to claim more, even though there are funds in the contract, should fail
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
-        .claim(
-            bob,
-            Uint128::new(10_000u128),
-            None,
-            BOB_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
-        .claim(
-            carol,
-            Uint128::new(20_000u128),
-            None,
-            CAROL_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
-        .claim(
-            dan,
-            Uint128::new(35_000u128),
-            None,
-            DAN_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        )
-        .claim(
-            eva,
-            Uint128::new(25_000u128),
-            None,
-            EVA_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::NothingToClaim { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
-                }
-            },
-        );
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
+        .claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
+        .claim(dan, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        })
+        .claim(eva, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        });
 
     suite.query_balance("uom", &contract, |balance| {
         assert_eq!(balance, Uint128::new(10_000));
@@ -2681,10 +2178,10 @@ fn query_rewards() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
@@ -2699,7 +2196,6 @@ fn query_rewards() {
                 ],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -2709,32 +2205,10 @@ fn query_rewards() {
     );
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .query_rewards(Uint128::new(35_000u128), alice, ALICE_PROOFS, |result| {
-            let err = result.unwrap_err().to_string();
-
-            assert_eq!(
-                err,
-                "Generic error: Querier contract error: Merkle root verification failed"
-            );
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
         })
-        .query_rewards(Uint128::new(20_000u128), alice, ALICE_PROOFS, |result| {
-            let err = result.unwrap_err().to_string();
-
-            assert_eq!(
-                err,
-                "Generic error: Querier contract error: Merkle root verification failed"
-            );
-        })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -2752,7 +2226,7 @@ fn query_rewards() {
                 result.unwrap();
             },
         )
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             let rewards_response = result.unwrap();
             assert_eq!(rewards_response.claimed, coins(2_500u128, "uom"));
             assert!(rewards_response.pending.is_empty());
@@ -2774,17 +2248,16 @@ fn query_rewards_single_user() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
                 }],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT_SINGLE.to_string(),
             }),
         },
         &coins(100, "uom"),
@@ -2794,33 +2267,17 @@ fn query_rewards_single_user() {
     );
 
     suite
-        .query_rewards(
-            Uint128::new(100u128),
-            alice,
-            ALICE_PROOFS_SINGLE,
-            |result| {
-                let rewards_response = result.unwrap();
-                println!("{:?}", rewards_response);
-            },
-        )
-        .claim(
-            alice,
-            Uint128::new(100u128),
-            None,
-            ALICE_PROOFS_SINGLE,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
-        .query_rewards(
-            Uint128::new(100u128),
-            alice,
-            ALICE_PROOFS_SINGLE,
-            |result| {
-                let rewards_response = result.unwrap();
-                println!("{:?}", rewards_response);
-            },
-        );
+        .query_rewards(alice, |result| {
+            let rewards_response = result.unwrap();
+            println!("{:?}", rewards_response);
+        })
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .query_rewards(alice, |result| {
+            let rewards_response = result.unwrap();
+            println!("{:?}", rewards_response);
+        });
 }
 
 #[test]
@@ -2837,10 +2294,10 @@ fn query_rewards_fails_when_campaign_has_not_started() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
@@ -2855,7 +2312,6 @@ fn query_rewards_fails_when_campaign_has_not_started() {
                 ],
                 start_time: current_time.plus_days(1).seconds(),
                 end_time: current_time.plus_days(15).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -2865,34 +2321,26 @@ fn query_rewards_fails_when_campaign_has_not_started() {
     );
 
     suite
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                match err {
-                    ContractError::CampaignError { reason } => {
-                        assert_eq!(reason, "not started");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            match err {
+                ContractError::CampaignError { reason } => {
+                    assert_eq!(reason, "not started");
                 }
-            },
-        )
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        })
+        .query_rewards(alice, |result| {
             let err = result.unwrap_err().to_string();
             assert!(err.contains("not started"));
         });
 
     // move some epochs to make campaign active
     // the query is successful
-    suite
-        .add_week()
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
-            result.unwrap();
-        });
+    suite.add_week().query_rewards(alice, |result| {
+        result.unwrap();
+    });
 }
 
 #[test]
@@ -2909,10 +2357,10 @@ fn close_campaigns() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: Some(dan.to_string()),
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
@@ -2927,7 +2375,6 @@ fn close_campaigns() {
                 ],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -2945,8 +2392,8 @@ fn close_campaigns() {
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::Unauthorized { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
                 }
             },
         )
@@ -2957,8 +2404,8 @@ fn close_campaigns() {
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::Unauthorized { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
                 }
             },
         )
@@ -2967,7 +2414,7 @@ fn close_campaigns() {
             assert!(campaign.closed.is_none());
         })
         .manage_campaign(
-            dan, // dan can end the campaign since it's the owner of the campaign
+            dan, // dan can end the campaign since it's the owner
             CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
@@ -2991,32 +2438,17 @@ fn close_campaigns() {
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert!(campaign.closed.is_some());
-        })
-        // try top up, should fail
-        .manage_campaign(
-            dan,
-            CampaignAction::TopUpCampaign {},
-            &coins(100_000, "uom"),
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::CampaignError { reason } => {
-                        assert_eq!(reason, "campaign has been closed");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
-                }
-            },
-        );
+        });
 
     // let's create a new campaign
     suite.instantiate_claimdrop_contract(None).manage_campaign(
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: Some(dan.to_string()),
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
@@ -3031,7 +2463,6 @@ fn close_campaigns() {
                 ],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -3041,14 +2472,14 @@ fn close_campaigns() {
     );
 
     suite.manage_campaign(
-        carol, // carol can't since it's not the owner of the contract nor the owner of the campaign
+        carol, // carol can't since it's not the owner
         CampaignAction::CloseCampaign {},
         &[],
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             match err {
-                ContractError::Unauthorized { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                ContractError::OwnershipError { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
             }
         },
     );
@@ -3076,19 +2507,19 @@ fn close_campaigns() {
     // now only dan or carol can end the new campaign.
     suite
         .manage_campaign(
-            alice, // alice can't since it renounce the ownership of the contract
+            alice, // alice can't since it renounce the ownership
             CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::Unauthorized { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
                 }
             },
         )
         .manage_campaign(
-            carol, // alice can't since it renounce the ownership of the contract
+            carol, // alice can't since it renounce the ownership
             CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
@@ -3115,10 +2546,10 @@ fn can_query_claims_after_campaign_is_closed() {
             dan,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
@@ -3133,7 +2564,6 @@ fn can_query_claims_after_campaign_is_closed() {
                     ],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -3155,9 +2585,7 @@ fn can_query_claims_after_campaign_is_closed() {
     suite
         .claim(
             bob, //bob claims for alice
-            Uint128::new(10_000u128),
             Some(alice.to_string()),
-            ALICE_PROOFS,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -3177,7 +2605,7 @@ fn can_query_claims_after_campaign_is_closed() {
 
     suite.add_week();
 
-    suite.query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+    suite.query_rewards(alice, |result| {
         assert_eq!(
             result.unwrap(),
             RewardsResponse {
@@ -3193,13 +2621,6 @@ fn can_query_claims_after_campaign_is_closed() {
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert_eq!(campaign.claimed, coin(2_500u128, "uom"));
-            assert_eq!(
-                campaign
-                    .reward_asset
-                    .amount
-                    .saturating_sub(campaign.claimed.amount),
-                Uint128::new(100_000 - 2_500)
-            );
         })
         .query_balance("uom", dan, |result| {
             assert_eq!(result, Uint128::new(1_000_000_000 - 100_000));
@@ -3215,7 +2636,7 @@ fn can_query_claims_after_campaign_is_closed() {
         .query_balance("uom", dan, |result| {
             assert_eq!(result, Uint128::new(1_000_000_000 - 2_500));
         })
-        .query_rewards(Uint128::new(10_000u128), alice, ALICE_PROOFS, |result| {
+        .query_rewards(alice, |result| {
             let rewards_response = result.unwrap();
             assert_eq!(rewards_response.claimed, coins(2_500u128, "uom"));
             assert!(rewards_response.pending.is_empty());
@@ -3246,10 +2667,10 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
                     DistributionType::LumpSum {
                         percentage: Decimal::percent(25),
@@ -3264,7 +2685,6 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                 ],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(14).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -3276,15 +2696,9 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
     suite.add_week();
 
     // can claim
-    suite.claim(
-        bob,
-        Uint128::new(10_000u128),
-        None,
-        BOB_PROOFS,
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite.claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+        result.unwrap();
+    });
 
     suite
         .update_ownership(
@@ -3310,15 +2724,9 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
             },
         )
         // can claim
-        .claim(
-            alice,
-            Uint128::new(10_000u128),
-            None,
-            ALICE_PROOFS,
-            |result: Result<AppResponse, anyhow::Error>| {
-                result.unwrap();
-            },
-        )
+        .claim(alice, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
         //end campaign
         .manage_campaign(
             alice,
@@ -3333,10 +2741,10 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
@@ -3351,7 +2759,6 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                     ],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(14).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -3384,10 +2791,10 @@ fn can_claim_dust_without_new_claims() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(23, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(23, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
@@ -3396,7 +2803,6 @@ fn can_claim_dust_without_new_claims() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(60).seconds(),
-                    merkle_root: MERKLE_ROOT_X.to_string(),
                 }),
             },
             &coins(23, "uom"),
@@ -3416,9 +2822,7 @@ fn can_claim_dust_without_new_claims() {
     suite
         .claim(
             alice,
-            Uint128::new(17u128),
             Some(alice.to_string()),
-            ALICE_PROOFS_X,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -3439,9 +2843,7 @@ fn can_claim_dust_without_new_claims() {
     suite
         .claim(
             alice,
-            Uint128::new(17u128),
             Some(alice.to_string()),
-            ALICE_PROOFS_X,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -3471,10 +2873,10 @@ fn cant_end_distribution_type_after_campaign() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
@@ -3483,7 +2885,6 @@ fn cant_end_distribution_type_after_campaign() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -3501,10 +2902,10 @@ fn cant_end_distribution_type_after_campaign() {
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(100_000, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
@@ -3513,7 +2914,6 @@ fn cant_end_distribution_type_after_campaign() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(7).seconds(),
-                    merkle_root: MERKLE_ROOT.to_string(),
                 }),
             },
             &coins(100_000, "uom"),
@@ -3526,10 +2926,10 @@ fn cant_end_distribution_type_after_campaign() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                owner: None,
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
-                reward_asset: coin(100_000, "uom"),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LinearVesting {
                     percentage: Decimal::percent(100),
                     start_time: current_time.seconds(),
@@ -3538,7 +2938,6 @@ fn cant_end_distribution_type_after_campaign() {
                 }],
                 start_time: current_time.seconds(),
                 end_time: current_time.plus_days(7).seconds(),
-                merkle_root: MERKLE_ROOT.to_string(),
             }),
         },
         &coins(100_000, "uom"),
@@ -3546,4 +2945,377 @@ fn cant_end_distribution_type_after_campaign() {
             result.unwrap();
         },
     );
+}
+
+#[test]
+fn test_upload_allocations() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(25),
+                        start_time: current_time.seconds(),
+                    },
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(75),
+                        start_time: current_time.plus_days(7).seconds(),
+                        end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
+                    },
+                ],
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Upload allocations
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(100_000)),
+        (bob.to_string(), Uint128::new(200_000)),
+        (carol.to_string(), Uint128::new(300_000)),
+    ];
+
+    suite
+        .query_allocation(alice, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, None);
+        })
+        .query_allocation(bob, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, None);
+        })
+        .query_allocation(carol, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, None);
+        })
+        .upload_allocations(
+            bob,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::OwnershipError(e) => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            },
+        )
+        .upload_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_allocation(alice, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, Some(Uint128::new(100_000)));
+        })
+        .query_allocation(bob, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, Some(Uint128::new(200_000)));
+        })
+        .query_allocation(carol, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, Some(Uint128::new(300_000)));
+        });
+}
+
+#[test]
+fn test_cannot_upload_allocations_after_campaign_start() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::percent(100),
+                    start_time: current_time.plus_days(1).seconds(),
+                }],
+                start_time: current_time.plus_days(1).seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Upload allocations
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(100_000)),
+        (bob.to_string(), Uint128::new(200_000)),
+        (carol.to_string(), Uint128::new(300_000)),
+    ];
+
+    suite.add_day().add_day();
+
+    suite.upload_allocations(
+        bob,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::CampaignError { reason } => {
+                    assert_eq!(
+                        reason,
+                        "cannot upload allocations after campaign has started"
+                    );
+                }
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        },
+    );
+}
+
+#[test]
+fn test_replace_address() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(50),
+                        start_time: current_time.plus_days(7).seconds(),
+                        end_time: current_time.plus_days(14).seconds(),
+                        cliff_duration: None,
+                    },
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(50),
+                        start_time: current_time.seconds(),
+                    },
+                ],
+                start_time: current_time.seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Upload allocations
+    let allocations = &vec![(bob.to_string(), Uint128::new(100_000))];
+
+    suite.upload_allocations(
+        bob,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite.add_day();
+
+    suite
+        .claim(bob, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        })
+        .query_claimed(Some(bob), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (bob.to_string(), coin(50_000u128, "uom"))
+            );
+        })
+        .query_allocation(bob, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, Some(Uint128::new(100_000)));
+        });
+
+    // replace address
+
+    suite
+        .replace_address(
+            carol,
+            bob,
+            carol,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::OwnershipError(e) => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            },
+        )
+        .replace_address(
+            alice,
+            bob,
+            carol,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_claimed(Some(bob), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert!(claimed_response.claimed.is_empty());
+        })
+        .query_allocation(bob, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, None);
+        })
+        .query_claimed(Some(carol), None, None, |result| {
+            let claimed_response = result.unwrap();
+            assert_eq!(claimed_response.claimed.len(), 1usize);
+            assert_eq!(
+                claimed_response.claimed[0],
+                (bob.to_string(), coin(50_000u128, "uom"))
+            );
+        })
+        .query_allocation(carol, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocation, Some(Uint128::new(100_000)));
+        });
+}
+
+#[test]
+fn test_blacklist_address() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::percent(100),
+                    start_time: current_time.plus_days(1).seconds(),
+                }],
+                start_time: current_time.plus_days(1).seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Upload allocations
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(100_000)),
+        (bob.to_string(), Uint128::new(200_000)),
+        (carol.to_string(), Uint128::new(300_000)),
+    ];
+
+    suite.upload_allocations(
+        bob,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite
+        .blacklist_address(
+            bob,
+            carol,
+            true,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::OwnershipError(e) => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            },
+        )
+        .query_is_blacklisted(carol, |result| {
+            let blacklist_status = result.unwrap();
+            assert_eq!(blacklist_status.is_blacklisted, false);
+        })
+        .blacklist_address(
+            alice,
+            carol,
+            true,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_is_blacklisted(carol, |result| {
+            let blacklist_status = result.unwrap();
+            assert_eq!(blacklist_status.is_blacklisted, true);
+        });
+
+    suite.add_week();
+    //claiming should fail
+
+    suite.claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        match err {
+            ContractError::AddressBlacklisted => {}
+            _ => panic!("Wrong error type, should return ContractError::AddressBlacklisted"),
+        }
+    });
+
+    // remove from blacklist, claiming should work
+    suite
+        .blacklist_address(
+            alice,
+            carol,
+            false,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(carol, None, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        });
 }

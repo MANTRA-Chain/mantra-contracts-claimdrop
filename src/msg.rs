@@ -70,6 +70,7 @@ pub enum QueryMsg {
     #[returns(AllocationResponse)]
     /// Get the allocation for an address
     Allocation {
+        //todo make this optional and paginate if possible/needed
         /// The address to get the allocation for
         address: String,
     },
@@ -371,6 +372,27 @@ impl CampaignParams {
             ContractError::InvalidDistributionPercentage {
                 expected: Decimal::percent(100),
                 actual: total_percentage,
+            }
+        );
+
+        Ok(())
+    }
+
+    /// Validates the total reward amount and denom
+    pub fn validate_rewards(&self) -> Result<(), ContractError> {
+        ensure!(
+            self.total_reward.amount > Uint128::zero(),
+            ContractError::InvalidCampaignParam {
+                param: "total_reward".to_string(),
+                reason: "cannot be zero".to_string()
+            }
+        );
+
+        ensure!(
+            self.total_reward.denom == self.reward_denom,
+            ContractError::InvalidCampaignParam {
+                param: "reward_denom".to_string(),
+                reason: "reward denom mismatch".to_string()
             }
         );
 

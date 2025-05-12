@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{ensure, Addr, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
+use cosmwasm_std::{Addr, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
 
 use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
@@ -14,13 +14,7 @@ pub(crate) fn validate_campaign_params(
     campaign_params.validate_campaign_name_description()?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_campaign_distribution()?;
-    ensure!(
-        campaign_params.total_reward.denom == campaign_params.reward_denom,
-        ContractError::InvalidCampaignParam {
-            param: "reward_denom".to_string(),
-            reason: "reward denom mismatch".to_string()
-        }
-    );
+    campaign_params.validate_rewards()?;
 
     Ok(())
 }
