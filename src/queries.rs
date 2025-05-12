@@ -1,16 +1,12 @@
-use cosmwasm_std::{coin, ensure, Addr, Coin, Deps, Env, Order, StdResult, Uint128};
+use cosmwasm_std::{coin, ensure, Coin, Deps, Env, Order, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
-use crate::helpers;
 use crate::msg::{
     AllocationResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, DistributionType,
     RewardsResponse,
 };
-use crate::state::{
-    get_allocation, get_total_claims_amount_for_address, is_blacklisted, ALLOCATIONS, BLACKLIST,
-    CAMPAIGN, CLAIMS,
-};
+use crate::state::{get_allocation, is_blacklisted, CAMPAIGN, CLAIMS};
 
 /// Returns the active airdrop campaign.
 ///
@@ -104,19 +100,20 @@ pub fn query_rewards(
         pending = pending.checked_add(amount)?;
         available_to_claim =
             available_to_claim.checked_add(amount.checked_sub(claimed_for_type)?)?;
+        available_to_claim.checked_add(amount.checked_sub(claimed_for_type)?)?;
     }
 
     Ok(RewardsResponse {
         claimed: vec![Coin {
-            denom: campaign.reward_asset.denom.clone(),
+            denom: campaign.reward_denom.clone(),
             amount: claimed,
         }],
         pending: vec![Coin {
-            denom: campaign.reward_asset.denom.clone(),
+            denom: campaign.reward_denom.clone(),
             amount: pending,
         }],
         available_to_claim: vec![Coin {
-            denom: campaign.reward_asset.denom,
+            denom: campaign.reward_denom,
             amount: available_to_claim,
         }],
     })
@@ -165,7 +162,7 @@ pub(crate) fn query_claimed(
                 });
 
             if total_claimed > Uint128::zero() {
-                let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
+                let denom = CAMPAIGN.load(deps.storage)?.reward_denom.clone();
                 claimed.push((address, coin(total_claimed.u128(), denom)));
             }
         }
@@ -173,7 +170,7 @@ pub(crate) fn query_claimed(
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
         let start = start_from.map(Bound::exclusive);
 
-        let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
+        let denom = CAMPAIGN.load(deps.storage)?.reward_denom.clone();
 
         CLAIMS
             .range(deps.storage, start, None, Order::Ascending)

@@ -1,12 +1,9 @@
-use cosmwasm_std::{
-    coins, ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
-    Response, StdResult, Uint128, WasmMsg,
-};
+use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 use cw_ownable::assert_owner;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType, ExecuteMsg};
+use crate::msg::{Campaign, CampaignAction, CampaignParams};
 use crate::state::{
     get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
     ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
@@ -21,7 +18,6 @@ pub(crate) fn manage_campaign(
 ) -> Result<Response, ContractError> {
     match campaign_action {
         CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
-        CampaignAction::TopUpCampaign {} => topup_campaign(deps, env, info),
         CampaignAction::CloseCampaign {} => close_campaign(deps, env, info),
     }
 }
@@ -36,7 +32,7 @@ fn create_campaign(
     // only the owner of the contract can create a campaign
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    let campaign = CAMPAIGN.may_load(deps.storage)?;
+    let campaign: Option<Campaign> = CAMPAIGN.may_load(deps.storage)?;
 
     ensure!(
         campaign.is_none(),
@@ -45,7 +41,7 @@ fn create_campaign(
         }
     );
 
-    helpers::validate_campaign_params(env.block.time, &info, &campaign_params)?;
+    helpers::validate_campaign_params(env.block.time, &campaign_params)?;
 
     let owner = campaign_params
         .owner
@@ -60,42 +56,6 @@ fn create_campaign(
 
     Ok(Response::default().add_attributes(vec![
         ("action", "create_campaign".to_string()),
-        ("campaign", campaign.to_string()),
-    ]))
-}
-
-/// Tops up an existing airdrop campaign.
-fn topup_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    let mut campaign = CAMPAIGN
-        .may_load(deps.storage)?
-        .ok_or(ContractError::CampaignError {
-            reason: "there's not an active campaign".to_string(),
-        })?;
-
-    ensure!(campaign.owner == info.sender, ContractError::Unauthorized);
-
-    ensure!(
-        campaign.end_time > env.block.time.seconds(),
-        ContractError::CampaignError {
-            reason: "campaign has ended".to_string()
-        }
-    );
-
-    ensure!(
-        campaign.closed.is_none(),
-        ContractError::CampaignError {
-            reason: "campaign has been closed".to_string()
-        }
-    );
-
-    let topup = cw_utils::must_pay(&info, &campaign.reward_asset.denom)?;
-    campaign.reward_asset.amount = campaign.reward_asset.amount.checked_add(topup)?;
-
-    CAMPAIGN.save(deps.storage, &campaign)?;
-
-    Ok(Response::default().add_attributes(vec![
-        ("action", "topup_campaign".to_string()),
-        ("topup", topup.to_string()),
         ("campaign", campaign.to_string()),
     ]))
 }
@@ -123,17 +83,16 @@ fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response
         }
     );
 
-    let refund = campaign
-        .reward_asset
-        .amount
-        .saturating_sub(campaign.claimed.amount);
+    let refund: Coin = deps
+        .querier
+        .query_balance(env.contract.address, &campaign.reward_denom)?;
 
     let mut messages = vec![];
 
-    if !refund.is_zero() {
+    if !refund.amount.is_zero() {
         messages.push(BankMsg::Send {
             to_address: campaign.owner.to_string(),
-            amount: coins(refund.u128(), campaign.reward_asset.denom.clone()),
+            amount: vec![refund.clone()],
         });
     }
 
@@ -178,25 +137,18 @@ pub(crate) fn claim(
         }
     );
 
-    ensure!(
-        campaign.has_funds_available(),
-        ContractError::CampaignError {
-            reason: "no funds available to claim".to_string()
-        }
-    );
-
     let receiver = receiver
         .map(|addr| deps.api.addr_validate(&addr))
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
     ensure!(
-        !is_blacklisted(deps.as_ref(), &receiver.to_string())?,
+        !is_blacklisted(deps.as_ref(), receiver.as_ref())?,
         ContractError::AddressBlacklisted
     );
 
     // Get allocation for the address
-    let total_claimable_amount = get_allocation(deps.as_ref(), &receiver.to_string())?.ok_or(
+    let total_claimable_amount = get_allocation(deps.as_ref(), receiver.as_ref())?.ok_or(
         ContractError::NoAllocationFound {
             address: receiver.to_string(),
         },
@@ -215,6 +167,17 @@ pub(crate) fn claim(
         ContractError::NothingToClaim
     );
 
+    let available_funds = deps
+        .querier
+        .query_balance(env.contract.address, &campaign.reward_denom)?;
+
+    ensure!(
+        claimable_amount.amount <= available_funds.amount,
+        ContractError::CampaignError {
+            reason: "no funds available to claim".to_string()
+        }
+    );
+
     let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
 
     let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
@@ -223,11 +186,6 @@ pub(crate) fn claim(
         .claimed
         .amount
         .checked_add(claimable_amount.amount)?;
-
-    ensure!(
-        campaign.claimed.amount <= campaign.reward_asset.amount,
-        ContractError::ExceededMaxClaimAmount
-    );
 
     CAMPAIGN.save(deps.storage, &campaign)?;
 
@@ -308,7 +266,7 @@ pub fn replace_address(
 
     // if the old address has claims, we need to move them to the new address
     let claims = get_claims_for_address(deps.as_ref(), &deps.api.addr_validate(&old_address)?)?;
-    if claims.len() > 0 {
+    if !claims.is_empty() {
         CLAIMS.save(deps.storage, new_address.clone(), &claims)?;
         CLAIMS.remove(deps.storage, old_address.clone());
     }

@@ -126,8 +126,6 @@ pub enum CampaignAction {
         /// The parameters to create a campaign with
         params: Box<CampaignParams>,
     },
-    /// Tops up the campaign
-    TopUpCampaign {},
     /// Closes the campaign
     CloseCampaign {},
 }
@@ -141,8 +139,8 @@ pub struct Campaign {
     pub name: String,
     /// The campaign description
     pub description: String,
-    /// The asset to be distributed as reward by the campaign
-    pub reward_asset: Coin,
+    /// The denom to be distributed as reward by the campaign
+    pub reward_denom: String,
     /// The amount of the reward asset that has been claimed
     pub claimed: Coin,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
@@ -160,11 +158,11 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign {{ owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
+            "Campaign {{ owner: {}, name: {}, description: {}, reward_denom: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
             self.owner,
             self.name,
             self.description,
-            self.reward_asset,
+            self.reward_denom,
             self.claimed,
             self.distribution_type,
             self.start_time,
@@ -177,13 +175,13 @@ impl Display for Campaign {
 impl Campaign {
     /// Creates a new campaign from the given parameters
     pub fn from_params(params: CampaignParams, owner: Addr) -> Self {
-        let reward_denom = params.reward_asset.denom.clone();
+        let reward_denom = params.reward_denom.clone();
 
         Campaign {
             owner,
             name: params.name,
             description: params.description,
-            reward_asset: params.reward_asset,
+            reward_denom: params.reward_denom,
             claimed: Coin {
                 denom: reward_denom,
                 amount: Uint128::zero(),
@@ -204,11 +202,6 @@ impl Campaign {
     pub fn has_ended(&self, current_time: &Timestamp) -> bool {
         current_time.seconds() >= self.end_time
     }
-
-    /// Checks if the campaign has funds available
-    pub fn has_funds_available(&self) -> bool {
-        self.claimed.amount < self.reward_asset.amount
-    }
 }
 
 /// Represents the parameters to create a campaign with.
@@ -220,8 +213,8 @@ pub struct CampaignParams {
     pub name: String,
     /// The campaign description
     pub description: String,
-    /// The asset to be distributed as reward by the campaign
-    pub reward_asset: Coin,
+    /// The denom to be distributed as reward by the campaign
+    pub reward_denom: String,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
     /// The sum of the percentages must be 100.
     pub distribution_type: Vec<DistributionType>,
@@ -243,10 +236,10 @@ impl CampaignParams {
         );
 
         ensure!(
-            self.name.len() <= 50usize,
+            self.name.len() <= 200usize,
             ContractError::InvalidCampaignParam {
                 param: "name".to_string(),
-                reason: "cannot be longer than 50 characters".to_string(),
+                reason: "cannot be longer than 200 characters".to_string(),
             }
         );
 
@@ -259,10 +252,10 @@ impl CampaignParams {
         );
 
         ensure!(
-            self.description.len() <= 500usize,
+            self.description.len() <= 2000usize,
             ContractError::InvalidCampaignParam {
                 param: "description".to_string(),
-                reason: "cannot be longer than 500 characters".to_string(),
+                reason: "cannot be longer than 2000 characters".to_string(),
             }
         );
 
