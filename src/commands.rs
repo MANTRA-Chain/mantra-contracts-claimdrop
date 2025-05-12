@@ -15,6 +15,7 @@ pub(crate) fn manage_campaign(
     info: MessageInfo,
     campaign_action: CampaignAction,
 ) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
     match campaign_action {
         CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
         CampaignAction::CloseCampaign {} => close_campaign(deps, env, info),
@@ -51,10 +52,9 @@ fn create_campaign(
     ]))
 }
 
-/// Closes the existing airdrop campaign. Only the owner or the contract admin can end the campaign.
+/// Closes the existing airdrop campaign. Only the owner can end the campaign.
 /// The remaining funds in the campaign are refunded to the owner.
 fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let mut campaign = CAMPAIGN
@@ -168,7 +168,6 @@ pub(crate) fn claim(
     );
 
     let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
-
     let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
 
     campaign.claimed.amount = campaign

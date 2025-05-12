@@ -139,6 +139,8 @@ pub struct Campaign {
     pub description: String,
     /// The denom to be distributed as reward by the campaign
     pub reward_denom: String,
+    /// The total amount of the reward asset that is intended to be allocated to the campaign
+    pub total_reward: Coin,
     /// The amount of the reward asset that has been claimed
     pub claimed: Coin,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
@@ -156,10 +158,11 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign {{ name: {}, description: {}, reward_denom: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
+            "Campaign {{ name: {}, description: {}, reward_denom: {}, total_reward: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
             self.name,
             self.description,
             self.reward_denom,
+            self.total_reward,
             self.claimed,
             self.distribution_type,
             self.start_time,
@@ -178,6 +181,7 @@ impl Campaign {
             name: params.name,
             description: params.description,
             reward_denom: params.reward_denom,
+            total_reward: params.total_reward,
             claimed: Coin {
                 denom: reward_denom,
                 amount: Uint128::zero(),
@@ -209,6 +213,8 @@ pub struct CampaignParams {
     pub description: String,
     /// The denom to be distributed as reward by the campaign
     pub reward_denom: String,
+    /// The total amount of the reward asset that is intended to be allocated to the campaign
+    pub total_reward: Coin,
     /// The ways the reward is distributed, which are defined by the [DistributionType].
     /// The sum of the percentages must be 100.
     pub distribution_type: Vec<DistributionType>,
