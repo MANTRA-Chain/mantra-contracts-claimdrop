@@ -19,13 +19,28 @@ pub enum ExecuteMsg {
     ManageCampaign { action: CampaignAction },
     /// Claims rewards from a campaign
     Claim {
-        /// The total claimable amount from the campaign
-        total_claimable_amount: Uint128,
         /// The receiver address of the claimed rewards. If not set, the sender of the message will be the receiver.
         /// This is useful for allowing a contract to do the claim operation on behalf of a user.
         receiver: Option<String>,
-        /// A Vector of all necessary proofs for the merkle root verification, hex-encoded.
-        proof: Vec<String>,
+    },
+    /// Uploads a batch of addresses and their allocations. This can only be done before the campaign has started.
+    UploadAllocations {
+        /// Vector of (address, amount) pairs
+        allocations: Vec<(String, Uint128)>,
+    },
+    /// Replaces an address in the allocation list. This can only be done before the campaign has started.
+    ReplaceAddress {
+        /// The old address to replace
+        old_address: String,
+        /// The new address to use
+        new_address: String,
+    },
+    /// Blacklists or unblacklists an address. This can be done at any time.
+    BlacklistAddress {
+        /// The address to blacklist/unblacklist
+        address: String,
+        /// Whether to blacklist or unblacklist
+        blacklist: bool,
     },
 }
 
@@ -39,12 +54,8 @@ pub enum QueryMsg {
     #[returns(RewardsResponse)]
     /// Get the rewards for a specific campaign and receiver address.
     Rewards {
-        /// The total claimable amount for the campaign.
-        total_claimable_amount: Uint128,
         /// The address to get the rewards for.
         receiver: String,
-        /// A Vector with the necessary proofs for the merkle root verification, hex-encoded.
-        proof: Vec<String>,
     },
     #[returns(ClaimedResponse)]
     /// Get the total amount of tokens claimed on the campaign.
@@ -55,6 +66,18 @@ pub enum QueryMsg {
         start_from: Option<String>,
         /// The maximum number of items to return. If not set, the default value is used. Used for paginating results.
         limit: Option<u16>,
+    },
+    #[returns(AllocationResponse)]
+    /// Get the allocation for an address
+    Allocation {
+        /// The address to get the allocation for
+        address: String,
+    },
+    #[returns(BlacklistResponse)]
+    /// Check if an address is blacklisted
+    IsBlacklisted {
+        /// The address to check
+        address: String,
     },
 }
 
@@ -79,6 +102,20 @@ pub struct RewardsResponse {
 pub struct ClaimedResponse {
     /// Contains a vector with a tuple with (address, coin) that have been claimed
     pub claimed: Vec<(String, Coin)>,
+}
+
+/// Response to the Allocation query.
+#[cw_serde]
+pub struct AllocationResponse {
+    /// The allocation amount for the address, if it exists
+    pub allocation: Option<Uint128>,
+}
+
+/// Response to the Blacklist query.
+#[cw_serde]
+pub struct BlacklistResponse {
+    /// Whether the address is blacklisted
+    pub is_blacklisted: bool,
 }
 
 /// The campaign action that can be executed with the [ExecuteMsg::ManageCampaign] message.
@@ -115,8 +152,6 @@ pub struct Campaign {
     pub start_time: u64,
     /// The campaign end time (unix timestamp), in seconds
     pub end_time: u64,
-    /// The campaign merkle root for the airdrop
-    pub merkle_root: String,
     /// The timestamp at which the campaign was closed, in seconds
     pub closed: Option<u64>,
 }
@@ -125,7 +160,7 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign {{ owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, merkle_root: {}, closed: {:?} }}",
+            "Campaign {{ owner: {}, name: {}, description: {}, reward_asset: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
             self.owner,
             self.name,
             self.description,
@@ -134,7 +169,6 @@ impl Display for Campaign {
             self.distribution_type,
             self.start_time,
             self.end_time,
-            self.merkle_root,
             self.closed
         )
     }
@@ -157,7 +191,6 @@ impl Campaign {
             distribution_type: params.distribution_type,
             start_time: params.start_time,
             end_time: params.end_time,
-            merkle_root: params.merkle_root,
             closed: None,
         }
     }
@@ -196,8 +229,6 @@ pub struct CampaignParams {
     pub start_time: u64,
     /// The campaign end timestamp (unix timestamp), in seconds
     pub end_time: u64,
-    /// The campaign merkle root
-    pub merkle_root: String,
 }
 
 impl CampaignParams {

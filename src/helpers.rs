@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use cosmwasm_std::{
     ensure, Addr, Coin, Decimal256, Deps, MessageInfo, Timestamp, Uint128, Uint256,
 };
-use sha2::Digest;
 
 use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
@@ -16,7 +15,6 @@ pub(crate) fn validate_campaign_params(
     campaign_params: &CampaignParams,
 ) -> Result<(), ContractError> {
     campaign_params.validate_campaign_name_description()?;
-    validate_merkle_root(&campaign_params.merkle_root)?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_campaign_distribution()?;
 
@@ -27,49 +25,6 @@ pub(crate) fn validate_campaign_params(
             expected: campaign_params.reward_asset.amount,
             actual: reward_amount
         }
-    );
-
-    Ok(())
-}
-
-/// Validates the merkle root, i.e. checks if it is a valid SHA-256 hash
-pub(crate) fn validate_merkle_root(merkle_root: &str) -> Result<[u8; 32], ContractError> {
-    let mut merkle_root_buf: [u8; 32] = [0; 32];
-    hex::decode_to_slice(merkle_root, &mut merkle_root_buf)?;
-
-    Ok(merkle_root_buf)
-}
-
-/// Validates the claim proof
-pub(crate) fn validate_claim(
-    contract_addr: &Addr,
-    receiver: &Addr,
-    amount: Uint128,
-    proof: &[String],
-    merkle_root: &str,
-) -> Result<(), ContractError> {
-    let user_input = format!("{}{}{}", contract_addr, receiver, amount);
-    let hash = sha2::Sha256::digest(user_input.as_bytes())
-        .as_slice()
-        .try_into()
-        .map_err(|_| ContractError::WrongHashLength)?;
-
-    let hash = proof.iter().try_fold(hash, |hash, p| {
-        let mut proof_buf = [0; 32];
-        hex::decode_to_slice(p, &mut proof_buf)?;
-        let mut hashes = [hash, proof_buf];
-        hashes.sort_unstable();
-        sha2::Sha256::digest(hashes.concat())
-            .as_slice()
-            .try_into()
-            .map_err(|_| ContractError::WrongHashLength {})
-    })?;
-
-    let merkle_root_buf = validate_merkle_root(merkle_root)?;
-
-    ensure!(
-        merkle_root_buf == hash,
-        ContractError::MerkleRootVerificationFailed
     );
 
     Ok(())

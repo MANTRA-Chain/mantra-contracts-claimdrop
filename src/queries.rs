@@ -1,81 +1,124 @@
-use cosmwasm_std::{coin, Coin, Deps, Env, Order, Uint128};
+use cosmwasm_std::{coin, ensure, Addr, Coin, Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{CampaignResponse, ClaimedResponse, RewardsResponse};
-use crate::state::{get_total_claims_amount_for_address, CAMPAIGN, CLAIMS};
+use crate::msg::{
+    AllocationResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, DistributionType,
+    RewardsResponse,
+};
+use crate::state::{
+    get_allocation, get_total_claims_amount_for_address, is_blacklisted, ALLOCATIONS, BLACKLIST,
+    CAMPAIGN, CLAIMS,
+};
 
 /// Returns the active airdrop campaign.
-pub(crate) fn query_campaign(deps: Deps) -> Result<CampaignResponse, ContractError> {
-    Ok(CAMPAIGN.load(deps.storage)?)
+///
+/// # Arguments
+/// * `deps` - The dependencies
+///
+/// # Returns
+/// * `Result<CampaignResponse, ContractError>` - The campaign information
+pub fn query_campaign(deps: Deps) -> Result<CampaignResponse, ContractError> {
+    let campaign = CAMPAIGN.load(deps.storage)?;
+    Ok(campaign)
 }
 
-pub(crate) fn query_rewards(
+/// Returns the rewards information for a specific address.
+/// This includes claimed, pending, and available to claim amounts.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `env` - The environment
+/// * `receiver` - The address to get rewards for
+///
+/// # Returns
+/// * `Result<RewardsResponse, ContractError>` - The rewards information
+pub fn query_rewards(
     deps: Deps,
     env: Env,
-    total_claimable_amount: Uint128,
     receiver: String,
-    proof: Vec<String>,
 ) -> Result<RewardsResponse, ContractError> {
-    let campaign = CAMPAIGN
-        .may_load(deps.storage)?
-        .ok_or(ContractError::CampaignError {
-            reason: "there's not an active campaign".to_string(),
-        })?;
+    let campaign = CAMPAIGN.load(deps.storage)?;
+    let receiver = deps.api.addr_validate(&receiver)?.to_string();
 
-    let mut available_to_claim = vec![];
-    let mut claimed = vec![];
-    let mut pending = vec![];
+    // Check if address is blacklisted
+    ensure!(
+        !is_blacklisted(deps, &receiver)?,
+        ContractError::AddressBlacklisted {}
+    );
 
-    let receiver = deps.api.addr_validate(&receiver)?;
-
-    let total_claimed = get_total_claims_amount_for_address(deps, &receiver)?;
-    if total_claimed > Uint128::zero() {
-        claimed.push(coin(total_claimed.u128(), &campaign.reward_asset.denom));
-    }
-
-    if campaign.has_funds_available() {
-        let pending_rewards = coin(
-            total_claimable_amount.saturating_sub(total_claimed).u128(),
-            &campaign.reward_asset.denom,
-        );
-
-        if pending_rewards.amount > Uint128::zero() {
-            pending.push(pending_rewards);
+    // Get allocation for the address
+    let allocation = get_allocation(deps, &receiver)?;
+    ensure!(
+        allocation.is_some(),
+        ContractError::NoAllocationFound {
+            address: receiver.clone(),
         }
+    );
 
-        helpers::validate_claim(
-            &env.contract.address,
-            &receiver,
-            total_claimable_amount,
-            &proof,
-            &campaign.merkle_root,
-        )?;
-        let (claimable_amount, _) = helpers::compute_claimable_amount(
-            deps,
-            &campaign,
-            &env.block.time,
-            &receiver,
-            total_claimable_amount,
-        )?;
+    let allocation = allocation.unwrap();
 
-        if claimable_amount.amount > Uint128::zero() {
-            available_to_claim.push(claimable_amount);
-        }
-    }
+    //todo reuse helper function from claims??
 
-    // if the campaign is closed, clear the pending and available to claim rewards as there's nothing else
-    // to claim
-    if campaign.closed.is_some() {
-        pending.clear();
-        available_to_claim.clear();
+    // Calculate claimable amount based on distribution type
+    let mut claimed = Uint128::zero();
+    let mut pending = Uint128::zero();
+    let mut available_to_claim = Uint128::zero();
+
+    for (idx, dist_type) in campaign.distribution_type.iter().enumerate() {
+        let claimed_for_type = CLAIMS
+            .may_load(deps.storage, receiver.clone())?
+            .unwrap_or_default()
+            .get(&idx)
+            .map(|(amount, _)| *amount)
+            .unwrap_or_else(Uint128::zero);
+
+        let amount = match dist_type {
+            DistributionType::LinearVesting {
+                percentage,
+                start_time,
+                end_time,
+                cliff_duration,
+            } => {
+                let total = allocation.checked_mul(percentage.atomics())?;
+                let elapsed = env.block.time.seconds() - start_time;
+                let duration = end_time - start_time;
+
+                if let Some(cliff) = cliff_duration {
+                    if elapsed < *cliff {
+                        Uint128::zero()
+                    } else {
+                        total.multiply_ratio(elapsed, duration)
+                    }
+                } else {
+                    total.multiply_ratio(elapsed, duration)
+                }
+            }
+            DistributionType::LumpSum { percentage, .. } => {
+                allocation.checked_mul(percentage.atomics())?
+            }
+        };
+
+        claimed = claimed.checked_add(claimed_for_type)?;
+        pending = pending.checked_add(amount)?;
+        available_to_claim =
+            available_to_claim.checked_add(amount.checked_sub(claimed_for_type)?)?;
     }
 
     Ok(RewardsResponse {
-        claimed,
-        pending,
-        available_to_claim,
+        claimed: vec![Coin {
+            denom: campaign.reward_asset.denom.clone(),
+            amount: claimed,
+        }],
+        pending: vec![Coin {
+            denom: campaign.reward_asset.denom.clone(),
+            amount: pending,
+        }],
+        available_to_claim: vec![Coin {
+            denom: campaign.reward_asset.denom,
+            amount: available_to_claim,
+        }],
     })
 }
 
@@ -83,6 +126,17 @@ pub(crate) fn query_rewards(
 pub(crate) const MAX_LIMIT: u16 = 5_000;
 const DEFAULT_LIMIT: u16 = 100;
 
+/// Returns the claimed amounts for addresses.
+/// Can be filtered by a specific address and paginated.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - Optional address to filter by
+/// * `start_from` - Optional address to start pagination from
+/// * `limit` - Optional limit for pagination
+///
+/// # Returns
+/// * `Result<ClaimedResponse, ContractError>` - The claimed amounts
 pub(crate) fn query_claimed(
     deps: Deps,
     address: Option<String>,
@@ -142,4 +196,33 @@ pub(crate) fn query_claimed(
     }
 
     Ok(ClaimedResponse { claimed })
+}
+
+/// Returns the allocation for an address.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - The address to get allocation for
+///
+/// # Returns
+/// * `Result<AllocationResponse, ContractError>` - The allocation information
+pub fn query_allocation(deps: Deps, address: String) -> Result<AllocationResponse, ContractError> {
+    let allocation = get_allocation(deps, &address)?;
+    Ok(AllocationResponse { allocation })
+}
+
+/// Returns whether an address is blacklisted.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - The address to check
+///
+/// # Returns
+/// * `Result<BlacklistResponse, ContractError>` - The blacklist status
+pub fn query_is_blacklisted(
+    deps: Deps,
+    address: String,
+) -> Result<BlacklistResponse, ContractError> {
+    let is_blacklisted = is_blacklisted(deps, &address)?;
+    Ok(BlacklistResponse { is_blacklisted })
 }

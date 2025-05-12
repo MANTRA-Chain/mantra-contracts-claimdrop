@@ -41,7 +41,7 @@ pub enum ContractError {
     #[error("{0}")]
     FromHexError(#[from] FromHexError),
 
-    #[error("Invalid campaign param {param}, reason: {reason}")]
+    #[error("Invalid campaign parameter: {param} - {reason}")]
     InvalidCampaignParam { param: String, reason: String },
 
     #[error("Wrong hash length")]
@@ -76,6 +76,12 @@ pub enum ContractError {
 
     #[error("The cliff period has not passed yet")]
     CliffPeriodNotPassed,
+
+    #[error("No allocation found for address: {address}")]
+    NoAllocationFound { address: String },
+
+    #[error("Address is blacklisted")]
+    AddressBlacklisted,
 }
 
 impl From<semver::Error> for ContractError {

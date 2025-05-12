@@ -1,9 +1,16 @@
-use cosmwasm_std::{coins, ensure, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{
+    coins, ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+    Response, StdResult, Uint128, WasmMsg,
+};
+use cw_ownable::assert_owner;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{Campaign, CampaignAction, CampaignParams};
-use crate::state::{get_claims_for_address, get_total_claims_amount_for_address, CAMPAIGN, CLAIMS};
+use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType, ExecuteMsg};
+use crate::state::{
+    get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
+    ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
+};
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -147,9 +154,7 @@ pub(crate) fn claim(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    total_claimable_amount: Uint128,
     receiver: Option<String>,
-    proof: Vec<String>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
@@ -185,12 +190,16 @@ pub(crate) fn claim(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
-    helpers::validate_claim(
-        &env.contract.address,
-        &receiver,
-        total_claimable_amount,
-        &proof,
-        &campaign.merkle_root,
+    ensure!(
+        !is_blacklisted(deps.as_ref(), &receiver.to_string())?,
+        ContractError::AddressBlacklisted
+    );
+
+    // Get allocation for the address
+    let total_claimable_amount = get_allocation(deps.as_ref(), &receiver.to_string())?.ok_or(
+        ContractError::NoAllocationFound {
+            address: receiver.to_string(),
+        },
     )?;
 
     let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
@@ -239,4 +248,117 @@ pub(crate) fn claim(
             ("receiver", receiver.to_string()),
             ("claimed_amount", claimable_amount.to_string()),
         ]))
+}
+
+/// Uploads a batch of addresses and their allocations. This can only be done before the campaign has started.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `env`  - The env context
+/// * `info` - The message info
+/// * `allocations` - Vector of (address, amount) pairs
+///
+/// # Returns
+/// * `Result<Response, ContractError>` - The response with attributes
+pub fn upload_allocations(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    allocations: Vec<(String, Uint128)>,
+) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+    assert_owner(deps.storage, &info.sender)?;
+
+    // Check if campaign has started
+    let campaign = CAMPAIGN.load(deps.storage)?;
+    ensure!(
+        !campaign.has_started(&env.block.time),
+        ContractError::CampaignError {
+            reason: "cannot upload allocations after campaign has started".to_string(),
+        }
+    );
+
+    for (address, amount) in &allocations {
+        ALLOCATIONS.save(deps.storage, address.as_str(), amount)?;
+    }
+
+    Ok(Response::default()
+        .add_attribute("action", "upload_allocations")
+        .add_attribute("count", allocations.len().to_string()))
+}
+
+/// Replaces an address in the allocation list. This can only be done before the campaign has started.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `info` - The message info
+/// * `old_address` - The old address to replace
+/// * `new_address` - The new address to use
+///
+/// # Returns
+/// * `Result<Response, ContractError>` - The response with attributes
+pub fn replace_address(
+    deps: DepsMut,
+    info: MessageInfo,
+    old_address: String,
+    new_address: String,
+) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+    assert_owner(deps.storage, &info.sender)?;
+
+    // if the old address has claims, we need to move them to the new address
+    let claims = get_claims_for_address(deps.as_ref(), &deps.api.addr_validate(&old_address)?)?;
+    if claims.len() > 0 {
+        CLAIMS.save(deps.storage, new_address.clone(), &claims)?;
+        CLAIMS.remove(deps.storage, old_address.clone());
+    }
+
+    // Get old allocation
+    let old_allocation = get_allocation(deps.as_ref(), &old_address)?;
+    ensure!(
+        old_allocation.is_some(),
+        ContractError::NoAllocationFound {
+            address: old_address.clone(),
+        }
+    );
+
+    // Replace old allocation with new allocation
+    ALLOCATIONS.save(deps.storage, &new_address, &old_allocation.unwrap())?;
+    ALLOCATIONS.remove(deps.storage, &old_address);
+
+    Ok(Response::default()
+        .add_attribute("action", "replace_address")
+        .add_attribute("old_address", old_address)
+        .add_attribute("new_address", new_address))
+}
+
+/// Blacklists or unblacklists an address. This can be done at any time.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `info` - The message info
+/// * `address` - The address to blacklist/unblacklist
+/// * `blacklist` - Whether to blacklist or unblacklist
+///
+/// # Returns
+/// * `Result<Response, ContractError>` - The response with attributes
+pub fn blacklist_address(
+    deps: DepsMut,
+    info: MessageInfo,
+    address: String,
+    blacklist: bool,
+) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+    assert_owner(deps.storage, &info.sender)?;
+
+    if blacklist {
+        BLACKLIST.save(deps.storage, &address, &true)?;
+    } else {
+        BLACKLIST.remove(deps.storage, &address);
+    }
+
+    Ok(Response::default()
+        .add_attribute("action", "blacklist_address")
+        .add_attribute("address", address)
+        .add_attribute("blacklisted", blacklist.to_string()))
 }
