@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BlacklistResponse",
+  "description": "Response to the Blacklist query.",
+  "type": "object",
+  "required": [
+    "is_blacklisted"
+  ],
+  "properties": {
+    "is_blacklisted": {
+      "description": "Whether the address is blacklisted",
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}
