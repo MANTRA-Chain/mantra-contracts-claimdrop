@@ -1,5 +1,5 @@
 use claimdrop_contract::msg::{
-    AllocationResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
+    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
     ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
 };
 use cosmwasm_std::{coin, Addr, Coin, Empty, StdResult, Timestamp, Uint128};
@@ -322,14 +322,18 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub fn query_allocation(
+    pub fn query_allocations(
         &mut self,
-        address: &Addr,
-        result: impl Fn(StdResult<AllocationResponse>),
+        address: Option<&Addr>,
+        start_after: Option<&Addr>,
+        limit: Option<u16>,
+        result: impl Fn(StdResult<AllocationsResponse>),
     ) -> &mut Self {
         self.query_contract(
-            QueryMsg::Allocation {
-                address: address.to_string(),
+            QueryMsg::Allocations {
+                address: address.map(|addr| addr.to_string()),
+                start_after: start_after.map(|addr| addr.to_string()),
+                limit,
             },
             result,
         )

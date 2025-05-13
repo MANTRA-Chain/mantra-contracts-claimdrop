@@ -577,18 +577,34 @@
         "description": "Get the allocation for an address",
         "type": "object",
         "required": [
-          "allocation"
+          "allocations"
         ],
         "properties": {
-          "allocation": {
+          "allocations": {
             "type": "object",
-            "required": [
-              "address"
-            ],
             "properties": {
               "address": {
-                "description": "The address to get the allocation for",
-                "type": "string"
+                "description": "The address to get the allocation for, if provided",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "limit": {
+                "description": "The maximum number of items to return. If not set, the default value is used. Used for paginating results.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint16",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "description": "The address to start querying from. Used for paginating results.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "additionalProperties": false
@@ -638,22 +654,31 @@
   "migrate": null,
   "sudo": null,
   "responses": {
-    "allocation": {
+    "allocations": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AllocationResponse",
+      "title": "AllocationsResponse",
       "description": "Response to the Allocation query.",
       "type": "object",
+      "required": [
+        "allocations"
+      ],
       "properties": {
-        "allocation": {
-          "description": "The allocation amount for the address, if it exists",
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Uint128"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "allocations": {
+          "description": "A vector with a tuple with (address, amount) that have been allocated.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/Uint128"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
         }
       },
       "additionalProperties": false,

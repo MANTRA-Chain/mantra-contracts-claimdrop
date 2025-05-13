@@ -8,7 +8,6 @@ use cw_utils::PaymentError;
 use crate::suite::TestingSuite;
 use claimdrop_contract::error::ContractError;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
-use claimdrop_contract::queries::query_allocation;
 
 mod hashes;
 mod suite;
@@ -2990,17 +2989,17 @@ fn test_add_allocations() {
     ];
 
     suite
-        .query_allocation(alice, |result| {
+        .query_allocations(Some(alice), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, None);
+            assert!(allocation.allocations.is_empty());
         })
-        .query_allocation(bob, |result| {
+        .query_allocations(Some(bob), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, None);
+            assert!(allocation.allocations.is_empty());
         })
-        .query_allocation(carol, |result| {
+        .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, None);
+            assert!(allocation.allocations.is_empty());
         })
         .add_allocations(
             bob,
@@ -3020,17 +3019,48 @@ fn test_add_allocations() {
                 result.unwrap();
             },
         )
-        .query_allocation(alice, |result| {
+        .query_allocations(Some(alice), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, Some(Uint128::new(100_000)));
+            assert_eq!(
+                allocation.allocations[0],
+                (alice.to_string(), Uint128::new(100_000))
+            );
         })
-        .query_allocation(bob, |result| {
+        .query_allocations(Some(bob), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, Some(Uint128::new(200_000)));
+            assert_eq!(
+                allocation.allocations[0],
+                (bob.to_string(), Uint128::new(200_000))
+            );
         })
-        .query_allocation(carol, |result| {
+        .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, Some(Uint128::new(300_000)));
+            assert_eq!(
+                allocation.allocations[0],
+                (carol.to_string(), Uint128::new(300_000))
+            );
+        });
+
+    // test allocations pagination
+
+    suite
+        .query_allocations(None, None, Some(2u16), |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocations.len(), 2);
+            assert_eq!(
+                allocation.allocations,
+                vec![
+                    (alice.to_string(), Uint128::new(100_000)),
+                    (carol.to_string(), Uint128::new(300_000))
+                ]
+            );
+        })
+        .query_allocations(None, Some(carol), None, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(
+                allocation.allocations,
+                vec![(bob.to_string(), Uint128::new(200_000))]
+            );
         });
 }
 
@@ -3161,9 +3191,12 @@ fn test_replace_address() {
                 (bob.to_string(), coin(50_000u128, "uom"))
             );
         })
-        .query_allocation(bob, |result| {
+        .query_allocations(Some(bob), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, Some(Uint128::new(100_000)));
+            assert_eq!(
+                allocation.allocations[0],
+                (bob.to_string(), Uint128::new(100_000))
+            );
         });
 
     // replace address
@@ -3196,9 +3229,9 @@ fn test_replace_address() {
             let claimed_response = result.unwrap();
             assert!(claimed_response.claimed.is_empty());
         })
-        .query_allocation(bob, |result| {
+        .query_allocations(Some(bob), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, None);
+            assert!(allocation.allocations.is_empty());
         })
         .query_claimed(Some(carol), None, None, |result| {
             let claimed_response = result.unwrap();
@@ -3208,9 +3241,12 @@ fn test_replace_address() {
                 (carol.to_string(), coin(50_000u128, "uom"))
             );
         })
-        .query_allocation(carol, |result| {
+        .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocation, Some(Uint128::new(100_000)));
+            assert_eq!(
+                allocation.allocations[0],
+                (carol.to_string(), Uint128::new(100_000))
+            );
         });
 }
 

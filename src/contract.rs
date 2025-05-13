@@ -78,9 +78,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         } => Ok(to_json_binary(&queries::query_claimed(
             deps, address, start_from, limit,
         )?)?),
-        QueryMsg::Allocation { address } => {
-            Ok(to_json_binary(&queries::query_allocation(deps, address)?)?)
-        }
+        QueryMsg::Allocations {
+            address,
+            start_after,
+            limit,
+        } => Ok(to_json_binary(&queries::query_allocation(
+            deps,
+            address,
+            start_after,
+            limit,
+        )?)?),
         QueryMsg::IsBlacklisted { address } => Ok(to_json_binary(&queries::query_is_blacklisted(
             deps, address,
         )?)?),

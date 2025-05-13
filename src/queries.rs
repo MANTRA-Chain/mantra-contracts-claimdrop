@@ -1,13 +1,14 @@
-use cosmwasm_std::{coin, Coin, Deps, Env, Order, Uint128};
+use cosmwasm_std::{coin, Coin, Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::msg::{
-    AllocationResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
+    AllocationsResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
 };
 use crate::state::{
-    get_allocation, get_total_claims_amount_for_address, is_blacklisted, CAMPAIGN, CLAIMS,
+    get_allocation, get_total_claims_amount_for_address, is_blacklisted, ALLOCATIONS, CAMPAIGN,
+    CLAIMS,
 };
 
 /// Returns the active airdrop campaign.
@@ -170,17 +171,49 @@ pub(crate) fn query_claimed(
     Ok(ClaimedResponse { claimed })
 }
 
+const MAX_ALLOCATIONS: u16 = 5_000;
+const DEFAULT_ALLOCATIONS_LIMIT: u16 = 100;
+
 /// Returns the allocation for an address.
 ///
 /// # Arguments
 /// * `deps` - The dependencies
-/// * `address` - The address to get allocation for
+/// * `address` - Optional address to filter by
+/// * `start_after` - Optional address to start pagination from
+/// * `limit` - Optional limit for pagination
 ///
 /// # Returns
-/// * `Result<AllocationResponse, ContractError>` - The allocation information
-pub fn query_allocation(deps: Deps, address: String) -> Result<AllocationResponse, ContractError> {
-    let allocation = get_allocation(deps, &address)?;
-    Ok(AllocationResponse { allocation })
+/// * `Result<AllocationsResponse, ContractError>` - The allocations information
+pub fn query_allocation(
+    deps: Deps,
+    address: Option<String>,
+    start_after: Option<String>,
+    limit: Option<u16>,
+) -> Result<AllocationsResponse, ContractError> {
+    let allocations = if let Some(address) = address {
+        let allocation = get_allocation(deps, &address)?;
+        if let Some(allocation) = allocation {
+            vec![(address, allocation)]
+        } else {
+            vec![]
+        }
+    } else {
+        let limit = limit
+            .unwrap_or(DEFAULT_ALLOCATIONS_LIMIT)
+            .min(MAX_ALLOCATIONS) as usize;
+        let start = cw_utils::calc_range_start_string(start_after).map(Bound::ExclusiveRaw);
+
+        ALLOCATIONS
+            .range(deps.storage, start, None, Order::Ascending)
+            .take(limit)
+            .map(|item| {
+                let (address, allocation) = item?;
+                Ok((address, allocation))
+            })
+            .collect::<StdResult<Vec<(String, Uint128)>>>()?
+    };
+
+    Ok(AllocationsResponse { allocations })
 }
 
 /// Returns whether an address is blacklisted.

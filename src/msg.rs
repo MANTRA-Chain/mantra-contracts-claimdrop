@@ -67,12 +67,15 @@ pub enum QueryMsg {
         /// The maximum number of items to return. If not set, the default value is used. Used for paginating results.
         limit: Option<u16>,
     },
-    #[returns(AllocationResponse)]
+    #[returns(AllocationsResponse)]
     /// Get the allocation for an address
-    Allocation {
-        //todo make this optional and paginate if possible/needed
-        /// The address to get the allocation for
-        address: String,
+    Allocations {
+        /// The address to get the allocation for, if provided
+        address: Option<String>,
+        /// The address to start querying from. Used for paginating results.
+        start_after: Option<String>,
+        /// The maximum number of items to return. If not set, the default value is used. Used for paginating results.
+        limit: Option<u16>,
     },
     #[returns(BlacklistResponse)]
     /// Check if an address is blacklisted
@@ -107,9 +110,9 @@ pub struct ClaimedResponse {
 
 /// Response to the Allocation query.
 #[cw_serde]
-pub struct AllocationResponse {
-    /// The allocation amount for the address, if it exists
-    pub allocation: Option<Uint128>,
+pub struct AllocationsResponse {
+    /// A vector with a tuple with (address, amount) that have been allocated.
+    pub allocations: Vec<(String, Uint128)>,
 }
 
 /// Response to the Blacklist query.

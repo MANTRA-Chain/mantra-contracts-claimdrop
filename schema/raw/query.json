@@ -82,18 +82,34 @@
       "description": "Get the allocation for an address",
       "type": "object",
       "required": [
-        "allocation"
+        "allocations"
       ],
       "properties": {
-        "allocation": {
+        "allocations": {
           "type": "object",
-          "required": [
-            "address"
-          ],
           "properties": {
             "address": {
-              "description": "The address to get the allocation for",
-              "type": "string"
+              "description": "The address to get the allocation for, if provided",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "description": "The maximum number of items to return. If not set, the default value is used. Used for paginating results.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "description": "The address to start querying from. Used for paginating results.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false
