@@ -210,7 +210,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub fn upload_allocations(
+    pub fn add_allocations(
         &mut self,
         sender: &Addr,
         allocations: &Vec<(String, Uint128)>,
@@ -218,7 +218,7 @@ impl TestingSuite {
     ) -> &mut Self {
         self.execute_contract(
             sender,
-            ExecuteMsg::UploadAllocations {
+            ExecuteMsg::AddAllocations {
                 allocations: allocations.clone(),
             },
             &[],

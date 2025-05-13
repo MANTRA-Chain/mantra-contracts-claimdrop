@@ -23,8 +23,8 @@ pub enum ExecuteMsg {
         /// This is useful for allowing a contract to do the claim operation on behalf of a user.
         receiver: Option<String>,
     },
-    /// Uploads a batch of addresses and their allocations. This can only be done before the campaign has started.
-    UploadAllocations {
+    /// Adds a batch of addresses and their allocations. This can only be done before the campaign has started.
+    AddAllocations {
         /// Vector of (address, amount) pairs
         allocations: Vec<(String, Uint128)>,
     },

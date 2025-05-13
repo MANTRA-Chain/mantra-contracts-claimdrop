@@ -196,7 +196,7 @@ pub(crate) fn claim(
         ]))
 }
 
-/// Uploads a batch of addresses and their allocations. This can only be done before the campaign has started.
+/// Adds a batch of addresses and their allocations. This can only be done before the campaign has started.
 ///
 /// # Arguments
 /// * `deps` - The dependencies
@@ -206,7 +206,7 @@ pub(crate) fn claim(
 ///
 /// # Returns
 /// * `Result<Response, ContractError>` - The response with attributes
-pub fn upload_allocations(
+pub fn add_allocations(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -216,20 +216,23 @@ pub fn upload_allocations(
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     // Check if campaign has started
-    let campaign = CAMPAIGN.load(deps.storage)?;
-    ensure!(
-        !campaign.has_started(&env.block.time),
-        ContractError::CampaignError {
-            reason: "cannot upload allocations after campaign has started".to_string(),
-        }
-    );
+    let campaign = CAMPAIGN.may_load(deps.storage)?;
+
+    if let Some(campaign) = campaign {
+        ensure!(
+            !campaign.has_started(&env.block.time),
+            ContractError::CampaignError {
+                reason: "cannot upload allocations after campaign has started".to_string(),
+            }
+        );
+    }
 
     for (address, amount) in &allocations {
         ALLOCATIONS.save(deps.storage, address.as_str(), amount)?;
     }
 
     Ok(Response::default()
-        .add_attribute("action", "upload_allocations")
+        .add_attribute("action", "add_allocations")
         .add_attribute("count", allocations.len().to_string()))
 }
 

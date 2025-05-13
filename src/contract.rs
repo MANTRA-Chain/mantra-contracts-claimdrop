@@ -38,8 +38,8 @@ pub fn execute(
     match msg {
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
         ExecuteMsg::Claim { receiver } => commands::claim(deps, env, info, receiver),
-        ExecuteMsg::UploadAllocations { allocations } => {
-            commands::upload_allocations(deps, env, info, allocations)
+        ExecuteMsg::AddAllocations { allocations } => {
+            commands::add_allocations(deps, env, info, allocations)
         }
         ExecuteMsg::ReplaceAddress {
             old_address,
