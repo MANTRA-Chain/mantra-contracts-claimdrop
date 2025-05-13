@@ -227,6 +227,13 @@ pub fn add_allocations(
     }
 
     for (address, amount) in &allocations {
+        let allocation = ALLOCATIONS.may_load(deps.storage, address.as_str())?;
+        ensure!(
+            allocation.is_none(),
+            ContractError::AllocationAlreadyExists {
+                address: address.clone(),
+            }
+        );
         ALLOCATIONS.save(deps.storage, address.as_str(), amount)?;
     }
 

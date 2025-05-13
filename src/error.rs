@@ -61,6 +61,9 @@ pub enum ContractError {
     #[error("No allocation found for address: {address}")]
     NoAllocationFound { address: String },
 
+    #[error("The current address already has an allocation: {address}")]
+    AllocationAlreadyExists { address: String },
+
     #[error("Address is blacklisted")]
     AddressBlacklisted,
 }

@@ -3062,6 +3062,71 @@ fn test_add_allocations() {
             );
         });
 }
+#[test]
+fn test_add_duplicated_allocation() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    suite.instantiate_claimdrop_contract(None).manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop with cliff".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![
+                    DistributionType::LumpSum {
+                        percentage: Decimal::percent(25),
+                        start_time: current_time.plus_days(1).seconds(),
+                    },
+                    DistributionType::LinearVesting {
+                        percentage: Decimal::percent(75),
+                        start_time: current_time.plus_days(8).seconds(),
+                        end_time: current_time.plus_days(15).seconds(),
+                        cliff_duration: None,
+                    },
+                ],
+                start_time: current_time.plus_days(1).seconds(),
+                end_time: current_time.plus_days(15).seconds(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // add allocations
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(100_000)),
+        (alice.to_string(), Uint128::new(200_000)),
+        (bob.to_string(), Uint128::new(200_000)),
+        (carol.to_string(), Uint128::new(300_000)),
+    ];
+
+    suite.add_allocations(
+        alice,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::AllocationAlreadyExists { address } => {
+                    assert_eq!(address, alice.to_string());
+                }
+                _ => {
+                    panic!("Wrong error type, should return ContractError::AllocationAlreadyExists")
+                }
+            }
+        },
+    );
+}
 
 #[test]
 fn test_cannot_add_allocations_after_campaign_start() {
