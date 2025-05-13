@@ -1,10 +1,7 @@
-use crate::hashes::{ALICE_PROOFS_X, MERKLE_ROOT_X};
 use crate::suite::TestingSuite;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
-
-mod hashes;
 mod suite;
 
 #[test]

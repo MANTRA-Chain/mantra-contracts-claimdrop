@@ -10,12 +10,6 @@ use cw_multi_test::{
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
 
-pub const DENOM: &str = "uatom";
-pub const OWNER: &str = "owner";
-pub const USER1: &str = "user1";
-pub const USER2: &str = "user2";
-pub const USER3: &str = "user3";
-
 pub fn claimdrop_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         claimdrop_contract::contract::execute,

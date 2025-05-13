@@ -4,8 +4,6 @@ use cw_multi_test::AppResponse;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 
 use crate::suite::TestingSuite;
-
-mod hashes;
 mod suite;
 
 /*

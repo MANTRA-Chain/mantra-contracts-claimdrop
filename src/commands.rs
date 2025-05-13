@@ -17,7 +17,10 @@ pub(crate) fn manage_campaign(
 ) -> Result<Response, ContractError> {
     match campaign_action {
         CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
-        CampaignAction::CloseCampaign {} => close_campaign(deps, env, info),
+        CampaignAction::CloseCampaign {} => {
+            cw_utils::nonpayable(&info)?;
+            close_campaign(deps, env, info)
+        }
     }
 }
 
@@ -54,7 +57,6 @@ fn create_campaign(
 /// Closes the existing airdrop campaign. Only the owner can end the campaign.
 /// The remaining funds in the campaign are refunded to the owner.
 fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let mut campaign = CAMPAIGN
@@ -104,8 +106,6 @@ pub(crate) fn claim(
     info: MessageInfo,
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
-
     let mut campaign = CAMPAIGN
         .may_load(deps.storage)?
         .ok_or(ContractError::CampaignError {
@@ -212,7 +212,6 @@ pub fn add_allocations(
     info: MessageInfo,
     allocations: Vec<(String, Uint128)>,
 ) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     // Check if campaign has started
@@ -252,7 +251,6 @@ pub fn replace_address(
     old_address: String,
     new_address: String,
 ) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     // if the old address has claims, we need to move them to the new address
@@ -297,7 +295,6 @@ pub fn blacklist_address(
     address: String,
     blacklist: bool,
 ) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     if blacklist {

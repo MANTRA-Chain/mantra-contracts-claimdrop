@@ -3,13 +3,10 @@ use std::str::FromStr;
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
-use cw_utils::PaymentError;
 
 use crate::suite::TestingSuite;
 use claimdrop_contract::error::ContractError;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
-
-mod hashes;
 mod suite;
 
 #[test]
@@ -2304,7 +2301,6 @@ fn close_campaigns() {
     let alice = &suite.senders[0].clone();
     let bob = &suite.senders[1].clone();
     let carol = &suite.senders[2].clone();
-    let dan = &suite.senders[3].clone();
     let current_time = &suite.get_time();
 
     suite.instantiate_claimdrop_contract(None).manage_campaign(
@@ -3007,7 +3003,10 @@ fn test_add_allocations() {
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
-                    ContractError::OwnershipError(e) => {}
+                    ContractError::OwnershipError(e) => match e {
+                        OwnershipError::NotOwner => {}
+                        _ => panic!("Wrong error type, should return OwnershipError::NotOwner"),
+                    },
                     _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
                 }
             },

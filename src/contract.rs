@@ -37,15 +37,23 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
-        ExecuteMsg::Claim { receiver } => commands::claim(deps, env, info, receiver),
+        ExecuteMsg::Claim { receiver } => {
+            cw_utils::nonpayable(&info)?;
+            commands::claim(deps, env, info, receiver)
+        }
         ExecuteMsg::AddAllocations { allocations } => {
+            cw_utils::nonpayable(&info)?;
             commands::add_allocations(deps, env, info, allocations)
         }
         ExecuteMsg::ReplaceAddress {
             old_address,
             new_address,
-        } => commands::replace_address(deps, info, old_address, new_address),
+        } => {
+            cw_utils::nonpayable(&info)?;
+            commands::replace_address(deps, info, old_address, new_address)
+        }
         ExecuteMsg::BlacklistAddress { address, blacklist } => {
+            cw_utils::nonpayable(&info)?;
             commands::blacklist_address(deps, info, address, blacklist)
         }
         ExecuteMsg::UpdateOwnership(action) => {
