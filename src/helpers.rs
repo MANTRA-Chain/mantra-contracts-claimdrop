@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{Addr, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
+use cosmwasm_std::{ensure, Addr, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
 
 use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
@@ -139,17 +139,19 @@ fn calculate_claim_amount_for_distribution(
                     .to_uint_floor(),
             )?;
 
+            let already_claimed =
+                previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
+
             let distribution_duration = end_time.saturating_sub(*start_time);
-            if distribution_duration == 0 {
-                return if current_time.seconds() >= *end_time {
-                    let already_claimed =
-                        previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
-                    Ok(amount_allocated_to_this_slot.saturating_sub(already_claimed))
-                } else {
-                    // if the distribution has not started yet, return 0
-                    Ok(Uint128::zero())
-                };
-            }
+
+            // sanity check to ensure we don't get division by zero
+            // this should never happen since `validate_campaign_times` ensures that the start time is less than the end time
+            ensure!(
+                distribution_duration > 0u64,
+                ContractError::CampaignError {
+                    reason: "distribution duration is 0".to_string(),
+                }
+            );
 
             let time_passed_since_start = current_time.seconds().saturating_sub(*start_time);
             let effective_time_passed =
@@ -169,8 +171,6 @@ fn calculate_claim_amount_for_distribution(
                 .to_uint_floor(),
             )?;
 
-            let already_claimed =
-                previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
             Ok(total_vested_for_slot_at_current_time.saturating_sub(already_claimed))
         }
         DistributionType::LumpSum { percentage, .. } => {
