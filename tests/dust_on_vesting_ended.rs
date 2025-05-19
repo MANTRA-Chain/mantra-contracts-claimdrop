@@ -61,6 +61,7 @@ fn can_claim_dust_after_vesting_ends() {
         .claim(
             alice,
             Some(alice.to_string()),
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -94,6 +95,7 @@ fn can_claim_dust_after_vesting_ends() {
         .claim(
             alice,
             Some(alice.to_string()),
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -171,6 +173,7 @@ fn can_claim_dust_after_vesting_ends_2() {
         .claim(
             alice,
             Some(alice.to_string()),
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -206,6 +209,7 @@ fn can_claim_dust_after_vesting_ends_2() {
         .claim(
             alice,
             Some(alice.to_string()),
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },

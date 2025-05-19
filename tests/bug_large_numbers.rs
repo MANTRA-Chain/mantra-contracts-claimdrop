@@ -76,6 +76,7 @@ fn bug_large_numbers() {
         .claim(
             &alice,
             None,
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -153,6 +154,7 @@ fn bug_large_numbers_2() {
         .claim(
             &alice,
             None,
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -166,6 +168,7 @@ fn bug_large_numbers_2() {
     suite
         .claim(
             &alice,
+            None,
             None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -242,6 +245,7 @@ fn bug_large_numbers_3() {
         })
         .claim(
             &alice,
+            None,
             None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();

@@ -1,8 +1,8 @@
 use claimdrop_contract::msg::{
-    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
-    ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
+    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignParams, CampaignResponse,
+    ClaimedResponse, DistributionType, ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
 };
-use cosmwasm_std::{coin, Addr, Coin, Empty, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
     WasmKeeper,
@@ -43,6 +43,15 @@ impl TestingSuite {
     pub fn add_day(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(1);
+        self.app.set_block(block_info);
+
+        self
+    }
+
+    #[track_caller]
+    pub fn add_seconds(&mut self, seconds: u64) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_seconds(seconds);
         self.app.set_block(block_info);
 
         self
@@ -188,9 +197,10 @@ impl TestingSuite {
         &mut self,
         sender: &Addr,
         receiver: Option<String>,
+        amount: Option<Uint128>,
         result: impl ResultHandler,
     ) -> &mut Self {
-        self.execute_contract(sender, ExecuteMsg::Claim { receiver }, &[], result)
+        self.execute_contract(sender, ExecuteMsg::Claim { receiver, amount }, &[], result)
     }
 
     #[track_caller]
@@ -365,5 +375,76 @@ impl TestingSuite {
         let balance_response = self.app.wrap().query_balance(address, denom);
         result(balance_response.unwrap_or(coin(0, denom)).amount);
         self
+    }
+}
+
+// Test setup helper
+impl TestingSuite {
+    #[track_caller]
+    pub fn setup_campaign_for_partial_claims(
+        &mut self,
+        user_allocation_amount: Uint128,
+        reward_denom: &str,
+        user_address: &Addr,
+    ) {
+        let admin = self.admin();
+
+        let current_time_secs = self.app.block_info().time.seconds();
+        let campaign_start_time = current_time_secs + 100;
+        let campaign_end_time = campaign_start_time + 1000;
+
+        let dist_lump_sum_start_time = campaign_start_time + 50;
+
+        let dist_vesting_start_time = campaign_start_time + 100;
+        let dist_vesting_cliff_duration = 50u64;
+        let dist_vesting_end_time = dist_vesting_start_time + 500;
+
+        let params = CampaignParams {
+            name: "Partial Claim Test Campaign".to_string(),
+            description: "Testing partial claims".to_string(),
+            reward_denom: reward_denom.to_string(),
+            total_reward: coin(user_allocation_amount.u128() * 10, reward_denom),
+            distribution_type: vec![
+                DistributionType::LumpSum {
+                    percentage: Decimal::percent(50),
+                    start_time: dist_lump_sum_start_time,
+                },
+                DistributionType::LinearVesting {
+                    percentage: Decimal::percent(50),
+                    start_time: dist_vesting_start_time,
+                    end_time: dist_vesting_end_time,
+                    cliff_duration: Some(dist_vesting_cliff_duration),
+                },
+            ],
+            start_time: campaign_start_time,
+            end_time: campaign_end_time,
+        };
+
+        self.manage_campaign(
+            &admin,
+            CampaignAction::CreateCampaign {
+                params: Box::new(params),
+            },
+            &[],
+            |res: Result<AppResponse, anyhow::Error>| {
+                res.unwrap();
+            },
+        );
+
+        self.add_allocations(
+            &admin,
+            &vec![(user_address.to_string(), user_allocation_amount)],
+            |res: Result<AppResponse, anyhow::Error>| {
+                res.unwrap();
+            },
+        );
+
+        self.top_up_campaign(
+            &admin,
+            &[coin(user_allocation_amount.u128() * 20, reward_denom)],
+            |res: Result<AppResponse, anyhow::Error>| {
+                res.unwrap();
+            },
+        );
     }
 }
