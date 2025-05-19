@@ -146,6 +146,7 @@ fn calculate_claim_amount_for_distribution(
                         previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
                     Ok(amount_allocated_to_this_slot.saturating_sub(already_claimed))
                 } else {
+                    // if the distribution has not started yet, return 0
                     Ok(Uint128::zero())
                 };
             }

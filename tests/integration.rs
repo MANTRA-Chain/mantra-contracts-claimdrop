@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{coin, coins, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
 
@@ -927,6 +927,101 @@ fn create_campaign_and_claim_single_distribution_type() {
         )
         .query_balance("uom", carol, |balance| {
             assert_eq!(balance, Uint128::new(1_000_020_000));
+        });
+}
+
+#[test]
+fn cant_claim_unfunded_campaign() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (bob.to_string(), Uint128::new(10_000)),
+        (carol.to_string(), Uint128::new(20_000)),
+    ];
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite.manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "This is an airdrop, 土金, ك".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::one(),
+                    start_time: current_time.seconds() + 1,
+                }],
+                start_time: current_time.seconds() + 1,
+                end_time: current_time.seconds() + 172_800,
+            }),
+        },
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite.add_day();
+
+    suite
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_000_000));
+        })
+        .query_balance("uom", bob, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_000_000));
+        })
+        // bob claims for alice
+        .claim(
+            bob,
+            Some(alice.to_string()),
+            None,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::CampaignError { reason } => {
+                        assert_eq!(reason, "no funds available to claim");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                }
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(50_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .claim(
+            alice,
+            None,
+            None,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_000_000 - 50_000 + 10_000));
         });
 }
 
@@ -3489,6 +3584,7 @@ fn test_replace_address() {
     let alice = &suite.senders[0].clone(); // Owner
     let bob = &suite.senders[1].clone(); // Old address
     let carol = &suite.senders[2].clone(); // New address
+    let dan = &suite.senders[3].clone(); // New address
     let current_time = &suite.get_time();
 
     // Upload initial allocation for Bob
@@ -3679,6 +3775,23 @@ fn test_replace_address() {
         let claim = result.unwrap();
         assert_eq!(claim.claimed[0].1, coin(100_000, "uom")); // Carol has total 100k
     });
+
+    // try to replace the address of someone who didn't have an allocation, i.e. dan
+
+    suite.replace_address(
+        alice,
+        dan,
+        carol,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NoAllocationFound { address } => {
+                    assert_eq!(address, dan.to_string());
+                }
+                _ => panic!("Wrong error type, should return ContractError::NoAllocationFound"),
+            }
+        },
+    );
 }
 
 #[test]
@@ -3802,478 +3915,713 @@ fn test_blacklist_address() {
         );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///
 #[test]
-fn test_partial_claim_lump_sum() {
-    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "umantra")]);
-    let user_total_allocation = Uint128::new(1000);
-    let reward_denom = "umantra";
+fn test_claim_more_than_currently_available_fails() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
 
-    let admin = suite.admin(); // Get admin from suite
-    suite.instantiate_claimdrop_contract(Some(admin.to_string())); // Instantiate contract first
-    let user = suite.senders[1].clone(); // Define user for the test
+    let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
 
-    suite.setup_campaign_for_partial_claims(user_total_allocation, reward_denom, &user);
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (dan.to_string(), Uint128::new(35_000)),
+    ];
 
-    // Advance time to make lump sum available
-    // Campaign starts at current_time_secs + 100
-    // Lump sum (dist_lump_sum_start_time) starts at campaign_start_time + 50 = current_time_secs + 150
-    suite.add_seconds(150 + 1);
-
-    let lump_sum_share = Uint128::new(500); // 50%
-    let partial_claim_amount = Uint128::new(100);
-
-    assert!(partial_claim_amount < lump_sum_share);
-
-    // Query rewards before claim
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
-        assert_eq!(
-            rewards.available_to_claim,
-            vec![coin(lump_sum_share.u128(), reward_denom)]
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: Some(3 * 86_400u64),
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
         );
-        assert_eq!(rewards.claimed, vec![]);
-        assert_eq!(
-            rewards.pending,
-            vec![coin(user_total_allocation.u128(), reward_denom)]
-        );
-    });
 
-    // User performs a partial claim
+    // Advance time for lump sum to be available
+    suite.add_day();
+
+    let alice_lump_sum_share = Uint128::from(2_500u128); // 25% of the total allocation for alice
+    let excessive_amount = alice_lump_sum_share + Uint128::new(1);
+
+    // At this point, only lump_sum_share is available. Vesting hasn't started/cliffed.
     suite.claim(
-        &user,
-        Some(user.to_string()),
-        Some(partial_claim_amount),
-        |res: Result<AppResponse, anyhow::Error>| {
-            res.unwrap();
+        &alice,
+        None,
+        Some(excessive_amount),
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::InvalidClaimAmount { reason } => {
+                    assert!(reason.contains("exceeds available claimable amount"));
+                }
+                _ => panic!("Wrong error type, should return ContractError::InvalidClaimAmount"),
+            }
         },
     );
+}
 
-    // Check user balance
-    suite.query_balance(reward_denom, &user, |bal| {
-        assert_eq!(bal, partial_claim_amount);
+#[test]
+fn test_partial_claim_lump_sum() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
+
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (dan.to_string(), Uint128::new(35_000)),
+    ];
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: Some(3 * 86_400u64),
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    // Advance time for lump sum to be available
+    suite.add_day();
+
+    let alice_lump_sum_share = Uint128::new(2_500);
+    let partial_claim_amount = Uint128::new(1_250);
+
+    assert!(partial_claim_amount < alice_lump_sum_share);
+
+    // Query rewards before claim
+    suite.query_rewards(alice, |result| {
+        let rewards: RewardsResponse = result.unwrap();
+        assert_eq!(
+            rewards,
+            RewardsResponse {
+                claimed: vec![],
+                pending: vec![coin(Uint128::new(10_000).u128(), "uom")],
+                available_to_claim: vec![coin(alice_lump_sum_share.u128(), "uom")]
+            }
+        );
     });
+
+    // Alice performs a partial claim
+    suite
+        .claim(
+            alice,
+            Some(alice.to_string()),
+            Some(partial_claim_amount),
+            |res: Result<AppResponse, anyhow::Error>| {
+                res.unwrap();
+            },
+        )
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(
+                balance,
+                Uint128::new(1_000_000_000 - 100_000 + partial_claim_amount.u128())
+            );
+        });
 
     // Query rewards after partial claim
-    let remaining_lump_sum = lump_sum_share.checked_sub(partial_claim_amount).unwrap();
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
+    let remaining_lump_sum = alice_lump_sum_share.saturating_sub(partial_claim_amount);
+
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
+
+        let total_pending = Uint128::new(10_000).saturating_sub(partial_claim_amount);
+
         assert_eq!(
-            rewards.available_to_claim,
-            vec![coin(remaining_lump_sum.u128(), reward_denom)]
-        );
-        assert_eq!(
-            rewards.claimed,
-            vec![coin(partial_claim_amount.u128(), reward_denom)]
-        );
-        let total_pending = user_total_allocation
-            .checked_sub(partial_claim_amount)
-            .unwrap();
-        assert_eq!(
-            rewards.pending,
-            vec![coin(total_pending.u128(), reward_denom)]
+            rewards,
+            RewardsResponse {
+                claimed: vec![coin(partial_claim_amount.u128(), "uom")],
+                pending: vec![coin(total_pending.u128(), "uom")],
+                available_to_claim: vec![coin(remaining_lump_sum.u128(), "uom")]
+            }
         );
     });
 
-    // User claims the rest of the lump sum
+    // alice claims the rest of the lump sum
     suite.claim(
-        &user,
-        Some(user.to_string()),
+        alice,
+        None,
         Some(remaining_lump_sum),
         |res: Result<AppResponse, anyhow::Error>| {
             res.unwrap();
         },
     );
-    suite.query_balance(reward_denom, &user, |bal| {
-        assert_eq!(bal, lump_sum_share);
-    });
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
-        // Vesting part might be available if time advanced enough for its start, but not cliff yet
-        // For this specific test, focusing on lump sum, let's assume vesting not claimable yet.
-        // If dist_vesting_start_time (current_time_secs + 200) is hit, it might show up.
-        // Current block time is current_time_secs + 151. Vesting starts at +200. So, still 0 from vesting.
-        assert_eq!(rewards.available_to_claim, vec![]);
+    suite.query_balance("uom", alice, |balance| {
         assert_eq!(
-            rewards.claimed,
-            vec![coin(lump_sum_share.u128(), reward_denom)]
+            balance,
+            Uint128::new(1_000_000_000 - 100_000 + alice_lump_sum_share.u128())
         );
+    });
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
         let total_pending_after_full_lump =
-            user_total_allocation.checked_sub(lump_sum_share).unwrap();
+            Uint128::new(10_000).saturating_sub(alice_lump_sum_share);
+
         assert_eq!(
-            rewards.pending,
-            vec![coin(total_pending_after_full_lump.u128(), reward_denom)]
+            rewards,
+            RewardsResponse {
+                claimed: vec![coin(alice_lump_sum_share.u128(), "uom")],
+                pending: vec![coin(total_pending_after_full_lump.u128(), "uom")],
+                available_to_claim: vec![]
+            }
         );
     });
 }
 
 #[test]
-fn test_partial_claim_linear_vesting() {
-    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "umantra")]);
-    let user_total_allocation = Uint128::new(1000);
-    let reward_denom = "umantra";
+fn test_partial_claim_lumpsum_and_linear_vesting() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
 
-    let admin = suite.admin();
-    suite.instantiate_claimdrop_contract(Some(admin.to_string()));
-    let user = suite.senders[1].clone();
-    suite.setup_campaign_for_partial_claims(user_total_allocation, reward_denom, &user);
+    let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
 
-    let initial_block_time_secs = suite.get_time().seconds();
-    // Campaign starts at initial_block_time_secs + 100
-    // Vesting (dist_vesting_start_time) starts at campaign_start_time + 100 = initial_block_time_secs + 200
-    // Cliff (dist_vesting_cliff_duration) is 50s, so cliff ends at initial_block_time_secs + 200 + 50 = initial_block_time_secs + 250
-    // Vesting duration is 500s. Vesting ends at initial_block_time_secs + 200 + 500 = initial_block_time_secs + 700
-    // Let's go to initial_block_time_secs + 250 (cliff end) + 100 (1/5th into vesting period post-cliff) = initial_block_time_secs + 350
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (dan.to_string(), Uint128::new(35_000)),
+    ];
 
-    let target_time_secs = initial_block_time_secs + 350;
-    let time_to_advance = target_time_secs - initial_block_time_secs;
+    let reward_denom = "uom";
 
-    let mut block = suite.add_seconds(350);
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: reward_denom.to_string(),
+                    total_reward: coin(100_000, reward_denom),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(5).seconds(),
+                            cliff_duration: None,
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(5).seconds(),
+                }),
+            },
+            &coins(100_000, reward_denom),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
-    let vesting_share_total = Uint128::new(500); // 50%
-                                                 // let time_into_vesting_post_cliff = 100u64; // We advanced 100s after cliff_end (which is 250s from campaign start + 100s for vesting start)
-    let vesting_duration = 500u64;
-    // Expected vested from linear part: (time_into_vesting_post_cliff / vesting_duration) * vesting_share_total
-    // No, it's ( (current_time - vesting_start_time_abs).min(vesting_duration) / vesting_duration ) * vesting_share_total
-    // current_time = initial_block_time_secs + 350
-    // vesting_start_time_abs = initial_block_time_secs + 200
-    // effective_time_passed_in_vesting = 350 - 200 = 150. This includes the cliff period.
-    // The contract logic calculates vested amount based on time passed since vesting_start_time,
-    // but only makes it available *after* cliff_end_time.
-    // At cliff_end_time (initial_block_time_secs + 250), amount for (250-200)=50s duration is released.
-    // So, at initial_block_time_secs + 350, effectively 150s of vesting has occurred.
-    let effective_time_in_vesting = target_time_secs - (initial_block_time_secs + 200); // 350 - 200 = 150
-    let expected_vested_amount = (Decimal::from_ratio(vesting_share_total, Uint128::one())
-        * Decimal::from_ratio(
-            Uint128::new(effective_time_in_vesting as u128),
-            Uint128::new(vesting_duration as u128),
-        ))
-    .to_uint_floor(); // 500 * (150/500) = 150
+    // Advance time, lump sum and 1/5th of vesting is available
+    suite.add_day();
 
-    let lump_sum_share = Uint128::new(500); // 50% (available because target_time_secs > dist_lump_sum_start_time)
-    let total_currently_available = lump_sum_share + expected_vested_amount; // 500 + 150 = 650
+    let alice_lump_sum_share = Uint128::new(2_500);
+    let expected_vested_amount = Uint128::new(7_500).checked_div(Uint128::new(5)).unwrap();
+    let total_currently_available = alice_lump_sum_share + expected_vested_amount; // 2_500 + 1_500 = 4_000
 
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
         assert_eq!(
             rewards.available_to_claim,
             vec![coin(total_currently_available.u128(), reward_denom)]
         );
     });
 
-    let partial_claim_vesting_only = Uint128::new(50);
-    assert!(partial_claim_vesting_only < expected_vested_amount);
+    let alice_partial_lump_sum_claim = Uint128::new(2_000);
 
     // User makes a claim. This will first take from lump sum.
     // To test partial vesting claim, let's first claim entire lump sum.
-    suite.claim(
-        &user,
-        Some(user.to_string()),
-        Some(lump_sum_share),
-        |res: Result<AppResponse, anyhow::Error>| {
-            res.unwrap();
-        },
-    );
+    suite
+        .claim(
+            alice,
+            None,
+            Some(alice_partial_lump_sum_claim),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards.available_to_claim,
+                vec![coin(
+                    total_currently_available.u128() - alice_partial_lump_sum_claim.u128(),
+                    reward_denom
+                )],
+            );
+        });
 
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
-        assert_eq!(
-            rewards.available_to_claim,
-            vec![coin(expected_vested_amount.u128(), reward_denom)]
-        );
-        assert_eq!(
-            rewards.claimed,
-            vec![coin(lump_sum_share.u128(), reward_denom)]
-        );
-    });
+    // claim remaining of lump sum
+    suite
+        .claim(
+            alice,
+            None,
+            Some(alice_lump_sum_share.saturating_sub(alice_partial_lump_sum_claim)),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards.available_to_claim,
+                vec![coin(expected_vested_amount.u128(), reward_denom)]
+            );
+            assert_eq!(
+                rewards.claimed,
+                vec![coin(alice_lump_sum_share.u128(), reward_denom)]
+            );
+        });
+
+    // now claim vesting share
+    let partial_claim_vesting_only = Uint128::new(500);
+    assert!(partial_claim_vesting_only < expected_vested_amount);
 
     // Now claim a part of the vested amount
     suite.claim(
-        &user,
-        Some(user.to_string()),
+        alice,
+        None,
         Some(partial_claim_vesting_only),
         |res: Result<AppResponse, anyhow::Error>| {
             res.unwrap();
         },
     );
 
-    let total_claimed_after_partial_vesting = lump_sum_share + partial_claim_vesting_only;
-    suite.query_balance(reward_denom, &user, |bal| {
-        assert_eq!(bal, total_claimed_after_partial_vesting);
+    let total_claimed_after_partial_vesting = alice_lump_sum_share + partial_claim_vesting_only;
+    suite.query_balance(reward_denom, alice, |balance| {
+        assert_eq!(
+            balance,
+            Uint128::new(1_000_000_000 - 100_000 + total_claimed_after_partial_vesting.u128())
+        );
     });
 
-    let remaining_vested_available = expected_vested_amount
-        .checked_sub(partial_claim_vesting_only)
-        .unwrap();
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
+    let remaining_vested_available =
+        expected_vested_amount.saturating_sub(partial_claim_vesting_only);
+
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
+        assert_eq!(
+            rewards,
+            RewardsResponse {
+                claimed: vec![coin(
+                    total_claimed_after_partial_vesting.u128(),
+                    reward_denom
+                )],
+                pending: vec![coin(
+                    Uint128::new(10_000 - total_claimed_after_partial_vesting.u128()).u128(),
+                    reward_denom
+                )],
+                available_to_claim: vec![coin(remaining_vested_available.u128(), reward_denom)]
+            }
+        );
+    });
+
+    // move all the way to the end of the vesting period
+    suite.add_day().add_day().add_day().add_day();
+
+    let remaining_vested_available =
+        Uint128::new(10_000 - total_claimed_after_partial_vesting.u128());
+
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
         assert_eq!(
             rewards.available_to_claim,
-            vec![coin(remaining_vested_available.u128(), reward_denom)]
-        );
-        assert_eq!(
-            rewards.claimed,
-            vec![coin(
-                total_claimed_after_partial_vesting.u128(),
-                reward_denom
-            )]
+            vec![coin(remaining_vested_available.u128(), reward_denom)],
         );
     });
-}
 
-#[test]
-fn test_partial_claim_prioritization_lump_sum_then_vesting() {
-    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "umantra")]);
-    let user_total_allocation = Uint128::new(1000);
-    let reward_denom = "umantra";
+    // alice claims another chunk of the vested amount
+    let partial_claim_vesting_only = Uint128::new(5_000);
+    assert!(remaining_vested_available > partial_claim_vesting_only);
 
-    let admin = suite.admin();
-    suite.instantiate_claimdrop_contract(Some(admin.to_string()));
-    let user = suite.senders[1].clone();
-    suite.setup_campaign_for_partial_claims(user_total_allocation, reward_denom, &user);
-
-    let initial_block_time_secs = suite.get_time().seconds();
-    // Target time: initial_block_time_secs + 350 (as in previous test, so lump sum + 150s of vesting available)
-    let target_time_secs = initial_block_time_secs + 350;
-    let time_to_advance = target_time_secs - initial_block_time_secs;
-    suite.add_seconds(time_to_advance);
-
-    let lump_sum_share = Uint128::new(500); // 50%
-    let vesting_share_total = Uint128::new(500); // 50%
-    let vesting_duration = 500u64;
-    // effective_time_in_vesting = 350 (target) - 200 (vesting start from initial) = 150
-    let effective_time_in_vesting = target_time_secs - (initial_block_time_secs + 200);
-    let currently_vested_amount = (Decimal::from_ratio(vesting_share_total, Uint128::one())
-        * Decimal::from_ratio(
-            Uint128::new(effective_time_in_vesting as u128),
-            Uint128::new(vesting_duration as u128),
-        ))
-    .to_uint_floor(); // 150
-
-    let total_available = lump_sum_share + currently_vested_amount; // 500 + 150 = 650
-
-    // Attempt to claim an amount that is more than lump sum but less than total available
-    let amount_to_take_from_vesting = Uint128::new(50);
-    let claim_amount = lump_sum_share + amount_to_take_from_vesting; // 500 + 50 = 550
-    assert!(claim_amount <= total_available);
-
-    suite.claim(
-        &user,
-        Some(user.to_string()),
-        Some(claim_amount),
-        |res: Result<AppResponse, anyhow::Error>| {
-            res.unwrap();
-        },
-    );
-
-    suite.query_balance(reward_denom, &user, |bal| {
-        assert_eq!(bal, claim_amount);
-    });
-
-    // Check rewards: lump sum should be fully claimed, vesting partially.
-    let remaining_vested_available = currently_vested_amount
-        .checked_sub(amount_to_take_from_vesting)
-        .unwrap(); // 150 - 50 = 100
-    suite.query_rewards(&user, |res| {
-        let rewards = res.unwrap();
-        assert_eq!(
-            rewards.available_to_claim,
-            vec![coin(remaining_vested_available.u128(), reward_denom)]
-        );
-        assert_eq!(
-            rewards.claimed,
-            vec![coin(claim_amount.u128(), reward_denom)]
-        );
-    });
+    suite
+        .claim(
+            alice,
+            None,
+            Some(partial_claim_vesting_only),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards.available_to_claim,
+                vec![coin(
+                    remaining_vested_available.u128() - partial_claim_vesting_only.u128(),
+                    reward_denom
+                )],
+            );
+        })
+        .claim(
+            alice,
+            None,
+            Some(remaining_vested_available.saturating_sub(partial_claim_vesting_only)),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards,
+                RewardsResponse {
+                    claimed: vec![coin(Uint128::new(10_000).u128(), reward_denom)],
+                    pending: vec![],
+                    available_to_claim: vec![]
+                }
+            );
+        });
 }
 
 #[test]
 fn test_claim_zero_amount_fails() {
-    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "umantra")]);
-    let user_total_allocation = Uint128::new(1000);
-    let reward_denom = "umantra";
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
 
-    let admin = suite.admin();
-    suite.instantiate_claimdrop_contract(Some(admin.to_string()));
-    let user = suite.senders[1].clone();
-    suite.setup_campaign_for_partial_claims(user_total_allocation, reward_denom, &user);
+    let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
 
-    // Advance time for lump sum to be available
-    let initial_block_time = suite.get_time().seconds();
-    let time_to_advance = (initial_block_time + 150 + 1) - initial_block_time;
-    suite.add_seconds(time_to_advance);
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (dan.to_string(), Uint128::new(35_000)),
+    ];
+
+    let reward_denom = "uom";
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: reward_denom.to_string(),
+                    total_reward: coin(100_000, reward_denom),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(5).seconds(),
+                            cliff_duration: None,
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(5).seconds(),
+                }),
+            },
+            &coins(100_000, reward_denom),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    // Advance time, lump sum and 1/5th of vesting is available
+    suite.add_day();
 
     suite.claim(
-        &user,
-        Some(user.to_string()),
+        alice,
+        None,
         Some(Uint128::zero()),
-        |res: Result<AppResponse, anyhow::Error>| {
-            let err = res.unwrap_err();
-            assert!(err.to_string().contains("amount must be greater than zero"));
-        },
-    );
-}
-
-#[test]
-fn test_claim_more_than_currently_available_fails() {
-    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "umantra")]);
-    let user_total_allocation = Uint128::new(1000);
-    let reward_denom = "umantra";
-
-    let admin = suite.admin();
-    suite.instantiate_claimdrop_contract(Some(admin.to_string()));
-    let user = suite.senders[1].clone();
-    suite.setup_campaign_for_partial_claims(user_total_allocation, reward_denom, &user);
-
-    // Advance time for lump sum to be available
-    let initial_block_time = suite.get_time().seconds();
-    let time_to_advance = (initial_block_time + 150 + 1) - initial_block_time;
-    suite.add_seconds(time_to_advance);
-
-    let lump_sum_share = Uint128::from(500u128); // 50%
-                                                 // At this point, only lump_sum_share is available. Vesting hasn't started/cliffed.
-    let excessive_amount = lump_sum_share + Uint128::new(1); // 501
-
-    suite.claim(
-        &user,
-        Some(user.to_string()),
-        Some(excessive_amount),
-        |res: Result<AppResponse, anyhow::Error>| {
-            let err = res.unwrap_err();
-            assert!(err
-                .to_string()
-                .contains("exceeds available claimable amount"));
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::InvalidClaimAmount { reason } => {
+                    assert!(reason.contains("amount must be greater than zero"));
+                }
+                _ => panic!("Wrong error type, should return ContractError::InvalidClaimAmount"),
+            }
         },
     );
 }
 
 #[test]
 fn test_claim_full_amount_when_none_specified_after_partial_claims() {
-    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "umantra")]);
-    let user_total_allocation = Uint128::new(1000);
-    let reward_denom = "umantra";
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
 
-    let admin = suite.admin();
-    suite.instantiate_claimdrop_contract(Some(admin.to_string()));
-    let user = suite.senders[1].clone();
-    suite.setup_campaign_for_partial_claims(user_total_allocation, reward_denom, &user);
+    let alice = &suite.senders[0].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
 
-    let initial_block_time_secs = suite.get_time().seconds();
-    // Advance time for lump sum and some vesting (target: initial_block_time_secs + 350)
-    let target_time_secs_1 = initial_block_time_secs + 350;
-    let time_to_advance_1 = target_time_secs_1 - initial_block_time_secs;
-    suite.add_seconds(time_to_advance_1);
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (dan.to_string(), Uint128::new(35_000)),
+    ];
 
-    let lump_sum_share = (Decimal::from_ratio(user_total_allocation, Uint128::from(1u128))
-        * Decimal::percent(50))
-    .to_uint_floor(); // 500
-    let vesting_share_total = (Decimal::from_ratio(user_total_allocation, Uint128::from(1u128))
-        * Decimal::percent(50))
-    .to_uint_floor(); // 500
-    let vesting_duration = 500u64;
-    let effective_time_in_vesting_1 = target_time_secs_1 - (initial_block_time_secs + 200); // 150
-    let currently_vested_amount_1 = (Decimal::from_ratio(vesting_share_total, Uint128::one())
-        * Decimal::from_ratio(
-            Uint128::new(effective_time_in_vesting_1 as u128),
-            Uint128::new(vesting_duration as u128),
-        ))
-    .to_uint_floor(); // 150
-    let total_currently_available_1 = lump_sum_share + currently_vested_amount_1; // 650
+    let reward_denom = "uom";
 
-    // First, a partial claim
-    let partial_amount = Uint128::new(150); // Takes from lump sum
-    suite.claim(
-        &user,
-        Some(user.to_string()),
-        Some(partial_amount),
-        |res: Result<AppResponse, anyhow::Error>| {
-            res.unwrap();
-        },
-    );
-
-    let amount_claimed_so_far = partial_amount;
-    let remaining_available_now = total_currently_available_1
-        .checked_sub(partial_amount)
-        .unwrap(); // 650 - 150 = 500
-
-    suite.query_rewards(&user, |res| {
-        let r = res.unwrap();
-        assert_eq!(
-            r.available_to_claim,
-            vec![coin(remaining_available_now.u128(), reward_denom)]
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    reward_denom: reward_denom.to_string(),
+                    total_reward: coin(100_000, reward_denom),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.seconds(),
+                            end_time: current_time.plus_days(5).seconds(),
+                            cliff_duration: None,
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(5).seconds(),
+                }),
+            },
+            &coins(100_000, reward_denom),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
         );
+
+    // Advance time, lump sum and 1/5th of vesting is available
+    suite.add_day();
+
+    let alice_lump_sum_share = Uint128::new(2_500);
+    let expected_vested_amount = Uint128::new(7_500).checked_div(Uint128::new(5)).unwrap();
+    let total_currently_available = alice_lump_sum_share + expected_vested_amount; // 2_500 + 1_500 = 4_000
+
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
         assert_eq!(
-            r.claimed,
-            vec![coin(amount_claimed_so_far.u128(), reward_denom)]
+            rewards.available_to_claim,
+            vec![coin(total_currently_available.u128(), reward_denom)]
         );
     });
 
-    // Now, claim with amount = None (should claim all remaining available now)
+    let partial_claim = Uint128::new(2_000);
+    assert!(partial_claim < total_currently_available);
+
+    // claim lump sum
+    suite
+        .claim(
+            alice,
+            None,
+            Some(partial_claim),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards.available_to_claim,
+                vec![coin(
+                    total_currently_available.u128() - partial_claim.u128(),
+                    reward_denom
+                )]
+            );
+            assert_eq!(
+                rewards.claimed,
+                vec![coin(partial_claim.u128(), reward_denom)]
+            );
+        });
+
+    // now claim the remaining available amount with None
     suite.claim(
-        &user,
-        Some(user.to_string()),
+        alice,
+        None,
         None,
         |res: Result<AppResponse, anyhow::Error>| {
             res.unwrap();
         },
     );
 
-    suite.query_balance(reward_denom, &user, |bal| {
-        assert_eq!(bal, total_currently_available_1); // 150 + 500 = 650
-    });
-
-    suite.query_rewards(&user, |res| {
-        let r = res.unwrap();
-        assert_eq!(r.available_to_claim, vec![]);
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
         assert_eq!(
-            r.claimed,
-            vec![coin(total_currently_available_1.u128(), reward_denom)]
+            rewards,
+            RewardsResponse {
+                claimed: vec![coin(total_currently_available.u128(), reward_denom)],
+                pending: vec![coin(
+                    Uint128::new(10_000 - total_currently_available.u128()).u128(),
+                    reward_denom
+                )],
+                available_to_claim: vec![],
+            }
         );
     });
 
-    // Advance time to make everything vested (campaign_end_time is initial_block_time_secs + 100 + 1000 = initial_block_time_secs + 1100)
-    let target_time_secs_2 = initial_block_time_secs + 1100 + 1;
-    let time_to_advance_2 = target_time_secs_2 - initial_block_time_secs;
-    suite.add_seconds(time_to_advance_2);
+    // move a few days so more rewards from the vesting get available
+    suite.add_day().add_day().add_day();
+    // by now, 4/5th of the vesting have been unlocked, with 1/5th claimed and 1/5th left to be vested
 
-    // let _amount_already_claimed_total = total_currently_available_1; // 650
-    // Total vesting share is 500. Amount vested from previous stage was 150. So 500-150=350 is newly available from vesting.
-    let newly_available_from_vesting_completion =
-        vesting_share_total.saturating_sub(currently_vested_amount_1); // 500 - 150 = 350
+    let expected_vested_amount = Uint128::new(7_500)
+        .checked_div(Uint128::new(5))
+        .unwrap()
+        .checked_mul(Uint128::new(3))
+        .unwrap();
 
-    suite.query_rewards(&user, |res| {
-        let r = res.unwrap();
+    suite.query_rewards(alice, |result| {
+        let rewards = result.unwrap();
         assert_eq!(
-            r.available_to_claim,
-            vec![coin(
-                newly_available_from_vesting_completion.u128(),
-                reward_denom
-            )]
+            rewards.available_to_claim,
+            vec![coin(expected_vested_amount.u128(), reward_denom)],
         );
     });
 
-    // Claim the final remainder
-    suite.claim(
-        &user,
-        Some(user.to_string()),
-        None,
-        |res: Result<AppResponse, anyhow::Error>| {
-            res.unwrap();
-        },
-    );
-    suite.query_balance(reward_denom, &user, |bal| {
-        assert_eq!(bal, user_total_allocation);
-    });
-    suite.query_rewards(&user, |res| {
-        let r = res.unwrap();
-        assert_eq!(r.available_to_claim, vec![]);
-        assert_eq!(
-            r.claimed,
-            vec![coin(user_total_allocation.u128(), reward_denom)]
-        );
-        assert_eq!(r.pending, vec![]);
-    });
+    // alice claims another chunk of the vested amount, partially
+    let partial_claim_vesting_only = expected_vested_amount.checked_div(Uint128::new(4)).unwrap();
+
+    suite
+        .claim(
+            alice,
+            None,
+            Some(partial_claim_vesting_only),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards.claimed,
+                vec![coin(
+                    total_currently_available.u128() + partial_claim_vesting_only.u128(),
+                    reward_denom
+                )],
+            );
+            assert_eq!(
+                rewards.available_to_claim,
+                vec![coin(partial_claim_vesting_only.u128() * 3, reward_denom)],
+            );
+        });
+
+    // claim remaining with None
+    suite
+        .add_day()
+        .claim(
+            alice,
+            None,
+            None,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_rewards(alice, |result| {
+            let rewards = result.unwrap();
+            assert_eq!(
+                rewards,
+                RewardsResponse {
+                    claimed: vec![coin(Uint128::new(10_000).u128(), reward_denom)],
+                    pending: vec![],
+                    available_to_claim: vec![]
+                }
+            );
+        });
 }
 
 // Make sure this is the last part of the file, or adjust accordingly
