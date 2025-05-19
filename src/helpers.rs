@@ -34,7 +34,7 @@ pub(crate) fn compute_claimable_amount(
     let mut new_claims = HashMap::new();
 
     if campaign.has_started(current_time) {
-        let previous_claims_for_address = get_claims_for_address(deps, address)?;
+        let previous_claims_for_address = get_claims_for_address(deps, address.to_string())?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()

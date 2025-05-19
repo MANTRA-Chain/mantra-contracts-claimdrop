@@ -1,12 +1,14 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{coin, coins, Decimal, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Uint128};
 use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
 
 use crate::suite::TestingSuite;
 use claimdrop_contract::error::ContractError;
-use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
+use claimdrop_contract::msg::{
+    CampaignAction, CampaignParams, ClaimedResponse, DistributionType, RewardsResponse,
+};
 mod suite;
 
 #[test]
@@ -3792,6 +3794,111 @@ fn test_replace_address() {
             }
         },
     );
+}
+
+#[test]
+fn test_replace_placeholder_address() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone(); // Owner
+    let bob = &suite.senders[1].clone(); // Old address
+    let carol = &suite.senders[2].clone(); // New address
+    let current_time = &suite.get_time();
+
+    // Upload initial allocation for Vitalik, who has not bridged from Ethereum to MANTRA yet
+    let allocations = &vec![("vitalik.eth".to_string(), Uint128::new(100_000))];
+
+    suite
+        .instantiate_claimdrop_contract(None) // Alice is owner
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+    // Create campaign AFTER allocations are set, so replace_address can be tested before start
+    suite.manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Airdrop I".to_string(),
+                description: "Test replace address".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"), // Matches Bob's allocation
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::percent(100),               // All at once
+                    start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
+                }],
+                start_time: current_time.plus_days(1).seconds(),
+                end_time: current_time.plus_days(14).seconds(),
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite.add_day();
+
+    // Try to claim on behalf of Vitalik, before the address in properly replaced
+    suite.claim(
+        bob,
+        Some("vitalik.eth".to_string()),
+        None,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::Std(e) => {
+                    assert!(e.to_string().contains("Invalid input"));
+                }
+                _ => panic!("Wrong error type, should return ContractError::Std"),
+            }
+        },
+    );
+
+    let vitalik_addr = &Addr::unchecked("vitalik.eth");
+
+    suite
+        .query_allocations(Some(vitalik_addr), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations[0].1 == Uint128::new(100_000));
+        })
+        .replace_address(
+            alice,
+            &Addr::unchecked("vitalik.eth"),
+            carol,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    // Verify Vitalik has no allocation or claims, Carol has Vitalik's original allocation
+    suite
+        .query_allocations(Some(vitalik_addr), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations.is_empty());
+        })
+        .query_claimed(
+            Some(vitalik_addr),
+            None,
+            None,
+            |result: StdResult<ClaimedResponse>| {
+                let err: StdError = result.unwrap_err();
+                assert!(err.to_string().contains("Invalid input"));
+            },
+        )
+        .query_allocations(Some(carol), None, None, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocations.len(), 1);
+            assert_eq!(
+                allocation.allocations[0],
+                (carol.to_string(), Uint128::new(100_000))
+            );
+        });
 }
 
 #[test]

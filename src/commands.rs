@@ -196,7 +196,7 @@ pub(crate) fn claim(
         }
     );
 
-    let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
+    let previous_claims = get_claims_for_address(deps.as_ref(), receiver.to_string())?;
     let mut claims_to_record: HashMap<DistributionSlot, Claim> = HashMap::new();
     let mut remaining_to_distribute = actual_claim_amount_coin.amount;
 
@@ -350,7 +350,7 @@ pub fn replace_address(
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     // if the old address has claims, we need to move them to the new address
-    let claims = get_claims_for_address(deps.as_ref(), &deps.api.addr_validate(&old_address)?)?;
+    let claims = get_claims_for_address(deps.as_ref(), old_address.clone())?;
     if !claims.is_empty() {
         CLAIMS.save(deps.storage, new_address.clone(), &claims)?;
         CLAIMS.remove(deps.storage, old_address.clone());

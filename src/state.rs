@@ -37,9 +37,9 @@ pub const BLACKLIST: Map<&str, bool> = Map::new("blacklist");
 /// * `Result<HashMap<DistributionSlot, Claim>, ContractError>` - The claims for the address
 pub fn get_claims_for_address(
     deps: Deps,
-    address: &Addr,
+    address: String,
 ) -> Result<HashMap<DistributionSlot, Claim>, ContractError> {
-    let claimed = CLAIMS.may_load(deps.storage, address.to_string())?;
+    let claimed = CLAIMS.may_load(deps.storage, address)?;
     Ok(claimed.unwrap_or_default())
 }
 
@@ -55,7 +55,7 @@ pub fn get_total_claims_amount_for_address(
     deps: Deps,
     address: &Addr,
 ) -> Result<Uint128, ContractError> {
-    let claimed = get_claims_for_address(deps, address)?;
+    let claimed = get_claims_for_address(deps, address.to_string())?;
     let mut total = Uint128::zero();
     for (_, (amount, _)) in claimed.iter() {
         total = total.checked_add(*amount)?;
