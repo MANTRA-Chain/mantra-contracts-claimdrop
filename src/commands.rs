@@ -365,6 +365,14 @@ pub fn replace_address(
         }
     );
 
+    // Ensure new address has no allocation
+    ensure!(
+        get_allocation(deps.as_ref(), &new_address)?.is_none(),
+        ContractError::AllocationAlreadyExists {
+            address: new_address.clone()
+        }
+    );
+
     // Replace old allocation with new allocation
     ALLOCATIONS.save(deps.storage, &new_address, &old_allocation.unwrap())?;
     ALLOCATIONS.remove(deps.storage, &old_address);

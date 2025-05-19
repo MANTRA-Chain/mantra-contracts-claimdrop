@@ -3902,6 +3902,83 @@ fn test_replace_placeholder_address() {
 }
 
 #[test]
+fn test_cant_replace_address_with_existing_allocation() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone(); // Owner
+    let bob = &suite.senders[1].clone(); // Old address
+    let carol = &suite.senders[2].clone(); // New address
+    let current_time = &suite.get_time();
+
+    // Upload initial allocation for Vitalik, who has not bridged from Ethereum to MANTRA yet
+    let allocations = &vec![
+        (bob.to_string(), Uint128::new(100_000)),
+        (carol.to_string(), Uint128::new(50_000)),
+    ];
+
+    suite
+        .instantiate_claimdrop_contract(None) // Alice is owner
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "Test replace address".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"), // Matches Bob's allocation
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),               // All at once
+                        start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
+                    }],
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite.add_day();
+
+    suite
+        .query_allocations(Some(bob), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations[0].1 == Uint128::new(100_000));
+        })
+        .query_allocations(Some(carol), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations[0].1 == Uint128::new(50_000));
+        })
+        .replace_address(
+            alice,
+            bob,
+            carol,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::AllocationAlreadyExists { address } => {
+                        assert_eq!(address, carol.to_string());
+                    }
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::AllocationAlreadyExists"
+                    ),
+                }
+            },
+        );
+}
+
+#[test]
 fn test_blacklist_address() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),
