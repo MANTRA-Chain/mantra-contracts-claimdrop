@@ -66,6 +66,9 @@ pub enum ContractError {
 
     #[error("Address is blacklisted")]
     AddressBlacklisted,
+
+    #[error("Invalid claim amount: {reason}")]
+    InvalidClaimAmount { reason: String },
 }
 
 impl From<semver::Error> for ContractError {

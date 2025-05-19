@@ -37,9 +37,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
-        ExecuteMsg::Claim { receiver } => {
+        ExecuteMsg::Claim { receiver, amount } => {
             cw_utils::nonpayable(&info)?;
-            commands::claim(deps, env, info, receiver)
+            commands::claim(deps, env, info, receiver, amount)
         }
         ExecuteMsg::AddAllocations { allocations } => {
             cw_utils::nonpayable(&info)?;

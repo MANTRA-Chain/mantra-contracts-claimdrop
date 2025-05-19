@@ -1,11 +1,13 @@
+use std::collections::HashMap;
+
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{Campaign, CampaignAction, CampaignParams};
+use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 use crate::state::{
     get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
-    ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
+    Claim, DistributionSlot, ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
 };
 
 /// Manages a campaign
@@ -105,6 +107,7 @@ pub(crate) fn claim(
     env: Env,
     info: MessageInfo,
     receiver: Option<String>,
+    amount: Option<Uint128>,
 ) -> Result<Response, ContractError> {
     let mut campaign = CAMPAIGN
         .may_load(deps.storage)?
@@ -137,22 +140,48 @@ pub(crate) fn claim(
     );
 
     // Get allocation for the address
-    let total_claimable_amount = get_allocation(deps.as_ref(), receiver.as_ref())?.ok_or(
+    let total_user_allocation = get_allocation(deps.as_ref(), receiver.as_ref())?.ok_or(
         ContractError::NoAllocationFound {
             address: receiver.to_string(),
         },
     )?;
 
-    let (claimable_amount, new_claims) = helpers::compute_claimable_amount(
+    // new_claims is HashMap<DistributionSlot, Claim=(amount, timestamp)> representing newly available amounts per slot
+    let (max_claimable_amount_coin, new_claims) = helpers::compute_claimable_amount(
         deps.as_ref(),
         &campaign,
         &env.block.time,
         &receiver,
-        total_claimable_amount,
+        total_user_allocation,
     )?;
 
+    let actual_claim_amount_coin = match amount {
+        Some(requested_amount) => {
+            ensure!(
+                requested_amount > Uint128::zero(),
+                ContractError::InvalidClaimAmount {
+                    reason: "amount must be greater than zero".to_string()
+                }
+            );
+            ensure!(
+                requested_amount <= max_claimable_amount_coin.amount,
+                ContractError::InvalidClaimAmount {
+                    reason: format!(
+                        "requested amount {} exceeds available claimable amount {}",
+                        requested_amount, max_claimable_amount_coin.amount
+                    )
+                }
+            );
+            Coin {
+                denom: campaign.reward_denom.clone(),
+                amount: requested_amount,
+            }
+        }
+        None => max_claimable_amount_coin,
+    };
+
     ensure!(
-        claimable_amount.amount > Uint128::zero(),
+        actual_claim_amount_coin.amount > Uint128::zero(),
         ContractError::NothingToClaim
     );
 
@@ -161,38 +190,98 @@ pub(crate) fn claim(
         .query_balance(env.contract.address, &campaign.reward_denom)?;
 
     ensure!(
-        claimable_amount.amount <= available_funds.amount,
+        actual_claim_amount_coin.amount <= available_funds.amount,
         ContractError::CampaignError {
             reason: "no funds available to claim".to_string()
         }
     );
 
     let previous_claims = get_claims_for_address(deps.as_ref(), &receiver)?;
-    let updated_claims = helpers::aggregate_claims(&previous_claims, &new_claims)?;
+    let mut claims_to_record: HashMap<DistributionSlot, Claim> = HashMap::new();
+    let mut remaining_to_distribute = actual_claim_amount_coin.amount;
+
+    if remaining_to_distribute > Uint128::zero() {
+        let mut lump_sum_slots_with_new_claims: Vec<DistributionSlot> = vec![];
+        let mut linear_vesting_slots_with_new_claims: Vec<DistributionSlot> = vec![];
+
+        for (idx, dist_type) in campaign.distribution_type.iter().enumerate() {
+            if new_claims.contains_key(&idx) {
+                // Only consider slots that have new claimable amounts
+                match dist_type {
+                    DistributionType::LumpSum { .. } => lump_sum_slots_with_new_claims.push(idx),
+                    DistributionType::LinearVesting { .. } => {
+                        linear_vesting_slots_with_new_claims.push(idx)
+                    }
+                }
+            }
+        }
+
+        lump_sum_slots_with_new_claims.sort();
+        linear_vesting_slots_with_new_claims.sort();
+
+        // Phase 1: Distribute to LumpSum slots from new_claims
+        for slot_idx in lump_sum_slots_with_new_claims {
+            if remaining_to_distribute == Uint128::zero() {
+                break;
+            }
+            // new_claims.get(&slot_idx) returns Option<&(Uint128, u64)>
+            // The Uint128 is the amount newly available from this slot.
+            if let Some((available_from_slot, _)) = new_claims.get(&slot_idx) {
+                let take_from_slot = std::cmp::min(remaining_to_distribute, *available_from_slot);
+                if take_from_slot > Uint128::zero() {
+                    claims_to_record.insert(slot_idx, (take_from_slot, env.block.time.seconds()));
+                    remaining_to_distribute =
+                        remaining_to_distribute.saturating_sub(take_from_slot);
+                }
+            }
+        }
+
+        // Phase 2: Distribute remaining to LinearVesting slots from new_claims
+        if remaining_to_distribute > Uint128::zero() {
+            for slot_idx in linear_vesting_slots_with_new_claims {
+                if remaining_to_distribute == Uint128::zero() {
+                    break;
+                }
+                if let Some((available_from_slot, _)) = new_claims.get(&slot_idx) {
+                    let take_from_slot =
+                        std::cmp::min(remaining_to_distribute, *available_from_slot);
+                    if take_from_slot > Uint128::zero() {
+                        claims_to_record
+                            .insert(slot_idx, (take_from_slot, env.block.time.seconds()));
+                        remaining_to_distribute =
+                            remaining_to_distribute.saturating_sub(take_from_slot);
+                    }
+                }
+            }
+        }
+    }
+    // At this point, if initial checks were correct (actual_claim_amount_coin.amount <= sum of new_claims),
+    // remaining_to_distribute should be zero.
+
+    let updated_claims = helpers::aggregate_claims(&previous_claims, &claims_to_record)?;
 
     campaign.claimed.amount = campaign
         .claimed
         .amount
-        .checked_add(claimable_amount.amount)?;
+        .checked_add(actual_claim_amount_coin.amount)?;
 
     CAMPAIGN.save(deps.storage, &campaign)?;
-
     CLAIMS.save(deps.storage, receiver.to_string(), &updated_claims)?;
 
     ensure!(
-        total_claimable_amount >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,
+        total_user_allocation >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,
         ContractError::ExceededMaxClaimAmount
     );
 
     Ok(Response::default()
         .add_message(BankMsg::Send {
             to_address: receiver.to_string(),
-            amount: vec![claimable_amount.clone()],
+            amount: vec![actual_claim_amount_coin.clone()],
         })
         .add_attributes(vec![
             ("action", "claim".to_string()),
             ("receiver", receiver.to_string()),
-            ("claimed_amount", claimable_amount.to_string()),
+            ("claimed_amount", actual_claim_amount_coin.to_string()),
         ]))
 }
 

@@ -22,6 +22,8 @@ pub enum ExecuteMsg {
         /// The receiver address of the claimed rewards. If not set, the sender of the message will be the receiver.
         /// This is useful for allowing a contract to do the claim operation on behalf of a user.
         receiver: Option<String>,
+        /// The amount to claim. If not set, all available tokens will be claimed.
+        amount: Option<Uint128>,
     },
     /// Adds a batch of addresses and their allocations. This can only be done before the campaign has started.
     AddAllocations {

@@ -119,9 +119,9 @@ pub(crate) fn compute_claimable_amount(
 /// Calculates the claimable amount for a given distribution, total amount and previous claim.
 fn calculate_claim_amount_for_distribution(
     current_time: &&Timestamp,
-    total_claimable_amount: Uint128,
+    total_user_allocation: Uint128,
     distribution_type: &&DistributionType,
-    previous_claim_for_address_for_distribution: &Option<&Claim>,
+    previous_claim_for_this_slot: &Option<&Claim>,
 ) -> Result<Uint128, ContractError> {
     match distribution_type {
         DistributionType::LinearVesting {
@@ -130,43 +130,64 @@ fn calculate_claim_amount_for_distribution(
             end_time,
             ..
         } => {
-            let elapsed_time = match previous_claim_for_address_for_distribution {
-                Some((_, last_claimed)) if end_time >= last_claimed => {
-                    current_time.seconds().min(end_time.to_owned()) - last_claimed
-                }
-                Some(_) => return Ok(Uint128::zero()), // it means the user has already claimed this distribution
-                None => current_time.seconds().min(end_time.to_owned()) - start_time,
-            };
-
-            let vesting_progress = Decimal256::from_ratio(
-                Uint256::from(elapsed_time),
-                Uint256::from(end_time - start_time),
-            );
-
-            Ok(Uint128::try_from(
+            let amount_allocated_to_this_slot = Uint128::try_from(
                 Decimal256::from(*percentage)
                     .checked_mul(Decimal256::from_ratio(
-                        Uint256::from_uint128(total_claimable_amount),
+                        Uint256::from_uint128(total_user_allocation),
                         Uint256::one(),
                     ))?
-                    .checked_mul(vesting_progress)?
                     .to_uint_floor(),
-            )?)
-        }
-        DistributionType::LumpSum { percentage, .. } => {
-            // it means the user has already claimed this distribution
-            if previous_claim_for_address_for_distribution.is_some() {
-                return Ok(Uint128::zero());
+            )?;
+
+            let distribution_duration = end_time.saturating_sub(*start_time);
+            if distribution_duration == 0 {
+                return if current_time.seconds() >= *end_time {
+                    let already_claimed =
+                        previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
+                    Ok(amount_allocated_to_this_slot.saturating_sub(already_claimed))
+                } else {
+                    Ok(Uint128::zero())
+                };
             }
 
-            Ok(Uint128::try_from(
+            let time_passed_since_start = current_time.seconds().saturating_sub(*start_time);
+            let effective_time_passed =
+                std::cmp::min(time_passed_since_start, distribution_duration);
+
+            let vesting_progress = Decimal256::from_ratio(
+                Uint256::from(effective_time_passed),
+                Uint256::from(distribution_duration),
+            );
+
+            let total_vested_for_slot_at_current_time = Uint128::try_from(
+                Decimal256::from_ratio(
+                    Uint256::from_uint128(amount_allocated_to_this_slot),
+                    Uint256::one(),
+                )
+                .checked_mul(vesting_progress)?
+                .to_uint_floor(),
+            )?;
+
+            let already_claimed =
+                previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
+            Ok(total_vested_for_slot_at_current_time.saturating_sub(already_claimed))
+        }
+        DistributionType::LumpSum { percentage, .. } => {
+            let total_entitlement_for_lumpsum_slot = Uint128::try_from(
                 Decimal256::from(*percentage)
                     .checked_mul(Decimal256::from_ratio(
-                        Uint256::from_uint128(total_claimable_amount),
+                        Uint256::from_uint128(total_user_allocation),
                         Uint256::one(),
                     ))?
                     .to_uint_floor(),
-            )?)
+            )?;
+
+            let already_claimed_for_this_slot =
+                previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
+
+            let newly_claimable =
+                total_entitlement_for_lumpsum_slot.saturating_sub(already_claimed_for_this_slot);
+            Ok(newly_claimable)
         }
     }
 }
