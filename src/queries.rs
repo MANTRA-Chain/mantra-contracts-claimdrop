@@ -1,22 +1,42 @@
-use cosmwasm_std::{coin, Coin, Deps, Env, Order, Uint128};
+use cosmwasm_std::{coin, Coin, Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{CampaignResponse, ClaimedResponse, RewardsResponse};
-use crate::state::{get_total_claims_amount_for_address, CAMPAIGN, CLAIMS};
+use crate::msg::{
+    AllocationsResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
+};
+use crate::state::{
+    get_allocation, get_total_claims_amount_for_address, is_blacklisted, ALLOCATIONS, CAMPAIGN,
+    CLAIMS,
+};
 
 /// Returns the active airdrop campaign.
-pub(crate) fn query_campaign(deps: Deps) -> Result<CampaignResponse, ContractError> {
-    Ok(CAMPAIGN.load(deps.storage)?)
+///
+/// # Arguments
+/// * `deps` - The dependencies
+///
+/// # Returns
+/// * `Result<CampaignResponse, ContractError>` - The campaign information
+pub fn query_campaign(deps: Deps) -> Result<CampaignResponse, ContractError> {
+    let campaign = CAMPAIGN.load(deps.storage)?;
+    Ok(campaign)
 }
 
+/// Returns the rewards information for a specific address.
+/// This includes claimed, pending, and available to claim amounts.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `env` - The environment
+/// * `receiver` - The address to get rewards for
+///
+/// # Returns
+/// * `Result<RewardsResponse, ContractError>` - The rewards information
 pub(crate) fn query_rewards(
     deps: Deps,
     env: Env,
-    total_claimable_amount: Uint128,
     receiver: String,
-    proof: Vec<String>,
 ) -> Result<RewardsResponse, ContractError> {
     let campaign = CAMPAIGN
         .may_load(deps.storage)?
@@ -30,39 +50,35 @@ pub(crate) fn query_rewards(
 
     let receiver = deps.api.addr_validate(&receiver)?;
 
+    let total_claimable_amount =
+        get_allocation(deps, receiver.as_ref())?.ok_or(ContractError::NoAllocationFound {
+            address: receiver.to_string(),
+        })?;
+
     let total_claimed = get_total_claims_amount_for_address(deps, &receiver)?;
     if total_claimed > Uint128::zero() {
-        claimed.push(coin(total_claimed.u128(), &campaign.reward_asset.denom));
+        claimed.push(coin(total_claimed.u128(), &campaign.reward_denom));
     }
 
-    if campaign.has_funds_available() {
-        let pending_rewards = coin(
-            total_claimable_amount.saturating_sub(total_claimed).u128(),
-            &campaign.reward_asset.denom,
-        );
+    let pending_rewards = coin(
+        total_claimable_amount.saturating_sub(total_claimed).u128(),
+        &campaign.reward_denom,
+    );
 
-        if pending_rewards.amount > Uint128::zero() {
-            pending.push(pending_rewards);
-        }
+    if pending_rewards.amount > Uint128::zero() {
+        pending.push(pending_rewards);
+    }
 
-        helpers::validate_claim(
-            &env.contract.address,
-            &receiver,
-            total_claimable_amount,
-            &proof,
-            &campaign.merkle_root,
-        )?;
-        let (claimable_amount, _) = helpers::compute_claimable_amount(
-            deps,
-            &campaign,
-            &env.block.time,
-            &receiver,
-            total_claimable_amount,
-        )?;
+    let (claimable_amount, _) = helpers::compute_claimable_amount(
+        deps,
+        &campaign,
+        &env.block.time,
+        &receiver,
+        total_claimable_amount,
+    )?;
 
-        if claimable_amount.amount > Uint128::zero() {
-            available_to_claim.push(claimable_amount);
-        }
+    if claimable_amount.amount > Uint128::zero() {
+        available_to_claim.push(claimable_amount);
     }
 
     // if the campaign is closed, clear the pending and available to claim rewards as there's nothing else
@@ -83,6 +99,17 @@ pub(crate) fn query_rewards(
 pub(crate) const MAX_LIMIT: u16 = 5_000;
 const DEFAULT_LIMIT: u16 = 100;
 
+/// Returns the claimed amounts for addresses.
+/// Can be filtered by a specific address and paginated.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - Optional address to filter by
+/// * `start_from` - Optional address to start pagination from
+/// * `limit` - Optional limit for pagination
+///
+/// # Returns
+/// * `Result<ClaimedResponse, ContractError>` - The claimed amounts
 pub(crate) fn query_claimed(
     deps: Deps,
     address: Option<String>,
@@ -111,7 +138,7 @@ pub(crate) fn query_claimed(
                 });
 
             if total_claimed > Uint128::zero() {
-                let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
+                let denom = CAMPAIGN.load(deps.storage)?.reward_denom.clone();
                 claimed.push((address, coin(total_claimed.u128(), denom)));
             }
         }
@@ -119,7 +146,7 @@ pub(crate) fn query_claimed(
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
         let start = start_from.map(Bound::exclusive);
 
-        let denom = CAMPAIGN.load(deps.storage)?.reward_asset.denom.clone();
+        let denom = CAMPAIGN.load(deps.storage)?.reward_denom.clone();
 
         CLAIMS
             .range(deps.storage, start, None, Order::Ascending)
@@ -142,4 +169,65 @@ pub(crate) fn query_claimed(
     }
 
     Ok(ClaimedResponse { claimed })
+}
+
+const MAX_ALLOCATIONS: u16 = 5_000;
+const DEFAULT_ALLOCATIONS_LIMIT: u16 = 100;
+
+/// Returns the allocation for an address.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - Optional address to filter by
+/// * `start_after` - Optional address to start pagination from
+/// * `limit` - Optional limit for pagination
+///
+/// # Returns
+/// * `Result<AllocationsResponse, ContractError>` - The allocations information
+pub fn query_allocation(
+    deps: Deps,
+    address: Option<String>,
+    start_after: Option<String>,
+    limit: Option<u16>,
+) -> Result<AllocationsResponse, ContractError> {
+    let allocations = if let Some(address) = address {
+        let allocation = get_allocation(deps, &address)?;
+        if let Some(allocation) = allocation {
+            vec![(address, allocation)]
+        } else {
+            vec![]
+        }
+    } else {
+        let limit = limit
+            .unwrap_or(DEFAULT_ALLOCATIONS_LIMIT)
+            .min(MAX_ALLOCATIONS) as usize;
+        let start = cw_utils::calc_range_start_string(start_after).map(Bound::ExclusiveRaw);
+
+        ALLOCATIONS
+            .range(deps.storage, start, None, Order::Ascending)
+            .take(limit)
+            .map(|item| {
+                let (address, allocation) = item?;
+                Ok((address, allocation))
+            })
+            .collect::<StdResult<Vec<(String, Uint128)>>>()?
+    };
+
+    Ok(AllocationsResponse { allocations })
+}
+
+/// Returns whether an address is blacklisted.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - The address to check
+///
+/// # Returns
+/// * `Result<BlacklistResponse, ContractError>` - The blacklist status
+pub fn query_is_blacklisted(
+    deps: Deps,
+    address: String,
+) -> Result<BlacklistResponse, ContractError> {
+    let is_blacklisted = is_blacklisted(deps, &address)?;
+    Ok(BlacklistResponse { is_blacklisted })
 }

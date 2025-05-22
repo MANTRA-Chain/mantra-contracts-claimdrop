@@ -1,0 +1,158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Get the airdrop campaign",
+      "type": "object",
+      "required": [
+        "campaign"
+      ],
+      "properties": {
+        "campaign": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get the rewards for a specific campaign and receiver address.",
+      "type": "object",
+      "required": [
+        "rewards"
+      ],
+      "properties": {
+        "rewards": {
+          "type": "object",
+          "required": [
+            "receiver"
+          ],
+          "properties": {
+            "receiver": {
+              "description": "The address to get the rewards for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get the total amount of tokens claimed on the campaign.",
+      "type": "object",
+      "required": [
+        "claimed"
+      ],
+      "properties": {
+        "claimed": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "description": "If provided, it will return the tokens claimed by the specified address.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "description": "The maximum number of items to return. If not set, the default value is used. Used for paginating results.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "start_from": {
+              "description": "The address to start querying from. Used for paginating results.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get the allocation for an address",
+      "type": "object",
+      "required": [
+        "allocations"
+      ],
+      "properties": {
+        "allocations": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "description": "The address to get the allocation for, if provided",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "description": "The maximum number of items to return. If not set, the default value is used. Used for paginating results.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "description": "The address to start querying from. Used for paginating results.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if an address is blacklisted",
+      "type": "object",
+      "required": [
+        "is_blacklisted"
+      ],
+      "properties": {
+        "is_blacklisted": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to check",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Query the contract's ownership information",
+      "type": "object",
+      "required": [
+        "ownership"
+      ],
+      "properties": {
+        "ownership": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

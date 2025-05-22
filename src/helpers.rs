@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{
-    ensure, Addr, Coin, Decimal256, Deps, MessageInfo, Timestamp, Uint128, Uint256,
-};
-use sha2::Digest;
+use cosmwasm_std::{ensure, Addr, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
 
 use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
@@ -12,65 +9,12 @@ use crate::state::{get_claims_for_address, Claim, DistributionSlot};
 /// Validates the provided campaign parameters are valid.
 pub(crate) fn validate_campaign_params(
     current_time: Timestamp,
-    info: &MessageInfo,
     campaign_params: &CampaignParams,
 ) -> Result<(), ContractError> {
     campaign_params.validate_campaign_name_description()?;
-    validate_merkle_root(&campaign_params.merkle_root)?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_campaign_distribution()?;
-
-    let reward_amount = cw_utils::must_pay(info, &campaign_params.reward_asset.denom)?;
-    ensure!(
-        reward_amount == campaign_params.reward_asset.amount,
-        ContractError::InvalidRewardAmount {
-            expected: campaign_params.reward_asset.amount,
-            actual: reward_amount
-        }
-    );
-
-    Ok(())
-}
-
-/// Validates the merkle root, i.e. checks if it is a valid SHA-256 hash
-pub(crate) fn validate_merkle_root(merkle_root: &str) -> Result<[u8; 32], ContractError> {
-    let mut merkle_root_buf: [u8; 32] = [0; 32];
-    hex::decode_to_slice(merkle_root, &mut merkle_root_buf)?;
-
-    Ok(merkle_root_buf)
-}
-
-/// Validates the claim proof
-pub(crate) fn validate_claim(
-    contract_addr: &Addr,
-    receiver: &Addr,
-    amount: Uint128,
-    proof: &[String],
-    merkle_root: &str,
-) -> Result<(), ContractError> {
-    let user_input = format!("{}{}{}", contract_addr, receiver, amount);
-    let hash = sha2::Sha256::digest(user_input.as_bytes())
-        .as_slice()
-        .try_into()
-        .map_err(|_| ContractError::WrongHashLength)?;
-
-    let hash = proof.iter().try_fold(hash, |hash, p| {
-        let mut proof_buf = [0; 32];
-        hex::decode_to_slice(p, &mut proof_buf)?;
-        let mut hashes = [hash, proof_buf];
-        hashes.sort_unstable();
-        sha2::Sha256::digest(hashes.concat())
-            .as_slice()
-            .try_into()
-            .map_err(|_| ContractError::WrongHashLength {})
-    })?;
-
-    let merkle_root_buf = validate_merkle_root(merkle_root)?;
-
-    ensure!(
-        merkle_root_buf == hash,
-        ContractError::MerkleRootVerificationFailed
-    );
+    campaign_params.validate_rewards()?;
 
     Ok(())
 }
@@ -90,7 +34,7 @@ pub(crate) fn compute_claimable_amount(
     let mut new_claims = HashMap::new();
 
     if campaign.has_started(current_time) {
-        let previous_claims_for_address = get_claims_for_address(deps, address)?;
+        let previous_claims_for_address = get_claims_for_address(deps, address.to_string())?;
 
         for (distribution_slot, distribution) in
             campaign.distribution_type.iter().enumerate().clone()
@@ -165,7 +109,7 @@ pub(crate) fn compute_claimable_amount(
 
     Ok((
         Coin {
-            denom: campaign.reward_asset.denom.clone(),
+            denom: campaign.reward_denom.clone(),
             amount: claimable_amount,
         },
         new_claims,
@@ -175,9 +119,9 @@ pub(crate) fn compute_claimable_amount(
 /// Calculates the claimable amount for a given distribution, total amount and previous claim.
 fn calculate_claim_amount_for_distribution(
     current_time: &&Timestamp,
-    total_claimable_amount: Uint128,
+    total_user_allocation: Uint128,
     distribution_type: &&DistributionType,
-    previous_claim_for_address_for_distribution: &Option<&Claim>,
+    previous_claim_for_this_slot: &Option<&Claim>,
 ) -> Result<Uint128, ContractError> {
     match distribution_type {
         DistributionType::LinearVesting {
@@ -186,43 +130,65 @@ fn calculate_claim_amount_for_distribution(
             end_time,
             ..
         } => {
-            let elapsed_time = match previous_claim_for_address_for_distribution {
-                Some((_, last_claimed)) if end_time >= last_claimed => {
-                    current_time.seconds().min(end_time.to_owned()) - last_claimed
-                }
-                Some(_) => return Ok(Uint128::zero()), // it means the user has already claimed this distribution
-                None => current_time.seconds().min(end_time.to_owned()) - start_time,
-            };
+            let amount_allocated_to_this_slot = Uint128::try_from(
+                Decimal256::from(*percentage)
+                    .checked_mul(Decimal256::from_ratio(
+                        Uint256::from_uint128(total_user_allocation),
+                        Uint256::one(),
+                    ))?
+                    .to_uint_floor(),
+            )?;
 
-            let vesting_progress = Decimal256::from_ratio(
-                Uint256::from(elapsed_time),
-                Uint256::from(end_time - start_time),
+            let already_claimed =
+                previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
+
+            let distribution_duration = end_time.saturating_sub(*start_time);
+
+            // sanity check to ensure we don't get division by zero
+            // this should never happen since `validate_campaign_times` ensures that the start time is less than the end time
+            ensure!(
+                distribution_duration > 0u64,
+                ContractError::CampaignError {
+                    reason: "distribution duration is 0".to_string(),
+                }
             );
 
-            Ok(Uint128::try_from(
-                Decimal256::from(*percentage)
-                    .checked_mul(Decimal256::from_ratio(
-                        Uint256::from_uint128(total_claimable_amount),
-                        Uint256::one(),
-                    ))?
-                    .checked_mul(vesting_progress)?
-                    .to_uint_floor(),
-            )?)
+            let time_passed_since_start = current_time.seconds().saturating_sub(*start_time);
+            let effective_time_passed =
+                std::cmp::min(time_passed_since_start, distribution_duration);
+
+            let vesting_progress = Decimal256::from_ratio(
+                Uint256::from(effective_time_passed),
+                Uint256::from(distribution_duration),
+            );
+
+            let total_vested_for_slot_at_current_time = Uint128::try_from(
+                Decimal256::from_ratio(
+                    Uint256::from_uint128(amount_allocated_to_this_slot),
+                    Uint256::one(),
+                )
+                .checked_mul(vesting_progress)?
+                .to_uint_floor(),
+            )?;
+
+            Ok(total_vested_for_slot_at_current_time.saturating_sub(already_claimed))
         }
         DistributionType::LumpSum { percentage, .. } => {
-            // it means the user has already claimed this distribution
-            if previous_claim_for_address_for_distribution.is_some() {
-                return Ok(Uint128::zero());
-            }
-
-            Ok(Uint128::try_from(
+            let total_entitlement_for_lumpsum_slot = Uint128::try_from(
                 Decimal256::from(*percentage)
                     .checked_mul(Decimal256::from_ratio(
-                        Uint256::from_uint128(total_claimable_amount),
+                        Uint256::from_uint128(total_user_allocation),
                         Uint256::one(),
                     ))?
                     .to_uint_floor(),
-            )?)
+            )?;
+
+            let already_claimed_for_this_slot =
+                previous_claim_for_this_slot.map_or(Uint128::zero(), |(amount, _)| *amount);
+
+            let newly_claimable =
+                total_entitlement_for_lumpsum_slot.saturating_sub(already_claimed_for_this_slot);
+            Ok(newly_claimable)
         }
     }
 }

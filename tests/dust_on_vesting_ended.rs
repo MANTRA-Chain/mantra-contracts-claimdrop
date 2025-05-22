@@ -1,10 +1,7 @@
-use crate::hashes::{ALICE_PROOFS_X, MERKLE_ROOT_X};
 use crate::suite::TestingSuite;
 use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
-
-mod hashes;
 mod suite;
 
 #[test]
@@ -17,16 +14,25 @@ fn can_claim_dust_after_vesting_ends() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
+    let allocations = &vec![(alice.to_string(), Uint128::new(17))];
+
     suite
         .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(23, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(23, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
                         percentage: Decimal::percent(100),
                         start_time: current_time.seconds(),
@@ -35,7 +41,6 @@ fn can_claim_dust_after_vesting_ends() {
                     }],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(90).seconds(),
-                    merkle_root: MERKLE_ROOT_X.to_string(),
                 }),
             },
             &coins(23, "uom"),
@@ -55,9 +60,8 @@ fn can_claim_dust_after_vesting_ends() {
     suite
         .claim(
             alice,
-            Uint128::new(17u128),
             Some(alice.to_string()),
-            ALICE_PROOFS_X,
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -78,7 +82,7 @@ fn can_claim_dust_after_vesting_ends() {
     // executing the claiming here, will result on the compute_claimable_amount::new_claims being empty,
     // as the claim_amount will be zero, while the rounding_error_compensation_amount will be 1.
     suite
-        .query_rewards(Uint128::new(17u128), alice, ALICE_PROOFS_X, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -90,9 +94,8 @@ fn can_claim_dust_after_vesting_ends() {
         })
         .claim(
             alice,
-            Uint128::new(17u128),
             Some(alice.to_string()),
-            ALICE_PROOFS_X,
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -117,16 +120,25 @@ fn can_claim_dust_after_vesting_ends_2() {
     let alice = &suite.senders[0].clone();
     let current_time = &suite.get_time();
 
+    let allocations = &vec![(alice.to_string(), Uint128::new(17))];
+
     suite
         .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
         .manage_campaign(
             alice,
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
-                    owner: None,
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
-                    reward_asset: coin(23, "uom"),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(23, "uom"),
                     distribution_type: vec![
                         DistributionType::LumpSum {
                             percentage: Decimal::percent(25),
@@ -141,7 +153,6 @@ fn can_claim_dust_after_vesting_ends_2() {
                     ],
                     start_time: current_time.seconds(),
                     end_time: current_time.plus_days(90).seconds(),
-                    merkle_root: MERKLE_ROOT_X.to_string(),
                 }),
             },
             &coins(23, "uom"),
@@ -161,9 +172,8 @@ fn can_claim_dust_after_vesting_ends_2() {
     suite
         .claim(
             alice,
-            Uint128::new(17u128),
             Some(alice.to_string()),
-            ALICE_PROOFS_X,
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -186,7 +196,7 @@ fn can_claim_dust_after_vesting_ends_2() {
     // executing the claiming here, will result on the compute_claimable_amount::new_claims being empty,
     // as the claim_amount will be zero, while the rounding_error_compensation_amount will be 1.
     suite
-        .query_rewards(Uint128::new(17u128), alice, ALICE_PROOFS_X, |result| {
+        .query_rewards(alice, |result| {
             assert_eq!(
                 result.unwrap(),
                 RewardsResponse {
@@ -198,9 +208,8 @@ fn can_claim_dust_after_vesting_ends_2() {
         })
         .claim(
             alice,
-            Uint128::new(17u128),
             Some(alice.to_string()),
-            ALICE_PROOFS_X,
+            None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },

@@ -1,8 +1,7 @@
-use cosmwasm_std::{ConversionOverflowError, Decimal, OverflowError, StdError, Uint128};
+use cosmwasm_std::{ConversionOverflowError, Decimal, OverflowError, StdError};
 use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
-use hex::FromHexError;
 use thiserror::Error;
 
 #[cw_migrate_invalid_version_error]
@@ -13,9 +12,6 @@ pub enum ContractError {
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
-
-    #[error("Unauthorized")]
-    Unauthorized,
 
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
@@ -35,20 +31,8 @@ pub enum ContractError {
     #[error("Invalid distribution percentage, cannot be zero")]
     ZeroDistributionPercentage,
 
-    #[error("Invalid reward amount, expected: {expected}, actual: {actual}")]
-    InvalidRewardAmount { expected: Uint128, actual: Uint128 },
-
-    #[error("{0}")]
-    FromHexError(#[from] FromHexError),
-
-    #[error("Invalid campaign param {param}, reason: {reason}")]
+    #[error("Invalid campaign parameter: {param} - {reason}")]
     InvalidCampaignParam { param: String, reason: String },
-
-    #[error("Wrong hash length")]
-    WrongHashLength,
-
-    #[error("Merkle root verification failed")]
-    MerkleRootVerificationFailed,
 
     #[error("Claim amount exceeds the maximum claimable amount")]
     ExceededMaxClaimAmount,
@@ -74,8 +58,17 @@ pub enum ContractError {
     #[error("There's nothing to claim for the given address")]
     NothingToClaim,
 
-    #[error("The cliff period has not passed yet")]
-    CliffPeriodNotPassed,
+    #[error("No allocation found for address: {address}")]
+    NoAllocationFound { address: String },
+
+    #[error("The current address already has an allocation: {address}")]
+    AllocationAlreadyExists { address: String },
+
+    #[error("Address is blacklisted")]
+    AddressBlacklisted,
+
+    #[error("Invalid claim amount: {reason}")]
+    InvalidClaimAmount { reason: String },
 }
 
 impl From<semver::Error> for ContractError {

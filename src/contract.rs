@@ -37,12 +37,27 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ManageCampaign { action } => commands::manage_campaign(deps, env, info, action),
-        ExecuteMsg::Claim {
-            total_claimable_amount,
-            receiver,
-            proof,
-        } => commands::claim(deps, env, info, total_claimable_amount, receiver, proof),
+        ExecuteMsg::Claim { receiver, amount } => {
+            cw_utils::nonpayable(&info)?;
+            commands::claim(deps, env, info, receiver, amount)
+        }
+        ExecuteMsg::AddAllocations { allocations } => {
+            cw_utils::nonpayable(&info)?;
+            commands::add_allocations(deps, env, info, allocations)
+        }
+        ExecuteMsg::ReplaceAddress {
+            old_address,
+            new_address,
+        } => {
+            cw_utils::nonpayable(&info)?;
+            commands::replace_address(deps, info, old_address, new_address)
+        }
+        ExecuteMsg::BlacklistAddress { address, blacklist } => {
+            cw_utils::nonpayable(&info)?;
+            commands::blacklist_address(deps, info, address, blacklist)
+        }
         ExecuteMsg::UpdateOwnership(action) => {
+            cw_utils::nonpayable(&info)?;
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
                     |ownership| {
@@ -60,16 +75,8 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Campaign {} => Ok(to_json_binary(&queries::query_campaign(deps)?)?),
-        QueryMsg::Rewards {
-            total_claimable_amount,
-            receiver,
-            proof,
-        } => Ok(to_json_binary(&queries::query_rewards(
-            deps,
-            env,
-            total_claimable_amount,
-            receiver,
-            proof,
+        QueryMsg::Rewards { receiver } => Ok(to_json_binary(&queries::query_rewards(
+            deps, env, receiver,
         )?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
         QueryMsg::Claimed {
@@ -78,6 +85,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             limit,
         } => Ok(to_json_binary(&queries::query_claimed(
             deps, address, start_from, limit,
+        )?)?),
+        QueryMsg::Allocations {
+            address,
+            start_after,
+            limit,
+        } => Ok(to_json_binary(&queries::query_allocation(
+            deps,
+            address,
+            start_after,
+            limit,
+        )?)?),
+        QueryMsg::IsBlacklisted { address } => Ok(to_json_binary(&queries::query_is_blacklisted(
+            deps, address,
         )?)?),
     }
 }

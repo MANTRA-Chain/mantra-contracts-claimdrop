@@ -1,12 +1,11 @@
+use claimdrop_contract::msg::{
+    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
+    ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
+};
 use cosmwasm_std::{coin, Addr, Coin, Empty, StdResult, Timestamp, Uint128};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
     WasmKeeper,
-};
-
-use claimdrop_contract::msg::{
-    CampaignAction, CampaignResponse, ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
-    RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
@@ -158,6 +157,22 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    pub fn top_up_campaign(
+        &mut self,
+        sender: &Addr,
+        funds: &[Coin],
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        result.handle_result(self.app.send_tokens(
+            sender.clone(),
+            self.claimdrop_contract_addr.clone(),
+            funds,
+        ));
+
+        self
+    }
+
+    #[track_caller]
     pub fn manage_campaign(
         &mut self,
         sender: &Addr,
@@ -172,21 +187,11 @@ impl TestingSuite {
     pub fn claim(
         &mut self,
         sender: &Addr,
-        total_claimable_amount: Uint128,
         receiver: Option<String>,
-        proof: &[&str],
+        amount: Option<Uint128>,
         result: impl ResultHandler,
     ) -> &mut Self {
-        self.execute_contract(
-            sender,
-            ExecuteMsg::Claim {
-                total_claimable_amount,
-                receiver,
-                proof: proof.iter().map(|s| s.to_string()).collect(),
-            },
-            &[],
-            result,
-        )
+        self.execute_contract(sender, ExecuteMsg::Claim { receiver, amount }, &[], result)
     }
 
     #[track_caller]
@@ -197,6 +202,61 @@ impl TestingSuite {
         result: impl ResultHandler,
     ) -> &mut Self {
         self.execute_contract(sender, ExecuteMsg::UpdateOwnership(action), &[], result)
+    }
+
+    #[track_caller]
+    pub fn add_allocations(
+        &mut self,
+        sender: &Addr,
+        allocations: &Vec<(String, Uint128)>,
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        self.execute_contract(
+            sender,
+            ExecuteMsg::AddAllocations {
+                allocations: allocations.clone(),
+            },
+            &[],
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub fn replace_address(
+        &mut self,
+        sender: &Addr,
+        old_address: &Addr,
+        new_address: &Addr,
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        self.execute_contract(
+            sender,
+            ExecuteMsg::ReplaceAddress {
+                old_address: old_address.to_string(),
+                new_address: new_address.to_string(),
+            },
+            &[],
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub fn blacklist_address(
+        &mut self,
+        sender: &Addr,
+        address: &Addr,
+        blacklist: bool,
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        self.execute_contract(
+            sender,
+            ExecuteMsg::BlacklistAddress {
+                address: address.to_string(),
+                blacklist,
+            },
+            &[],
+            result,
+        )
     }
 }
 
@@ -224,16 +284,12 @@ impl TestingSuite {
     #[track_caller]
     pub fn query_rewards(
         &mut self,
-        total_claimable_amount: Uint128,
         receiver: &Addr,
-        proof: &[&str],
         result: impl Fn(StdResult<RewardsResponse>),
     ) -> &mut Self {
         self.query_contract(
             QueryMsg::Rewards {
-                total_claimable_amount,
                 receiver: receiver.to_string(),
-                proof: proof.iter().map(|s| s.to_string()).collect(),
             },
             result,
         )
@@ -255,6 +311,38 @@ impl TestingSuite {
                 address,
                 start_from,
                 limit,
+            },
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub fn query_allocations(
+        &mut self,
+        address: Option<&Addr>,
+        start_after: Option<&Addr>,
+        limit: Option<u16>,
+        result: impl Fn(StdResult<AllocationsResponse>),
+    ) -> &mut Self {
+        self.query_contract(
+            QueryMsg::Allocations {
+                address: address.map(|addr| addr.to_string()),
+                start_after: start_after.map(|addr| addr.to_string()),
+                limit,
+            },
+            result,
+        )
+    }
+
+    #[track_caller]
+    pub fn query_is_blacklisted(
+        &mut self,
+        address: &Addr,
+        result: impl Fn(StdResult<BlacklistResponse>),
+    ) -> &mut Self {
+        self.query_contract(
+            QueryMsg::IsBlacklisted {
+                address: address.to_string(),
             },
             result,
         )
