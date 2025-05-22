@@ -25,6 +25,7 @@ are attached to the new address, same as the original allocation entry. The entr
 - Ability to blacklist addresses (in case of hacked for instance). Blacklisted wallets cannot claim.
 - The owner (of the contract) is the only one able to do all permissioned actions, i.e. create a campaign, close a 
 campaign, blacklist users, batch upload addresses.
+- Ability to make partial claims. 
 
 ## When can it be used?
 
