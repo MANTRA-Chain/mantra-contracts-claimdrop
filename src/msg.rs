@@ -37,6 +37,11 @@ pub enum ExecuteMsg {
         /// The new address to use
         new_address: String,
     },
+    /// Removes an address in the allocation list. This can only be done before the campaign has started.
+    RemoveAddress {
+        /// The address to remove
+        address: String,
+    },
     /// Blacklists or unblacklists an address. This can be done at any time.
     BlacklistAddress {
         /// The address to blacklist/unblacklist

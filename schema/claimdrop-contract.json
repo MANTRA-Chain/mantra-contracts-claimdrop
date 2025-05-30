@@ -142,6 +142,29 @@
         "additionalProperties": false
       },
       {
+        "description": "Removes an address in the allocation list. This can only be done before the campaign has started.",
+        "type": "object",
+        "required": [
+          "remove_address"
+        ],
+        "properties": {
+          "remove_address": {
+            "type": "object",
+            "required": [
+              "address"
+            ],
+            "properties": {
+              "address": {
+                "description": "The address to remove",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Blacklists or unblacklists an address. This can be done at any time.",
         "type": "object",
         "required": [

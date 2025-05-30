@@ -383,6 +383,44 @@ pub fn replace_address(
         .add_attribute("new_address", new_address))
 }
 
+/// Removes an address in the allocation list. This can only be done before the campaign has started.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `env`  - The env context
+/// * `info` - The message info
+/// * `address` - The address to remove
+///
+/// # Returns
+/// * `Result<Response, ContractError>` - The response with attributes
+pub fn remove_address(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    address: String,
+) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    // Check if campaign has started
+    let campaign = CAMPAIGN.may_load(deps.storage)?;
+
+    if let Some(campaign) = campaign {
+        ensure!(
+            !campaign.has_started(&env.block.time),
+            ContractError::CampaignError {
+                reason: "cannot remove an address allocation after campaign has started"
+                    .to_string(),
+            }
+        );
+    }
+
+    ALLOCATIONS.remove(deps.storage, address.as_str());
+
+    Ok(Response::default()
+        .add_attribute("action", "remove_address")
+        .add_attribute("removed", address))
+}
+
 /// Blacklists or unblacklists an address. This can be done at any time.
 ///
 /// # Arguments
