@@ -52,6 +52,10 @@ pub fn execute(
             cw_utils::nonpayable(&info)?;
             commands::replace_address(deps, info, old_address, new_address)
         }
+        ExecuteMsg::RemoveAddress { address } => {
+            cw_utils::nonpayable(&info)?;
+            commands::remove_address(deps, env, info, address)
+        }
         ExecuteMsg::BlacklistAddress { address, blacklist } => {
             cw_utils::nonpayable(&info)?;
             commands::blacklist_address(deps, info, address, blacklist)
