@@ -1118,19 +1118,6 @@ fn claim_ended_campaign() {
             // bob tries to end the campaign
             bob,
             CampaignAction::CloseCampaign {},
-            &[coin(100_000, "uom")],
-            |result: Result<AppResponse, anyhow::Error>| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                match err {
-                    ContractError::PaymentError { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
-                }
-            },
-        )
-        .manage_campaign(
-            // bob tries to end the campaign
-            bob,
-            CampaignAction::CloseCampaign {},
             &[],
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();

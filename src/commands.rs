@@ -17,11 +17,13 @@ pub(crate) fn manage_campaign(
     info: MessageInfo,
     campaign_action: CampaignAction,
 ) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
     match campaign_action {
-        CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
+        CampaignAction::CreateCampaign { params } => create_campaign(deps, env, *params),
         CampaignAction::CloseCampaign {} => {
             cw_utils::nonpayable(&info)?;
-            close_campaign(deps, env, info)
+            close_campaign(deps, env)
         }
     }
 }
@@ -30,12 +32,8 @@ pub(crate) fn manage_campaign(
 fn create_campaign(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
     campaign_params: CampaignParams,
 ) -> Result<Response, ContractError> {
-    // only the owner can create a campaign
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
-
     let campaign: Option<Campaign> = CAMPAIGN.may_load(deps.storage)?;
 
     ensure!(
@@ -58,9 +56,7 @@ fn create_campaign(
 
 /// Closes the existing airdrop campaign. Only the owner can end the campaign.
 /// The remaining funds in the campaign are refunded to the owner.
-fn close_campaign(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
-
+fn close_campaign(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
     let mut campaign = CAMPAIGN
         .may_load(deps.storage)?
         .ok_or(ContractError::CampaignError {
