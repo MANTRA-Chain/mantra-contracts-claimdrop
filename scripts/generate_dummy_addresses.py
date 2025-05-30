@@ -5,7 +5,7 @@ def generate_add_allocations_json():
     allocations = []
     
     # Create 5000 dummy entries
-    for i in range(1, 5000):  # 1 to 5000 inclusive
+    for i in range(1, 5001):  # 1 to 5000 inclusive
         # Generate a dummy address: mantra1dummy + zero-padded index
         address = f"mantra1dummy{'{:040d}'.format(i)}"
         # Generate an amount: e.g., 1000, 2000, ..., 5000000

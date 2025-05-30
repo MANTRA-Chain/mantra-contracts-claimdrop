@@ -3797,6 +3797,138 @@ fn test_replace_address() {
 }
 
 #[test]
+fn test_remove_address() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone(); // Owner
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let dan = &suite.senders[3].clone();
+    let current_time = &suite.get_time();
+
+    // Upload initial allocation for Bob
+    let allocations = &vec![
+        (bob.to_string(), Uint128::new(100_000)),
+        (carol.to_string(), Uint128::new(100_000)),
+    ];
+
+    suite
+        .instantiate_claimdrop_contract(None) // Alice is owner
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "Test replace address".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"), // Matches Bob's allocation
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),               // All at once
+                        start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
+                    }],
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    // At this point, campaign hasn't started. Bob and Carol have an allocation.
+    //
+    // The campaign manager notices Carol's allocation is incorrect. Removes it
+
+    suite.remove_address(
+        // Non-owner tries
+        carol,
+        bob,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::OwnershipError(e) => match e {
+                    OwnershipError::NotOwner => {}
+                    _ => panic!("Wrong error type, should return OwnershipError::NotOwner"),
+                },
+                _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+            }
+        },
+    );
+
+    // tries to remove an address that doesn't even have an allocation
+    suite
+        .query_allocations(Some(dan), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations.is_empty());
+        })
+        .remove_address(alice, dan, |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        });
+
+    // remove carol
+    suite
+        .query_allocations(Some(carol), None, None, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocations[0].1, Uint128::new(100_000));
+        })
+        .remove_address(
+            alice,
+            carol,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_allocations(Some(carol), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations.is_empty());
+        });
+
+    // once carol's allocation is removed, the corrected one can be added
+    let allocations = &vec![(carol.to_string(), Uint128::new(50_000))];
+    suite
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_allocations(Some(carol), None, None, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocations[0].1, Uint128::new(50_000));
+        });
+
+    // start the campaign
+    suite.add_week();
+    suite.remove_address(
+        alice,
+        carol,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::CampaignError { reason } => {
+                    assert_eq!(
+                        reason,
+                        "cannot remove an address allocation after campaign has started"
+                    );
+                }
+                _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+            }
+        },
+    );
+}
+
+#[test]
 fn test_replace_placeholder_address() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),

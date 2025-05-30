@@ -241,6 +241,23 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    pub fn remove_address(
+        &mut self,
+        sender: &Addr,
+        address: &Addr,
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        self.execute_contract(
+            sender,
+            ExecuteMsg::RemoveAddress {
+                address: address.to_string(),
+            },
+            &[],
+            result,
+        )
+    }
+
+    #[track_caller]
     pub fn blacklist_address(
         &mut self,
         sender: &Addr,
