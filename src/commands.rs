@@ -383,7 +383,8 @@ pub fn replace_address(
         .add_attribute("new_address", new_address))
 }
 
-/// Removes an address in the allocation list. This can only be done before the campaign has started.
+/// Removes an address from the allocation list. This can only be done before the campaign has started.
+/// Trying to remove an address that doesn't exist in the list won't result in an error.
 ///
 /// # Arguments
 /// * `deps` - The dependencies
