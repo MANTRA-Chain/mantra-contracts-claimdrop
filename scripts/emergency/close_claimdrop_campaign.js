@@ -1,5 +1,5 @@
 // @ts-check
-const { SigningCosmWasmClient, CosmWasmClient } = require('@cosmjs/cosmwasm-stargate');
+const { SigningCosmWasmClient } = require('@cosmjs/cosmwasm-stargate');
 const { LedgerSigner } = require('@cosmjs/ledger-amino');
 const { makeCosmoshubPath } = require("@cosmjs/amino");
 const TransportNodeHid = require('@ledgerhq/hw-transport-node-hid').default;
@@ -26,7 +26,6 @@ async function main() {
         const codeId = parseInt(codeIdString, 10);
         if (isNaN(codeId)) {
             console.error("Error: <code_id> must be an integer.");
-            console.error("Usage: node scripts/emergency/close_claimdrop_campaign.js <rpc_endpoint> <code_id> [account_index]");
             process.exit(1);
         }
 
@@ -38,10 +37,11 @@ async function main() {
         console.log(`  Ledger Account Prefix:  ${LEDGER_ACCOUNT_PREFIX}`);
         console.log(`  Gas Price:              ${GAS_PRICE_STRING}`);
         console.log("----------------------------------------------------");
-        console.log("IMPORTANT: This action is IRREVERSIBLE for each campaign.");
-        console.log("Ensure you are targeting the correct Code ID, RPC endpoint, and Ledger account index.");
-        console.log("You will need to confirm transactions on your Ledger device.");
+        console.log("IMPORTANT: This script will attempt to close campaigns ONLY on contracts");
+        console.log("           where the connected Ledger account is the current owner.");
+        console.log("           This action is IRREVERSIBLE for each campaign closed.");
         console.log("----------------------------------------------------");
+
 
         const rl = readline.createInterface({
             input: process.stdin,
@@ -61,7 +61,13 @@ async function main() {
         });
 
         console.log("\nAttempting to connect to Ledger device...");
-        transport = await TransportNodeHid.create();
+        try {
+            transport = await TransportNodeHid.create();
+        } catch (e) {
+            console.error("Error connecting to Ledger device. Ensure it's connected, unlocked, and the MANTRA app is open.");
+            console.error("Details:", e.message);
+            process.exit(1);
+        }
 
         const hdPath = makeCosmoshubPath(accountIndex);
         const ledgerSigner = new LedgerSigner(transport, {
@@ -70,12 +76,17 @@ async function main() {
         });
 
         let accounts;
-        accounts = await ledgerSigner.getAccounts();
+        try {
+            accounts = await ledgerSigner.getAccounts();
+        } catch (e) {
+            console.error("Error getting accounts from Ledger.");
+            console.error("Details:", e.message);
+            process.exit(1);
+        }
 
         if (accounts.length === 0) {
             console.error(`No accounts found on Ledger for HD Path ${hdPath.toString()} with prefix '${LEDGER_ACCOUNT_PREFIX}'.`);
-            process.exitCode = 1;
-            return;
+            process.exit(1);
         }
         const senderAddress = accounts[0].address;
         console.log(`Successfully connected to Ledger. Using address: ${senderAddress}`);
@@ -90,18 +101,21 @@ async function main() {
         );
 
         let contractAddresses;
-        contractAddresses = await client.getContracts(codeId);
+        try {
+            contractAddresses = await client.getContracts(codeId);
+        } catch (err) {
+            console.error(`Failed to query contracts for code ID ${codeId}:`, err);
+            process.exit(1);
+        }
 
         if (!contractAddresses || contractAddresses.length === 0) {
             console.log(`No contracts found for code ID ${codeId}. Exiting.`);
-            process.exitCode = 0;
-            return;
+            process.exit(0);
         }
 
         console.log(
-            `Found ${contractAddresses.length} contract(s) for code ID ${codeId}:`
+            `Found ${contractAddresses.length} contract(s) for code ID ${codeId}.`
         );
-        contractAddresses.forEach((addr) => console.log(`  - ${addr}`));
 
         const closeCampaignMsg = {
             manage_campaign: {
@@ -113,35 +127,87 @@ async function main() {
 
         const fee = calculateFee(300000, GasPrice.fromString(GAS_PRICE_STRING));
 
-        console.log("\nProceeding to close campaigns for each contract...");
+        console.log("\nProcessing contracts to potentially close campaigns...");
+        let successCount = 0;
+        let failureCount = 0;
+        let skippedNotOwnerCount = 0;
+        let skippedNoCampaignCount = 0;
 
         for (const contractAddress of contractAddresses) {
-            console.log(`\nAttempting to close campaign for contract: ${contractAddress}`);
-            console.log("Please review and confirm the transaction on your Ledger device.");
+            console.log(`\nInspecting contract: ${contractAddress}`);
+            let campaignExists = false;
             try {
-                const result = await client.execute(
-                    senderAddress,
-                    contractAddress,
-                    closeCampaignMsg,
-                    fee,
-                    `Emergency close campaign for ${contractAddress} (Code ID: ${codeId})`
-                );
-                console.log(
-                    `  Successfully closed campaign. Transaction hash: ${result.transactionHash}`
-                );
-            } catch (error) {
-                console.error(
-                    `  Failed to close campaign for ${contractAddress}:`,
-                    error.message || error
-                );
+                const campaignQuery = { campaign: {} };
+                try {
+                    await client.queryContractSmart(contractAddress, campaignQuery);
+                    campaignExists = true;
+                    console.log(`  Query for active campaign successful.`);
+                } catch (campaignQueryError) {
+                    console.log(`No active campaign found.`);
+                    skippedNoCampaignCount++;
+                    continue;
+                }
+
+                if (campaignExists) {
+                    const ownershipQuery = { ownership: {} };
+                    const ownershipResponse = await client.queryContractSmart(contractAddress, ownershipQuery);
+
+                    if (ownershipResponse && ownershipResponse.owner) {
+                        const contractOwner = ownershipResponse.owner;
+                        console.log(`  Contract owner: ${contractOwner}`);
+
+                        if (contractOwner === senderAddress) {
+                            console.log(`  Ledger address (${senderAddress}) IS the owner. Proceeding to close campaign.`);
+                            console.log("  Please review and confirm the transaction on your Ledger device.");
+                            try {
+                                const result = await client.execute(
+                                    senderAddress,
+                                    contractAddress,
+                                    closeCampaignMsg,
+                                    fee,
+                                    `Emergency close campaign for ${contractAddress} (Code ID: ${codeId})`
+                                );
+                                console.log(
+                                    `    Successfully closed campaign. Transaction hash: ${result.transactionHash}`
+                                );
+                                successCount++;
+                            } catch (executeError) {
+                                console.error(
+                                    `    Failed to close campaign for ${contractAddress} (owned by sender):`,
+                                    executeError.message || executeError
+                                );
+                                failureCount++;
+                            }
+                        } else {
+                            console.log(`  Ledger address (${senderAddress}) is NOT the owner. Skipping.`);
+                            skippedNotOwnerCount++;
+                        }
+                    } else {
+                        console.warn(`  Could not determine owner for contract ${contractAddress}. Response:`, ownershipResponse);
+                        skippedNotOwnerCount++;
+                    }
+                }
+            } catch (processContractError) {
+                console.error(`  Failed to process contract ${contractAddress} (e.g., ownership query failed after campaign check):`, processContractError.message || processContractError);
+                failureCount++;
             }
         }
 
-        console.log("\nAll contract processing complete.");
-        process.exitCode = 0;
+        console.log("\n--- Processing Summary ---");
+        console.log(`Successfully closed campaigns for ${successCount} contract(s).`);
+        console.log(`Failed to close campaigns for ${failureCount} contract(s) (due to execution or query errors).`);
+        console.log(`Skipped ${skippedNotOwnerCount} contract(s) (sender not owner or owner undetermined).`);
+        console.log(`Skipped ${skippedNoCampaignCount} contract(s) (no active/queryable campaign found).`);
+        console.log("All contract processing complete.");
+
+        if (failureCount > 0 || (successCount === 0 && (skippedNotOwnerCount + skippedNoCampaignCount === contractAddresses.length) && contractAddresses.length > 0) ) {
+            process.exitCode = 1;
+        } else {
+            process.exitCode = 0;
+        }
 
     } catch (error) {
-        console.error("\nAn unexpected error occurred within the main operation:", error.message);
+        console.error("\nAn critical unexpected error occurred:", error.message);
         if (error.stack) console.error(error.stack);
         process.exitCode = 1;
     } finally {
@@ -153,16 +219,8 @@ async function main() {
                 console.error("Error closing Ledger transport:", closeError.message);
             }
         }
-        if (process.exitCode !== undefined && process.exitCode !== null) {
-            process.exit(process.exitCode);
-        } else {
-            process.exit(0);
-        }
+        process.exit(process.exitCode === undefined ? 1 : process.exitCode);
     }
 }
 
-main().catch(error => {
-    console.error("Critical script failure (outer promise catch):", error.message);
-    if (error.stack) console.error(error.stack);
-    process.exit(1);
-});
+main();
