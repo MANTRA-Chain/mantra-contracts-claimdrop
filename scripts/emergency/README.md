@@ -30,9 +30,9 @@ Then, install the required Node.js dependencies:
 # Navigate to scripts/emergency if you are not already there
 # cd scripts/emergency
 
-npm install @cosmjs/cosmwasm-stargate @cosmjs/ledger-amino @cosmjs/amino @ledgerhq/hw-transport-node-hid @cosmjs/stargate readline secp256k1
+npm install @cosmjs/cosmwasm-stargate @cosmjs/ledger-amino @cosmjs/amino @ledgerhq/hw-transport-node-hid @cosmjs/stargate @cosmjs/encoding readline secp256k1
 ```
-Ensure `secp256k1` can be built, which might require build tools like `python`, `make`, `g++` depending on your OS. The `readline` module is used for the confirmation prompt.
+Ensure `secp256k1` can be built, which might require build tools like `python`, `make`, `g++` depending on your OS. The `readline` module is used for confirmation prompts. The `@cosmjs/encoding` module is used for `toUtf8`.
 
 ### 1.3 Ledger Setup
 *   Connect your Ledger device and unlock it.
@@ -47,10 +47,15 @@ Ensure `secp256k1` can be built, which might require build tools like `python`, 
 *   `close_claimdrop_campaign.js` (Node.js script)
 
 **Purpose:**
-This script attempts to close the current campaign for ALL claimdrop contracts instantiated from a specific `CODE_ID`. This is an emergency measure to halt claimdrop activities.
+This script identifies claimdrop contracts instantiated from a specific `CODE_ID` and prepares a single batch transaction to close eligible campaigns. This is an emergency measure to halt claimdrop activities.
 
 **Action:**
-For each contract found associated with the given `CODE_ID`, it executes the `ManageCampaign` message with the `CloseCampaign` action. You will be prompted for confirmation in the terminal and must approve each transaction on your Ledger device.
+For each contract found associated with the given `CODE_ID`, the script performs the following checks:
+1.  **Verifies an active and open campaign**: It queries the contract. If no campaign state is found, or if the campaign has a `closed` timestamp indicating it's already closed, the contract is skipped.
+2.  **Verifies ownership**: If an active and open campaign exists, it then queries the contract's ownership.
+3.  **Prepares `CloseCampaign` message**: If the connected Ledger account (`senderAddress`) is the owner of the contract, a `MsgExecuteContract` message (with `CloseCampaign` action) is prepared for this contract and added to a batch.
+
+All prepared messages are then batched into a **single transaction**. You will be prompted for confirmation before this single transaction is broadcast and will need to approve it **once** on your Ledger device.
 
 **Execution:**
 The script is configured using command-line arguments.
@@ -68,24 +73,33 @@ node scripts/emergency/close_claimdrop_campaign.js <rpc_endpoint> <code_id> [acc
 **Hardcoded Values in Script:**
 *   `LEDGER_ACCOUNT_PREFIX`: "mantra"
 *   `GAS_PRICE_STRING`: "0.025uom"
+*   `GAS_PER_MESSAGE`: Estimated gas for a single close operation (default: `300000`). Total gas is calculated based on this and the number of messages in the batch.
 
 **Example Usage:**
 ```bash
-# Using default Ledger account index 0
+# Using default Ledger account index 0, with code_id 1
 node scripts/emergency/close_claimdrop_campaign.js "http://localhost:26657" 1
 
-# Using Ledger account index 5
+# Using Ledger account index 5, with code_id 456
 node scripts/emergency/close_claimdrop_campaign.js "https://rpc.mantrachain.io" 456 5
 ```
 
 **Execution Flow:**
 1.  Run the Node.js script with the required command-line arguments.
-2.  The script will display the configuration and a critical warning.
-3.  You will be prompted for confirmation in the terminal. Type 'yes' to proceed.
-4.  The script connects to the Ledger, queries contracts by `CODE_ID`.
-5.  For each contract found, it prepares to broadcast a `ManageCampaign { action: { close_campaign: {} } }` message.
-6.  You must approve each transaction on your Ledger device.
-7.  Results (success or failure for each contract) are logged to the console.
+2.  The script displays its configuration and a critical warning, including the conditions for action (active, open campaign, and ownership).
+3.  You will be prompted for an initial confirmation to proceed with data gathering and message preparation.
+4.  The script connects to the Ledger and retrieves the sender address.
+5.  It queries for all contract addresses instantiated from the given `CODE_ID`.
+6.  For each contract address found:
+    a.  It queries the contract to check for an active campaign and ensures it's not already marked as `closed`.
+    b.  If an active and open campaign is found, it queries for the contract's owner.
+    c.  If the sender address from the Ledger matches the contract owner, it prepares a `MsgExecuteContract` to close the campaign and adds it to a batch of messages.
+7.  After processing all contracts, a summary of messages prepared for batching is displayed.
+8.  If there are messages to broadcast, you will be prompted again for a **final confirmation** to sign and send the single batch transaction.
+9.  If confirmed, the script broadcasts all prepared messages as a single transaction.
+10. You must approve this **single transaction** on your Ledger device.
+11. The overall result of the broadcasted batch transaction (success or failure) is logged.
+12. A final summary of actions is provided.
 
 ## 3. General Usage
 
@@ -111,8 +125,8 @@ node scripts/emergency/close_claimdrop_campaign.js "https://rpc.mantrachain.io" 
 *   **TESTNET FIRST:** Always test this script thoroughly on a testnet environment that mirrors mainnet conditions as closely as possible before ever considering its use on mainnet.
 *   **VERIFY PARAMETERS:** Triple-check all command-line arguments (`<rpc_endpoint>`, `<code_id>`, `[account_index]`) before execution.
 *   **SECURE ENVIRONMENT:** Run this script from a secure, trusted machine.
-*   **LEDGER CONFIRMATION:** Pay close attention to the details displayed on your Ledger device screen before approving any transaction.
-*   **UNDERSTAND THE CODE:** Review the Node.js script code.
+*   **LEDGER CONFIRMATION:** Pay close attention to the details displayed on your Ledger device screen before approving the **single batch transaction**.
+*   **UNDERSTAND THE CODE:** Review the Node.js script code to understand its full logic, especially the conditions for action and the batching mechanism.
 *   **COMMUNICATION:** If operating as part of a team, communicate clearly before, during, and after script execution.
 
 ## 5. Troubleshooting
@@ -124,13 +138,16 @@ node scripts/emergency/close_claimdrop_campaign.js "https://rpc.mantrachain.io" 
 *   **Node.js Script Errors:**
     *   `Usage: node scripts/emergency/...`: Missing or incorrect command-line arguments.
     *   `Error: <code_id> must be an integer.`: Ensure the code ID is a valid number.
-    *   `cannot find module '@cosmjs/...'`: Run `npm install` in `scripts/emergency/`.
+    *   `cannot find module '@cosmjs/...'` or other modules: Run `npm install` in `scripts/emergency/`. Ensure all dependencies like `@cosmjs/encoding` are listed and installed.
     *   Verify RPC endpoint is correct and accessible.
-*   **Transaction Failures:**
-    *   `Out of gas`: The default gas amount per transaction is `300000`. You might need to adjust this value in `calculateFee(300000, ...)` within the script if transactions fail due to insufficient gas. The `GAS_PRICE_STRING` is hardcoded to "0.025uom".
-    *   `Account sequence mismatch`: Usually handled by CosmJS.
-    *   `Signature verification failed` / `Denied by user?`: Ensure correct Ledger operation.
-    *   Contract-specific errors: Check error message for details from the contract.
+*   **Transaction Failures (Batch Transaction):**
+    *   `Out of gas`: The script uses a `GAS_PER_MESSAGE` constant (default `300000`) to estimate the total gas for the batch. If the batch transaction fails with "out of gas," you may need to increase this constant in the script, or the chain's gas limit for a single transaction might be too low for a very large batch. The `GAS_PRICE_STRING` is hardcoded to "0.025uom".
+    *   `Account sequence mismatch`: Less likely with a single batch transaction, but possible if other transactions are sent from the same account concurrently.
+    *   `Signature verification failed` / `Denied by user?`: Ensure correct Ledger operation for the single batch approval.
+    *   Contract-specific errors / Batch Rejection: If the **entire batch transaction fails**, the chain's raw log (if provided in the error) might indicate which message within the batch caused the issue (e.g., one campaign was unexpectedly already closed by another party between script preparation and execution, or a contract had an unexpected state). The script attempts to pre-filter, but race conditions are possible.
 *   **General Troubleshooting:**
-    *   Ensure the `account_index` corresponds to an initialized account on your Ledger with funds.
-    *   Confirm the `CODE_ID` is correct for the target claimdrop contracts.
+    *   Ensure the `account_index` corresponds to an initialized account on your Ledger with sufficient funds for the transaction fee.
+    *   Confirm the `CODE_ID` is correct.
+    *   If contracts are skipped with "No active/open campaign found," verify campaigns are indeed active, open, and queryable.
+    *   If contracts are skipped with "Campaign already closed," this is expected if they were previously closed.
+    *   If contracts are skipped with "sender not owner," verify the Ledger account is the owner.
