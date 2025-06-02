@@ -21,12 +21,12 @@ async function main() {
 
         if (!rpcEndpoint || !codeIdString) {
             console.error("Usage: node scripts/emergency/close_claimdrop_campaign.js <rpc_endpoint> <code_id> [account_index]");
-            process.exit(1); 
+            process.exit(1);
         }
         const codeId = parseInt(codeIdString, 10);
         if (isNaN(codeId)) {
             console.error("Error: <code_id> must be an integer.");
-            process.exit(1); 
+            process.exit(1);
         }
 
         console.log("--- Emergency Claimdrop Campaign Closure Script ---");
@@ -50,7 +50,7 @@ async function main() {
                 if (answer.toLowerCase() !== 'yes') {
                     console.log("Operation cancelled by user.");
                     rl.close();
-                    process.exit(0); 
+                    process.exit(0);
                 }
                 rl.close();
                 resolve();
@@ -62,7 +62,7 @@ async function main() {
             transport = await TransportNodeHid.create();
         } catch (e) {
             console.error("Error connecting to Ledger device:", e.message);
-            process.exit(1); 
+            process.exit(1);
         }
 
         const hdPath = makeCosmoshubPath(accountIndex);
@@ -73,11 +73,11 @@ async function main() {
             accounts = await ledgerSigner.getAccounts();
         } catch (e) {
             console.error("Error getting accounts from Ledger:", e.message);
-            process.exit(1); 
+            process.exit(1);
         }
         if (accounts.length === 0) {
             console.error(`No accounts found on Ledger for HD Path ${hdPath.toString()} with prefix '${LEDGER_ACCOUNT_PREFIX}'.`);
-            process.exit(1); 
+            process.exit(1);
         }
         const senderAddress = accounts[0].address;
         console.log(`Successfully connected to Ledger. Using address: ${senderAddress}`);
@@ -93,21 +93,21 @@ async function main() {
             contractAddresses = await client.getContracts(codeId);
         } catch (err) {
             console.error(`Failed to query contracts for code ID ${codeId}:`, err);
-            process.exit(1); 
+            process.exit(1);
         }
         if (!contractAddresses || contractAddresses.length === 0) {
             console.log(`No contracts found for code ID ${codeId}. Exiting.`);
-            process.exit(0); 
+            process.exit(0);
         }
         console.log(`Found ${contractAddresses.length} contract(s) for code ID ${codeId}.`);
 
         const messagesToBroadcast = [];
         const closeCampaignMsgPayload = { manage_campaign: { action: { close_campaign: {} } } };
-        
+
         let skippedNotOwnerCount = 0;
         let skippedNoCampaignCount = 0;
         let skippedAlreadyClosedCount = 0;
-        let queryFailureCount = 0; 
+        let queryFailureCount = 0;
 
         console.log("\nFiltering contracts and preparing messages...");
         for (const contractAddress of contractAddresses) {
@@ -126,7 +126,7 @@ async function main() {
                 } catch (campaignQueryError) {
                     console.log(`  No active/open campaign found or error querying campaign.`);
                     skippedNoCampaignCount++;
-                    continue; 
+                    continue;
                 }
 
                 const ownershipQuery = { ownership: {} };
@@ -155,7 +155,7 @@ async function main() {
                 }
             } catch (processContractError) {
                 console.error(`  Error processing/querying contract ${contractAddress}:`, processContractError.message || processContractError);
-                queryFailureCount++; 
+                queryFailureCount++;
             }
         }
 
@@ -172,7 +172,7 @@ async function main() {
             process.exitCode = 0;
         } else {
             const rlConfirmBroadcast = readline.createInterface({ input: process.stdin, output: process.stdout });
-            let confirmedToBroadcast = false; 
+            let confirmedToBroadcast = false;
             await new Promise(resolve => {
                 rlConfirmBroadcast.question(`\nARE YOU ABSOLUTELY SURE you want to sign and broadcast a single transaction with ${messagesToBroadcast.length} 'CloseCampaign' messages? (yes/no): `, (answer) => {
                     rlConfirmBroadcast.close();
@@ -180,7 +180,7 @@ async function main() {
                         confirmedToBroadcast = true;
                     } else {
                         console.log("Operation cancelled by user. No transaction will be broadcast.");
-                        process.exitCode = 0; 
+                        process.exitCode = 0;
                     }
                     resolve();
                 });
@@ -202,7 +202,7 @@ async function main() {
                 console.log(`  Calculated total gas: ${totalGas.toString()}`);
                 console.log(`  Calculated fee: ${fee.amount[0].amount}${fee.amount[0].denom}`);
                 console.log(`  Memo: "${memo}"`);
-                
+
                 try {
                     const broadcastResult = await client.signAndBroadcast(senderAddress, messagesToBroadcast, fee, memo);
                     if (broadcastResult.code !== undefined && broadcastResult.code !== 0) {
