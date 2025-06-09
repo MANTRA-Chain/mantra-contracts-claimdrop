@@ -1,5 +1,7 @@
+use std::result;
 use std::str::FromStr;
 
+use claimdrop_contract::helpers::MAX_PLACEHOLDER_ADDRESS_LEN;
 use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Uint128};
 use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
@@ -3496,6 +3498,154 @@ fn test_add_duplicated_allocation() {
 }
 
 #[test]
+fn cant_add_allocations_with_invalid_placeholders() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+
+    let aave = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8";
+    let valid_mantra_address = "mantra1w8e2wyzhrg3y5ghe9yg0xn0u7548e627zs7xahfvn5l63ry2x8zsqru7xd";
+    let valid_mantra_address_uppercase =
+        "MANTRA1W8E2WYZHRG3Y5GHE9YG0XN0U7548E627ZS7XAHFVN5L63RY2X8ZSQRU7XD";
+    let invalid_chars = "invalid-address!";
+    let invalid_too_long = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c80x24a42fD28C976A61Df5D00D
+    0599C34c4f90748c80x24a42fD28C976A61Df5D00D0599C34c4f90748c80x24a42fD28C976A61Df5D00D0599C34c4f9074
+    8c80x24a42fD28C976A61Df5D00D0599C34c4f90748c80x24a42fD28C976A61Df5D00D0599C34c4f90748casuwsa";
+
+    suite.instantiate_claimdrop_contract(None); // Alice is owner
+
+    // add allocations first
+    let allocations_initial = &vec![
+        (aave.to_string(), Uint128::new(100_000)),
+        (valid_mantra_address.to_string(), Uint128::new(200_000)),
+    ];
+    suite.add_allocations(
+        alice,
+        allocations_initial,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    let allocations = &vec![(
+        valid_mantra_address_uppercase.to_string(),
+        Uint128::new(100_000),
+    )];
+
+    suite.add_allocations(
+        alice,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::AllocationAlreadyExists { address } => {
+                    assert_eq!(address, valid_mantra_address.to_string());
+                }
+                _ => {
+                    panic!("Wrong error type, should return ContractError::AllocationAlreadyExists")
+                }
+            }
+        },
+    );
+
+    let allocations = &vec![(invalid_chars.to_string(), Uint128::new(100_000))];
+
+    suite.add_allocations(
+        alice,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::InvalidInput { reason } => {
+                    assert_eq!(
+                        reason,
+                        format!(
+                            "placeholder address '{}' contains invalid characters",
+                            invalid_chars
+                        )
+                        .to_string()
+                    );
+                }
+                _ => {
+                    panic!("Wrong error type, should return ContractError::InvalidInput")
+                }
+            }
+        },
+    );
+
+    let allocations = &vec![(invalid_too_long.to_string(), Uint128::new(100_000))];
+
+    suite.add_allocations(
+        alice,
+        allocations,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::InvalidInput { reason } => {
+                    assert_eq!(
+                        reason,
+                        format!(
+                            "address '{}' must be between 1 and {} characters long (got {})",
+                            invalid_too_long,
+                            MAX_PLACEHOLDER_ADDRESS_LEN,
+                            invalid_too_long.len()
+                        )
+                        .to_string()
+                    );
+                }
+                _ => {
+                    panic!("Wrong error type, should return ContractError::InvalidInput")
+                }
+            }
+        },
+    );
+}
+
+#[test]
+fn can_query_placeholder_allocation() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+
+    let aave = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8".to_lowercase();
+
+    suite.instantiate_claimdrop_contract(None); // Alice is owner
+
+    // add allocations first
+    let allocations_initial = &vec![
+        (aave.to_string(), Uint128::new(100_000)),
+        // saving bob valid address uppercase, but since it's a valid bech32
+        (bob.to_string().to_uppercase(), Uint128::new(500_000)),
+    ];
+
+    suite
+        .add_allocations(
+            alice,
+            allocations_initial,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_allocations(None, None, None, |result| {
+            let response = result.unwrap();
+
+            let allocations = response.allocations;
+            assert_eq!(allocations.len(), 2);
+            assert_eq!(allocations[0].0, aave);
+            assert_eq!(allocations[0].1, Uint128::new(100_000));
+
+            assert_eq!(allocations[1].0, bob.to_string());
+            assert_eq!(allocations[1].1, Uint128::new(500_000));
+        });
+}
+
+#[test]
 fn test_cannot_add_allocations_after_campaign_start() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),
@@ -3924,6 +4074,7 @@ fn test_replace_placeholder_address() {
     let alice = &suite.senders[0].clone(); // Owner
     let bob = &suite.senders[1].clone(); // Old address
     let carol = &suite.senders[2].clone(); // New address
+    let placeholder = &Addr::unchecked("placeholder"); // Another new address
     let current_time = &suite.get_time();
 
     // Upload initial allocation for Vitalik, who has not bridged from Ethereum to MANTRA yet
@@ -3986,6 +4137,21 @@ fn test_replace_placeholder_address() {
             let allocation = result.unwrap();
             assert!(allocation.allocations[0].1 == Uint128::new(100_000));
         })
+        // can't replace a placeholder with another placeholder
+        .replace_address(
+            alice,
+            &Addr::unchecked("vitalik.eth"),
+            placeholder,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Std(e) => {
+                        assert!(e.to_string().contains("Invalid input"));
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::Std"),
+                }
+            },
+        )
         .replace_address(
             alice,
             &Addr::unchecked("vitalik.eth"),
@@ -4105,7 +4271,8 @@ fn test_blacklist_address() {
     ]);
     let alice = &suite.senders[0].clone(); // Owner
     let bob = &suite.senders[1].clone();
-    let carol = &suite.senders[2].clone(); // Address to be blacklisted
+    let carol: &Addr = &suite.senders[2].clone(); // Address to be blacklisted
+    let placeholder = &Addr::unchecked("bad.placeholder"); // Another address to be blacklisted
     let current_time = &suite.get_time();
 
     suite.instantiate_claimdrop_contract(None); // Alice is owner
@@ -4115,6 +4282,7 @@ fn test_blacklist_address() {
         (alice.to_string(), Uint128::new(100_000)),
         (bob.to_string(), Uint128::new(200_000)),
         (carol.to_string(), Uint128::new(300_000)),
+        (placeholder.to_string(), Uint128::new(400_000)),
     ];
     suite.add_allocations(
         alice,
@@ -4176,7 +4344,19 @@ fn test_blacklist_address() {
                 result.unwrap();
             },
         )
+        .blacklist_address(
+            alice,
+            placeholder,
+            true,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
         .query_is_blacklisted(carol, |result| {
+            let blacklist_status = result.unwrap();
+            assert_eq!(blacklist_status.is_blacklisted, true);
+        })
+        .query_is_blacklisted(placeholder, |result| {
             let blacklist_status = result.unwrap();
             assert_eq!(blacklist_status.is_blacklisted, true);
         });
@@ -4927,4 +5107,39 @@ fn test_claim_full_amount_when_none_specified_after_partial_claims() {
         });
 }
 
-// Make sure this is the last part of the file, or adjust accordingly
+#[test]
+fn unvalidated_address_collisions_should_not_be_allowed() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+
+    let allocations = &vec![
+        (
+            "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8".to_string(),
+            Uint128::new(10_000),
+        ),
+        (
+            "0X24A42FD28C976A61DF5D00D0599C34C4F90748C8".to_string(),
+            Uint128::new(20_000),
+        ),
+    ];
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::AllocationAlreadyExists { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::AllocationAlreadyExists"
+                    ),
+                }
+            },
+        );
+}

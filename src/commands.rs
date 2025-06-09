@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::error::ContractError;
-use crate::helpers;
+use crate::helpers::{self, validate_address_placeholder, validate_raw_address};
 use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 use crate::state::{
     get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
@@ -131,7 +131,7 @@ pub(crate) fn claim(
         .unwrap_or_else(|| info.sender.clone());
 
     ensure!(
-        !is_blacklisted(deps.as_ref(), receiver.as_ref())?,
+        !is_blacklisted(deps.as_ref(), &receiver.as_ref())?,
         ContractError::AddressBlacklisted
     );
 
@@ -147,7 +147,7 @@ pub(crate) fn claim(
         deps.as_ref(),
         &campaign,
         &env.block.time,
-        &receiver,
+        &receiver.as_ref(),
         total_user_allocation,
     )?;
 
@@ -265,7 +265,8 @@ pub(crate) fn claim(
     CLAIMS.save(deps.storage, receiver.to_string(), &updated_claims)?;
 
     ensure!(
-        total_user_allocation >= get_total_claims_amount_for_address(deps.as_ref(), &receiver)?,
+        total_user_allocation
+            >= get_total_claims_amount_for_address(deps.as_ref(), &receiver.as_ref())?,
         ContractError::ExceededMaxClaimAmount
     );
 
@@ -311,20 +312,25 @@ pub fn add_allocations(
         );
     }
 
-    for (address, amount) in &allocations {
-        let allocation = ALLOCATIONS.may_load(deps.storage, address.as_str())?;
+    let allocations_len = allocations.len().to_string();
+
+    for (address_raw, amount) in allocations.into_iter() {
+        let validated_receiver_string = validate_raw_address(deps.as_ref(), &address_raw)?;
+
+        let allocation: Option<Uint128> =
+            ALLOCATIONS.may_load(deps.storage, validated_receiver_string.as_str())?;
         ensure!(
             allocation.is_none(),
             ContractError::AllocationAlreadyExists {
-                address: address.clone(),
+                address: validated_receiver_string.clone(),
             }
         );
-        ALLOCATIONS.save(deps.storage, address.as_str(), amount)?;
+        ALLOCATIONS.save(deps.storage, validated_receiver_string.as_str(), &amount)?;
     }
 
     Ok(Response::default()
         .add_attribute("action", "add_allocations")
-        .add_attribute("count", allocations.len().to_string()))
+        .add_attribute("count", allocations_len))
 }
 
 /// Replaces an address in the allocation list. This can only be done before the campaign has started.
@@ -340,43 +346,53 @@ pub fn add_allocations(
 pub fn replace_address(
     deps: DepsMut,
     info: MessageInfo,
-    old_address: String,
-    new_address: String,
+    old_address_raw: String,
+    new_address_raw: String,
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    // if the old address has claims, we need to move them to the new address
-    let claims = get_claims_for_address(deps.as_ref(), old_address.clone())?;
+    let old_address_canonical = old_address_raw.to_lowercase();
+    let new_address_validated = deps.api.addr_validate(&new_address_raw)?;
+
+    let old_allocation = ALLOCATIONS
+        .may_load(deps.storage, old_address_canonical.as_str())?
+        .ok_or(ContractError::NoAllocationFound {
+            address: old_address_raw.clone(),
+        })?;
+
+    // Ensure the new address (now a validated CosmWasm Addr) doesn't already have an allocation
+    ensure!(
+        ALLOCATIONS
+            .may_load(deps.storage, new_address_validated.as_str())?
+            .is_none(),
+        ContractError::AllocationAlreadyExists {
+            address: new_address_raw.clone()
+        }
+    );
+    ALLOCATIONS.remove(deps.storage, old_address_canonical.as_str());
+    ALLOCATIONS.save(
+        deps.storage,
+        new_address_validated.as_str(),
+        &old_allocation,
+    )?;
+
+    // Update claims and blacklist if the address has claimed rewards or is blacklisted
+    let claims = get_claims_for_address(deps.as_ref(), old_address_canonical.clone())?;
     if !claims.is_empty() {
-        CLAIMS.save(deps.storage, new_address.clone(), &claims)?;
-        CLAIMS.remove(deps.storage, old_address.clone());
+        CLAIMS.remove(deps.storage, old_address_canonical.clone());
+        CLAIMS.save(deps.storage, new_address_validated.to_string(), &claims)?;
     }
 
-    // Get old allocation
-    let old_allocation = get_allocation(deps.as_ref(), &old_address)?;
-    ensure!(
-        old_allocation.is_some(),
-        ContractError::NoAllocationFound {
-            address: old_address.clone(),
-        }
-    );
+    if is_blacklisted(deps.as_ref(), old_address_canonical.as_str())? {
+        BLACKLIST.remove(deps.storage, old_address_canonical.as_str());
+        BLACKLIST.save(deps.storage, new_address_validated.as_str(), &true)?;
+    }
 
-    // Ensure new address has no allocation
-    ensure!(
-        get_allocation(deps.as_ref(), &new_address)?.is_none(),
-        ContractError::AllocationAlreadyExists {
-            address: new_address.clone()
-        }
-    );
-
-    // Replace old allocation with new allocation
-    ALLOCATIONS.save(deps.storage, &new_address, &old_allocation.unwrap())?;
-    ALLOCATIONS.remove(deps.storage, &old_address);
-
-    Ok(Response::default()
-        .add_attribute("action", "replace_address")
-        .add_attribute("old_address", old_address)
-        .add_attribute("new_address", new_address))
+    Ok(Response::default().add_attributes(vec![
+        ("action", "replace_address".to_string()),
+        ("old_address", old_address_raw),
+        ("new_address", new_address_raw),
+    ]))
 }
 
 /// Removes an address from the allocation list. This can only be done before the campaign has started.
@@ -436,14 +452,16 @@ pub fn blacklist_address(
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
+    let address = validate_address_placeholder(&address)?;
+
     if blacklist {
-        BLACKLIST.save(deps.storage, &address, &true)?;
+        BLACKLIST.save(deps.storage, address.as_str(), &true)?;
     } else {
-        BLACKLIST.remove(deps.storage, &address);
+        BLACKLIST.remove(deps.storage, address.as_str());
     }
 
     Ok(Response::default()
-        .add_attribute("action", "blacklist_address")
+        .add_attribute("action", "blacklist_address".to_string())
         .add_attribute("address", address)
         .add_attribute("blacklisted", blacklist.to_string()))
 }
