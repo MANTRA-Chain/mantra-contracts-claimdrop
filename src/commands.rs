@@ -131,7 +131,7 @@ pub(crate) fn claim(
         .unwrap_or_else(|| info.sender.clone());
 
     ensure!(
-        !is_blacklisted(deps.as_ref(), &receiver.as_ref())?,
+        !is_blacklisted(deps.as_ref(), receiver.as_ref())?,
         ContractError::AddressBlacklisted
     );
 
@@ -147,7 +147,7 @@ pub(crate) fn claim(
         deps.as_ref(),
         &campaign,
         &env.block.time,
-        &receiver.as_ref(),
+        receiver.as_ref(),
         total_user_allocation,
     )?;
 
@@ -266,7 +266,7 @@ pub(crate) fn claim(
 
     ensure!(
         total_user_allocation
-            >= get_total_claims_amount_for_address(deps.as_ref(), &receiver.as_ref())?,
+            >= get_total_claims_amount_for_address(deps.as_ref(), receiver.as_ref())?,
         ContractError::ExceededMaxClaimAmount
     );
 
