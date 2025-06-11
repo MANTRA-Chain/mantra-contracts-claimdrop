@@ -69,6 +69,9 @@ pub enum ContractError {
 
     #[error("Invalid claim amount: {reason}")]
     InvalidClaimAmount { reason: String },
+
+    #[error("Invalid input: {reason}")]
+    InvalidInput { reason: String },
 }
 
 impl From<semver::Error> for ContractError {

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{ensure, Addr, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
+use cosmwasm_std::{ensure, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
 
 use crate::error::ContractError;
 use crate::msg::{Campaign, CampaignParams, DistributionType};
@@ -27,7 +27,7 @@ pub(crate) fn compute_claimable_amount(
     deps: Deps,
     campaign: &Campaign,
     current_time: &Timestamp,
-    address: &Addr,
+    address: &str,
     total_claimable_amount: Uint128,
 ) -> Result<(Coin, HashMap<DistributionSlot, Claim>), ContractError> {
     let mut claimable_amount = Uint128::zero();
@@ -252,6 +252,51 @@ fn distribution_types_ended(campaign: &Campaign, current_time: &Timestamp) -> bo
     }
 
     distribution_types_ended
+}
+
+/// Validates the raw address string.
+pub fn validate_raw_address(deps: Deps, address_raw: &str) -> Result<String, ContractError> {
+    if let Ok(addr) = deps.api.addr_validate(address_raw) {
+        Ok(addr.to_string())
+    } else {
+        Ok(validate_address_placeholder(address_raw)?)
+    }
+}
+
+// Maximum allowed length for a placeholder address string.
+pub const MAX_PLACEHOLDER_ADDRESS_LEN: usize = 256;
+
+/// Validates the placeholder address string.
+pub fn validate_address_placeholder(placeholder: &str) -> Result<String, ContractError> {
+    let address = placeholder.to_lowercase();
+
+    // Ensure address length is between 1 and MAX_PLACEHOLDER_ADDRESS_LEN
+    ensure!(
+        !address.is_empty() && address.len() <= MAX_PLACEHOLDER_ADDRESS_LEN,
+        ContractError::InvalidInput {
+            reason: format!(
+                "address '{}' must be between 1 and {} characters long (got {})",
+                placeholder,
+                MAX_PLACEHOLDER_ADDRESS_LEN,
+                address.len()
+            ),
+        }
+    );
+
+    // only alphanumeric characters and dots allowed, i.e. for 0x addresses or ENS domains
+    if !address
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '.')
+    {
+        return Err(ContractError::InvalidInput {
+            reason: format!(
+                "placeholder address '{}' contains invalid characters",
+                placeholder
+            ),
+        });
+    }
+
+    Ok(address)
 }
 
 /// Aggregates the new claims with the existing claims

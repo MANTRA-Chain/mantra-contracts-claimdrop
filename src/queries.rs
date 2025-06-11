@@ -48,14 +48,16 @@ pub(crate) fn query_rewards(
     let mut claimed = vec![];
     let mut pending = vec![];
 
-    let receiver = deps.api.addr_validate(&receiver)?;
+    let validated_receiver_string = helpers::validate_raw_address(deps, &receiver)?;
 
-    let total_claimable_amount =
-        get_allocation(deps, receiver.as_ref())?.ok_or(ContractError::NoAllocationFound {
+    let total_claimable_amount = get_allocation(deps, validated_receiver_string.as_str())?.ok_or(
+        ContractError::NoAllocationFound {
             address: receiver.to_string(),
-        })?;
+        },
+    )?;
 
-    let total_claimed = get_total_claims_amount_for_address(deps, &receiver)?;
+    let total_claimed: Uint128 =
+        get_total_claims_amount_for_address(deps, validated_receiver_string.as_str())?;
     if total_claimed > Uint128::zero() {
         claimed.push(coin(total_claimed.u128(), &campaign.reward_denom));
     }
@@ -73,7 +75,7 @@ pub(crate) fn query_rewards(
         deps,
         &campaign,
         &env.block.time,
-        &receiver,
+        &validated_receiver_string,
         total_claimable_amount,
     )?;
 
