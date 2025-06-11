@@ -427,6 +427,8 @@ pub fn remove_address(
         );
     }
 
+    let address = validate_address_placeholder(&address)?;
+
     ALLOCATIONS.remove(deps.storage, address.as_str());
 
     Ok(Response::default()

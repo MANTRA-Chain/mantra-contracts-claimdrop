@@ -3943,12 +3943,14 @@ fn test_remove_address() {
     let bob = &suite.senders[1].clone();
     let carol = &suite.senders[2].clone();
     let dan = &suite.senders[3].clone();
+    let placeholder = &Addr::unchecked("vitalik.eth");
     let current_time = &suite.get_time();
 
     // Upload initial allocation for Bob
     let allocations = &vec![
         (bob.to_string(), Uint128::new(100_000)),
         (carol.to_string(), Uint128::new(100_000)),
+        (placeholder.to_string(), Uint128::new(500_000)),
     ];
 
     suite
@@ -4043,6 +4045,23 @@ fn test_remove_address() {
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
             assert_eq!(allocation.allocations[0].1, Uint128::new(50_000));
+        });
+
+    suite
+        .query_allocations(Some(placeholder), None, None, |result| {
+            let allocation = result.unwrap();
+            assert_eq!(allocation.allocations[0].1, Uint128::new(500_000));
+        })
+        .remove_address(
+            alice,
+            placeholder,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .query_allocations(Some(placeholder), None, None, |result| {
+            let allocation = result.unwrap();
+            assert!(allocation.allocations.is_empty());
         });
 
     // start the campaign
