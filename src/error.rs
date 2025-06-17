@@ -72,6 +72,9 @@ pub enum ContractError {
 
     #[error("Invalid input: {reason}")]
     InvalidInput { reason: String },
+
+    #[error("Batch size limit exceeded: {actual}, maximum allowed: {max}")]
+    BatchSizeLimitExceeded { actual: usize, max: usize },
 }
 
 impl From<semver::Error> for ContractError {

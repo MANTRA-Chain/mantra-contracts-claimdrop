@@ -128,6 +128,7 @@ pub(crate) fn query_claimed(
     }
 
     if let Some(address) = address {
+        // For an address to have claimed, it must have been a valid cosmos address
         let address = deps.api.addr_validate(&address)?.to_string();
         let claims = CLAIMS.may_load(deps.storage, address.clone())?;
 
@@ -173,9 +174,6 @@ pub(crate) fn query_claimed(
     Ok(ClaimedResponse { claimed })
 }
 
-const MAX_ALLOCATIONS: u16 = 5_000;
-const DEFAULT_ALLOCATIONS_LIMIT: u16 = 100;
-
 /// Returns the allocation for an address.
 ///
 /// # Arguments
@@ -200,9 +198,7 @@ pub fn query_allocation(
             vec![]
         }
     } else {
-        let limit = limit
-            .unwrap_or(DEFAULT_ALLOCATIONS_LIMIT)
-            .min(MAX_ALLOCATIONS) as usize;
+        let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
         let start = cw_utils::calc_range_start_string(start_after).map(Bound::ExclusiveRaw);
 
         ALLOCATIONS

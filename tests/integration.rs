@@ -1,6 +1,6 @@
-use std::result;
 use std::str::FromStr;
 
+use claimdrop_contract::commands::MAX_ALLOCATION_BATCH_SIZE;
 use claimdrop_contract::helpers::MAX_PLACEHOLDER_ADDRESS_LEN;
 use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Uint128};
 use cw_multi_test::AppResponse;
@@ -3504,7 +3504,6 @@ fn cant_add_allocations_with_invalid_placeholders() {
         coin(1_000_000_000, "uusdc"),
     ]);
     let alice = &suite.senders[0].clone();
-    let bob = &suite.senders[1].clone();
 
     let aave = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8";
     let valid_mantra_address = "mantra1w8e2wyzhrg3y5ghe9yg0xn0u7548e627zs7xahfvn5l63ry2x8zsqru7xd";
@@ -3600,6 +3599,54 @@ fn cant_add_allocations_with_invalid_placeholders() {
                     panic!("Wrong error type, should return ContractError::InvalidInput")
                 }
             }
+        },
+    );
+}
+
+#[test]
+fn test_allocation_batch_size_limit() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+
+    suite.instantiate_claimdrop_contract(None);
+
+    // Create a batch that exceeds the limit
+    let mut large_batch = Vec::new();
+    for i in 0..=MAX_ALLOCATION_BATCH_SIZE {
+        large_batch.push((format!("address{}", i), Uint128::new(100)));
+    }
+
+    suite.add_allocations(
+        alice,
+        &large_batch,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::BatchSizeLimitExceeded { actual, max } => {
+                    assert_eq!(actual, MAX_ALLOCATION_BATCH_SIZE + 1);
+                    assert_eq!(max, MAX_ALLOCATION_BATCH_SIZE);
+                }
+                _ => {
+                    panic!("Wrong error type, should return ContractError::BatchSizeLimitExceeded")
+                }
+            }
+        },
+    );
+
+    // Test that exactly 3000 allocations work fine
+    let mut max_batch = Vec::new();
+    for i in 0..MAX_ALLOCATION_BATCH_SIZE {
+        max_batch.push((format!("addr{}", i), Uint128::new(100)));
+    }
+
+    suite.add_allocations(
+        alice,
+        &max_batch,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
         },
     );
 }

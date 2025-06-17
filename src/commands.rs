@@ -3,12 +3,15 @@ use std::collections::HashMap;
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::error::ContractError;
-use crate::helpers::{self, validate_address_placeholder, validate_raw_address};
+use crate::helpers::{self, validate_raw_address};
 use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 use crate::state::{
     get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
     Claim, DistributionSlot, ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
 };
+
+/// Maximum number of allocations that can be added in a single batch
+pub const MAX_ALLOCATION_BATCH_SIZE: usize = 3000;
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -300,6 +303,15 @@ pub fn add_allocations(
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
+    // Check batch size limit
+    ensure!(
+        allocations.len() <= MAX_ALLOCATION_BATCH_SIZE,
+        ContractError::BatchSizeLimitExceeded {
+            actual: allocations.len(),
+            max: MAX_ALLOCATION_BATCH_SIZE,
+        }
+    );
+
     // Check if campaign has started
     let campaign = CAMPAIGN.may_load(deps.storage)?;
 
@@ -351,7 +363,8 @@ pub fn replace_address(
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    let old_address_canonical = old_address_raw.to_lowercase();
+    let old_address_canonical = validate_raw_address(deps.as_ref(), &old_address_raw)?;
+    // New address should be a valid cosmos address
     let new_address_validated = deps.api.addr_validate(&new_address_raw)?;
 
     let old_allocation = ALLOCATIONS
@@ -360,7 +373,7 @@ pub fn replace_address(
             address: old_address_raw.clone(),
         })?;
 
-    // Ensure the new address (now a validated CosmWasm Addr) doesn't already have an allocation
+    // Ensure the new address doesn't have an allocation already
     ensure!(
         ALLOCATIONS
             .may_load(deps.storage, new_address_validated.as_str())?
@@ -427,7 +440,7 @@ pub fn remove_address(
         );
     }
 
-    let address = validate_address_placeholder(&address)?;
+    let address = validate_raw_address(deps.as_ref(), &address)?;
 
     ALLOCATIONS.remove(deps.storage, address.as_str());
 
@@ -454,7 +467,7 @@ pub fn blacklist_address(
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    let address = validate_address_placeholder(&address)?;
+    let address = validate_raw_address(deps.as_ref(), &address)?;
 
     if blacklist {
         BLACKLIST.save(deps.storage, address.as_str(), &true)?;
