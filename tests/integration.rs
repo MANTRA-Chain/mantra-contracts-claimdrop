@@ -3605,6 +3605,54 @@ fn cant_add_allocations_with_invalid_placeholders() {
 }
 
 #[test]
+fn test_allocation_batch_size_limit() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+    let alice = &suite.senders[0].clone();
+
+    suite.instantiate_claimdrop_contract(None);
+
+    // Create a batch that exceeds the limit
+    let mut large_batch = Vec::new();
+    for i in 0..3001 {
+        large_batch.push((format!("address{}", i), Uint128::new(100)));
+    }
+
+    suite.add_allocations(
+        alice,
+        &large_batch,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::BatchSizeLimitExceeded { actual, max } => {
+                    assert_eq!(actual, 3001);
+                    assert_eq!(max, 3000);
+                }
+                _ => {
+                    panic!("Wrong error type, should return ContractError::BatchSizeLimitExceeded")
+                }
+            }
+        },
+    );
+
+    // Test that exactly 3000 allocations work fine
+    let mut max_batch = Vec::new();
+    for i in 0..3000 {
+        max_batch.push((format!("addr{}", i), Uint128::new(100)));
+    }
+
+    suite.add_allocations(
+        alice,
+        &max_batch,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+}
+
+#[test]
 fn can_query_placeholder_allocation() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000, "uom"),

@@ -10,6 +10,9 @@ use crate::state::{
     Claim, DistributionSlot, ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
 };
 
+/// Maximum number of allocations that can be added in a single batch
+const MAX_ALLOCATION_BATCH_SIZE: usize = 3000;
+
 /// Manages a campaign
 pub(crate) fn manage_campaign(
     deps: DepsMut,
@@ -299,6 +302,15 @@ pub fn add_allocations(
     allocations: Vec<(String, Uint128)>,
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    // Check batch size limit
+    ensure!(
+        allocations.len() <= MAX_ALLOCATION_BATCH_SIZE,
+        ContractError::BatchSizeLimitExceeded {
+            actual: allocations.len(),
+            max: MAX_ALLOCATION_BATCH_SIZE,
+        }
+    );
 
     // Check if campaign has started
     let campaign = CAMPAIGN.may_load(deps.storage)?;
