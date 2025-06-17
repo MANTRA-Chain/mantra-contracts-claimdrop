@@ -11,7 +11,7 @@ use crate::state::{
 };
 
 /// Maximum number of allocations that can be added in a single batch
-const MAX_ALLOCATION_BATCH_SIZE: usize = 3000;
+pub const MAX_ALLOCATION_BATCH_SIZE: usize = 3000;
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(

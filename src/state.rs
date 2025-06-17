@@ -4,6 +4,7 @@ use cosmwasm_std::{Deps, Uint128};
 use cw_storage_plus::{Item, Map};
 
 use crate::error::ContractError;
+use crate::helpers;
 use crate::msg::Campaign;
 
 /// The campaign item that stores the current active campaign
@@ -39,7 +40,7 @@ pub fn get_claims_for_address(
     deps: Deps,
     address: String,
 ) -> Result<HashMap<DistributionSlot, Claim>, ContractError> {
-    let claimed = CLAIMS.may_load(deps.storage, address.to_lowercase())?;
+    let claimed = CLAIMS.may_load(deps.storage, helpers::validate_raw_address(deps, &address)?)?;
     Ok(claimed.unwrap_or_default())
 }
 
@@ -73,7 +74,10 @@ pub fn get_total_claims_amount_for_address(
 /// # Returns
 /// * `Result<Option<Uint128>, ContractError>` - The allocation amount if it exists
 pub fn get_allocation(deps: Deps, address: &str) -> Result<Option<Uint128>, ContractError> {
-    Ok(ALLOCATIONS.may_load(deps.storage, address.to_lowercase().as_str())?)
+    Ok(ALLOCATIONS.may_load(
+        deps.storage,
+        helpers::validate_raw_address(deps, address)?.as_str(),
+    )?)
 }
 
 /// Returns whether an address is blacklisted
@@ -86,6 +90,9 @@ pub fn get_allocation(deps: Deps, address: &str) -> Result<Option<Uint128>, Cont
 /// * `Result<bool, ContractError>` - Whether the address is blacklisted
 pub fn is_blacklisted(deps: Deps, address: &str) -> Result<bool, ContractError> {
     Ok(BLACKLIST
-        .may_load(deps.storage, address.to_lowercase().as_str())?
+        .may_load(
+            deps.storage,
+            helpers::validate_raw_address(deps, address)?.as_str(),
+        )?
         .unwrap_or(false))
 }
