@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::error::ContractError;
-use crate::helpers::{self, validate_address_placeholder, validate_raw_address};
+use crate::helpers::{self, validate_raw_address};
 use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 use crate::state::{
     get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
@@ -351,7 +351,8 @@ pub fn replace_address(
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    let old_address_canonical = old_address_raw.to_lowercase();
+    let old_address_canonical = validate_raw_address(deps.as_ref(), &old_address_raw)?;
+    // New address should be a valid cosmos address
     let new_address_validated = deps.api.addr_validate(&new_address_raw)?;
 
     let old_allocation = ALLOCATIONS
@@ -360,7 +361,7 @@ pub fn replace_address(
             address: old_address_raw.clone(),
         })?;
 
-    // Ensure the new address (now a validated CosmWasm Addr) doesn't already have an allocation
+    // Ensure the new address doesn't have an allocation already
     ensure!(
         ALLOCATIONS
             .may_load(deps.storage, new_address_validated.as_str())?
@@ -427,7 +428,7 @@ pub fn remove_address(
         );
     }
 
-    let address = validate_address_placeholder(&address)?;
+    let address = validate_raw_address(deps.as_ref(), &address)?;
 
     ALLOCATIONS.remove(deps.storage, address.as_str());
 
@@ -454,7 +455,7 @@ pub fn blacklist_address(
 ) -> Result<Response, ContractError> {
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    let address = validate_address_placeholder(&address)?;
+    let address = validate_raw_address(deps.as_ref(), &address)?;
 
     if blacklist {
         BLACKLIST.save(deps.storage, address.as_str(), &true)?;
