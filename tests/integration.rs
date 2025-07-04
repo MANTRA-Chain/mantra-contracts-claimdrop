@@ -3472,7 +3472,7 @@ fn test_add_allocations() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (alice.to_string(), Uint128::new(100_000))
+                (alice.to_string(), coin(100_000, "uom"))
             );
         })
         .query_allocations(Some(bob), None, None, |result| {
@@ -3480,7 +3480,7 @@ fn test_add_allocations() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (bob.to_string(), Uint128::new(200_000))
+                (bob.to_string(), coin(200_000, "uom"))
             );
         })
         .query_allocations(Some(carol), None, None, |result| {
@@ -3488,7 +3488,7 @@ fn test_add_allocations() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (carol.to_string(), Uint128::new(300_000))
+                (carol.to_string(), coin(300_000, "uom"))
             );
         })
         .add_allocations(
@@ -3519,8 +3519,8 @@ fn test_add_allocations() {
             assert_eq!(
                 allocations_vec,
                 vec![
-                    (alice.to_string(), Uint128::new(100_000)),
-                    (carol.to_string(), Uint128::new(300_000))
+                    (alice.to_string(), coin(100_000, "uom")),
+                    (carol.to_string(), coin(300_000, "uom"))
                 ]
             );
         })
@@ -3531,7 +3531,7 @@ fn test_add_allocations() {
             allocations_vec.sort_by(|a, b| a.0.cmp(&b.0));
             assert_eq!(
                 allocations_vec,
-                vec![(bob.to_string(), Uint128::new(200_000))]
+                vec![(bob.to_string(), coin(200_000, "uom"))]
             );
         });
 }
@@ -3772,10 +3772,10 @@ fn can_query_placeholder_allocation() {
             let allocations = response.allocations;
             assert_eq!(allocations.len(), 2);
             assert_eq!(allocations[0].0, aave);
-            assert_eq!(allocations[0].1, Uint128::new(100_000));
+            assert_eq!(allocations[0].1, coin(100_000, ""));
 
             assert_eq!(allocations[1].0, bob.to_string());
-            assert_eq!(allocations[1].1, Uint128::new(500_000));
+            assert_eq!(allocations[1].1, coin(500_000, ""));
         });
 }
 
@@ -3943,7 +3943,7 @@ fn test_replace_address() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (carol.to_string(), Uint128::new(100_000))
+                (carol.to_string(), coin(100_000, "uom"))
             );
         })
         .query_claimed(Some(carol), None, None, |result| {
@@ -4028,7 +4028,7 @@ fn test_replace_address() {
 
     suite.query_allocations(Some(carol), None, None, |result| {
         let allocation = result.unwrap();
-        assert_eq!(allocation.allocations[0].1, Uint128::new(100_000));
+        assert_eq!(allocation.allocations[0].1, coin(100_000, "uom"));
     });
     suite.query_claimed(Some(carol), None, None, |result| {
         let claim = result.unwrap();
@@ -4156,7 +4156,7 @@ fn test_remove_address() {
     suite
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocations[0].1, Uint128::new(100_000));
+            assert_eq!(allocation.allocations[0].1, coin(100_000, "uom"));
         })
         .remove_address(
             alice,
@@ -4182,13 +4182,13 @@ fn test_remove_address() {
         )
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocations[0].1, Uint128::new(50_000));
+            assert_eq!(allocation.allocations[0].1, coin(50_000, "uom"));
         });
 
     suite
         .query_allocations(Some(placeholder), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocations[0].1, Uint128::new(500_000));
+            assert_eq!(allocation.allocations[0].1, coin(500_000, "uom"));
         })
         .remove_address(
             alice,
@@ -4293,7 +4293,7 @@ fn test_replace_placeholder_address() {
     suite
         .query_allocations(Some(vitalik_addr), None, None, |result| {
             let allocation = result.unwrap();
-            assert!(allocation.allocations[0].1 == Uint128::new(100_000));
+            assert!(allocation.allocations[0].1 == coin(100_000, "uom"));
         })
         // can't replace a placeholder with another placeholder
         .replace_address(
@@ -4339,7 +4339,7 @@ fn test_replace_placeholder_address() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (carol.to_string(), Uint128::new(100_000))
+                (carol.to_string(), coin(100_000, "uom"))
             );
         });
 }
@@ -4398,11 +4398,11 @@ fn test_cant_replace_address_with_existing_allocation() {
     suite
         .query_allocations(Some(bob), None, None, |result| {
             let allocation = result.unwrap();
-            assert!(allocation.allocations[0].1 == Uint128::new(100_000));
+            assert!(allocation.allocations[0].1 == coin(100_000, "uom"));
         })
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert!(allocation.allocations[0].1 == Uint128::new(50_000));
+            assert!(allocation.allocations[0].1 == coin(50_000, "uom"));
         })
         .replace_address(
             alice,

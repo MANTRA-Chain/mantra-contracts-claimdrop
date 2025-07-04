@@ -190,10 +190,15 @@ pub fn query_allocation(
     start_after: Option<String>,
     limit: Option<u16>,
 ) -> Result<AllocationsResponse, ContractError> {
+    let campaign = CAMPAIGN.may_load(deps.storage)?;
+    let denom = campaign
+        .map(|c| c.reward_denom)
+        .unwrap_or_else(|| "".to_string());
+
     let allocations = if let Some(address) = address {
         let allocation = get_allocation(deps, &address)?;
         if let Some(allocation) = allocation {
-            vec![(address, allocation)]
+            vec![(address, coin(allocation.u128(), denom))]
         } else {
             vec![]
         }
@@ -206,9 +211,9 @@ pub fn query_allocation(
             .take(limit)
             .map(|item| {
                 let (address, allocation) = item?;
-                Ok((address, allocation))
+                Ok((address, coin(allocation.u128(), denom.clone())))
             })
-            .collect::<StdResult<Vec<(String, Uint128)>>>()?
+            .collect::<StdResult<Vec<(String, Coin)>>>()?
     };
 
     Ok(AllocationsResponse { allocations })
