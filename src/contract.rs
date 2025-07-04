@@ -2,9 +2,9 @@ use cosmwasm_std::{entry_point, to_json_binary};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
 
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::{commands, queries, validate_contract};
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "mantra_claimdrop-contract";

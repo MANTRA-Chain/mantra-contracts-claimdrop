@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use cosmwasm_std::{Deps, Uint128};
 use cw_storage_plus::{Item, Map};
 
-use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::Campaign;
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::Campaign;
 
 /// The campaign item that stores the current active campaign
 pub const CAMPAIGN: Item<Campaign> = Item::new("campaign");

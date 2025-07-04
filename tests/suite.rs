@@ -1,11 +1,11 @@
-use claimdrop_contract::msg::{
-    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
-    ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
-};
 use cosmwasm_std::{coin, Addr, Coin, Empty, StdResult, Timestamp, Uint128};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, MockApiBech32,
     WasmKeeper,
+};
+use mantra_claimdrop_std::msg::{
+    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
+    ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;

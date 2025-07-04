@@ -7,8 +7,8 @@ use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
 
 use crate::suite::TestingSuite;
-use claimdrop_contract::error::ContractError;
-use claimdrop_contract::msg::{
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::{
     CampaignAction, CampaignParams, ClaimedResponse, DistributionType, RewardsResponse,
 };
 mod suite;
@@ -37,6 +37,7 @@ fn create_multiple_campaigns_fails() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -58,6 +59,7 @@ fn create_multiple_campaigns_fails() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -82,6 +84,7 @@ fn create_multiple_campaigns_fails() {
         .query_campaign(|result| {
             let campaign = result.unwrap();
             assert_eq!(campaign.name, "Test Airdrop I".to_string());
+            assert_eq!(campaign.ty, "airdrop".to_string());
         })
         .manage_campaign(
             alice,
@@ -97,6 +100,7 @@ fn create_multiple_campaigns_fails() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -139,6 +143,7 @@ fn cant_create_campaign_if_not_owner() {
                 params: Box::new(CampaignParams {
                     name: "".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -182,6 +187,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -207,10 +213,9 @@ fn validate_campaign_params() {
         alice,
         CampaignAction::CreateCampaign {
             params: Box::new(CampaignParams {
-                name: "%WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5DK%WEmpcQxf5ONYNy1Gj2m#\
-                    w7oauP6E5OUoZM1n7AnTRDX9sSd5D%WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5D\
-                    %WEmpcQxf5ONYNy1Gj2m#w7oauP6E5OUoZM1n7AnTRDX9sSd5D".to_string(),
+                name: "a".repeat(201),
                 description: "This is an airdrop, 土金, ك".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
@@ -239,6 +244,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -266,26 +272,8 @@ fn validate_campaign_params() {
             CampaignAction::CreateCampaign {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
-                    description: "bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP\
-                bxOmDxCEaGwURwYOretJXoSBZxKtqvRzQYFUzBvzrYHqVGywHYeWvApTYETxADYdHDeBDTbKXeAzCVPhvxzTBxNtFhUzPYCgrEBP1".to_string(),
+                    description: "a".repeat(2001),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -308,6 +296,66 @@ fn validate_campaign_params() {
                 }
             },
         )
+        // campaign type - empty type
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                    }],
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { param, reason } => {
+                        assert_eq!(param, "type");
+                        assert_eq!(reason, "cannot be empty");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
+                }
+            },
+        )
+        // campaign type - too long type
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "a".repeat(201),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                    }],
+                    start_time: current_time.seconds() + 1,
+                    end_time: current_time.seconds() + 172_800,
+                }),
+            },
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidCampaignParam { param, reason } => {
+                        assert_eq!(param, "type");
+                        assert_eq!(reason, "cannot be longer than 200 characters");
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::InvalidCampaignParam"),
+                }
+            },
+        )
         // campaign times
         .manage_campaign(
             alice,
@@ -315,6 +363,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -343,6 +392,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -372,6 +422,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![],
@@ -396,6 +447,7 @@ fn validate_campaign_params() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
@@ -434,6 +486,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -462,6 +515,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -490,6 +544,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -515,6 +570,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -540,6 +596,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -566,6 +623,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -599,6 +657,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -630,6 +689,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -662,6 +722,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uosmo".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -690,6 +751,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(0, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -718,6 +780,7 @@ fn validate_campaign_params() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -756,6 +819,7 @@ fn cannot_start_distribution_in_past() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -841,6 +905,7 @@ fn create_campaign_and_claim_single_distribution_type() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
@@ -968,6 +1033,7 @@ fn cant_claim_unfunded_campaign() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop, 土金, ك".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
@@ -1063,6 +1129,7 @@ fn claim_ended_campaign() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -1227,6 +1294,7 @@ fn query_claimed() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -1477,6 +1545,7 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -1696,6 +1765,7 @@ fn claim_campaign_with_cliff() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -1860,6 +1930,7 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -2040,6 +2111,7 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -2257,6 +2329,7 @@ fn topup_campaigns_with_and_without_cliff() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -2377,6 +2450,7 @@ fn topup_campaigns_with_and_without_cliff() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop without cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"), // Total intended for this campaign
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -2438,6 +2512,7 @@ fn query_rewards() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -2524,6 +2599,7 @@ fn query_rewards_single_user() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"), // Contract has 100k, user allocated 100
                     distribution_type: vec![DistributionType::LumpSum {
@@ -2594,6 +2670,7 @@ fn query_rewards_fails_when_campaign_has_not_started() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -2666,6 +2743,7 @@ fn close_campaigns() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
@@ -2755,6 +2833,7 @@ fn close_campaigns() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(), // Name can be same as closed one
                 description: "This is an airdrop with cliff".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
@@ -2865,6 +2944,7 @@ fn can_query_claims_after_campaign_is_closed() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"), // Contract funded with 100k
                     distribution_type: vec![
@@ -3014,6 +3094,7 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -3107,6 +3188,7 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop II".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![ /* ... */ ],
@@ -3158,6 +3240,7 @@ fn can_claim_dust_without_new_claims() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(23, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -3245,6 +3328,7 @@ fn cant_end_distribution_type_after_campaign() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -3275,6 +3359,7 @@ fn cant_end_distribution_type_after_campaign() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop II".to_string(), // Changed name
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -3302,6 +3387,7 @@ fn cant_end_distribution_type_after_campaign() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop III".to_string(), // Changed name
                 description: "This is an airdrop, 土金, ك".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LinearVesting {
@@ -3355,6 +3441,7 @@ fn test_add_allocations() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(600_000, "uom"), // Sum of allocations
                 distribution_type: vec![
@@ -3385,7 +3472,7 @@ fn test_add_allocations() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (alice.to_string(), Uint128::new(100_000))
+                (alice.to_string(), coin(100_000, "uom"))
             );
         })
         .query_allocations(Some(bob), None, None, |result| {
@@ -3393,7 +3480,7 @@ fn test_add_allocations() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (bob.to_string(), Uint128::new(200_000))
+                (bob.to_string(), coin(200_000, "uom"))
             );
         })
         .query_allocations(Some(carol), None, None, |result| {
@@ -3401,7 +3488,7 @@ fn test_add_allocations() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (carol.to_string(), Uint128::new(300_000))
+                (carol.to_string(), coin(300_000, "uom"))
             );
         })
         .add_allocations(
@@ -3432,8 +3519,8 @@ fn test_add_allocations() {
             assert_eq!(
                 allocations_vec,
                 vec![
-                    (alice.to_string(), Uint128::new(100_000)),
-                    (carol.to_string(), Uint128::new(300_000))
+                    (alice.to_string(), coin(100_000, "uom")),
+                    (carol.to_string(), coin(300_000, "uom"))
                 ]
             );
         })
@@ -3444,7 +3531,7 @@ fn test_add_allocations() {
             allocations_vec.sort_by(|a, b| a.0.cmp(&b.0));
             assert_eq!(
                 allocations_vec,
-                vec![(bob.to_string(), Uint128::new(200_000))]
+                vec![(bob.to_string(), coin(200_000, "uom"))]
             );
         });
 }
@@ -3685,10 +3772,10 @@ fn can_query_placeholder_allocation() {
             let allocations = response.allocations;
             assert_eq!(allocations.len(), 2);
             assert_eq!(allocations[0].0, aave);
-            assert_eq!(allocations[0].1, Uint128::new(100_000));
+            assert_eq!(allocations[0].1, coin(100_000, ""));
 
             assert_eq!(allocations[1].0, bob.to_string());
-            assert_eq!(allocations[1].1, Uint128::new(500_000));
+            assert_eq!(allocations[1].1, coin(500_000, ""));
         });
 }
 
@@ -3711,6 +3798,7 @@ fn test_cannot_add_allocations_after_campaign_start() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![DistributionType::LumpSum {
@@ -3792,6 +3880,7 @@ fn test_replace_address() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "Test replace address".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"), // Matches Bob's allocation
                 distribution_type: vec![DistributionType::LumpSum {
@@ -3854,7 +3943,7 @@ fn test_replace_address() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (carol.to_string(), Uint128::new(100_000))
+                (carol.to_string(), coin(100_000, "uom"))
             );
         })
         .query_claimed(Some(carol), None, None, |result| {
@@ -3878,6 +3967,7 @@ fn test_replace_address() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop II".to_string(),
                 description: "Test replace address with claims".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"),
                 distribution_type: vec![
@@ -3938,7 +4028,7 @@ fn test_replace_address() {
 
     suite.query_allocations(Some(carol), None, None, |result| {
         let allocation = result.unwrap();
-        assert_eq!(allocation.allocations[0].1, Uint128::new(100_000));
+        assert_eq!(allocation.allocations[0].1, coin(100_000, "uom"));
     });
     suite.query_claimed(Some(carol), None, None, |result| {
         let claim = result.unwrap();
@@ -4015,6 +4105,7 @@ fn test_remove_address() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "Test replace address".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"), // Matches Bob's allocation
                     distribution_type: vec![DistributionType::LumpSum {
@@ -4065,7 +4156,7 @@ fn test_remove_address() {
     suite
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocations[0].1, Uint128::new(100_000));
+            assert_eq!(allocation.allocations[0].1, coin(100_000, "uom"));
         })
         .remove_address(
             alice,
@@ -4091,13 +4182,13 @@ fn test_remove_address() {
         )
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocations[0].1, Uint128::new(50_000));
+            assert_eq!(allocation.allocations[0].1, coin(50_000, "uom"));
         });
 
     suite
         .query_allocations(Some(placeholder), None, None, |result| {
             let allocation = result.unwrap();
-            assert_eq!(allocation.allocations[0].1, Uint128::new(500_000));
+            assert_eq!(allocation.allocations[0].1, coin(500_000, "uom"));
         })
         .remove_address(
             alice,
@@ -4162,6 +4253,7 @@ fn test_replace_placeholder_address() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "Test replace address".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(100_000, "uom"), // Matches Bob's allocation
                 distribution_type: vec![DistributionType::LumpSum {
@@ -4201,7 +4293,7 @@ fn test_replace_placeholder_address() {
     suite
         .query_allocations(Some(vitalik_addr), None, None, |result| {
             let allocation = result.unwrap();
-            assert!(allocation.allocations[0].1 == Uint128::new(100_000));
+            assert!(allocation.allocations[0].1 == coin(100_000, "uom"));
         })
         // can't replace a placeholder with another placeholder
         .replace_address(
@@ -4247,7 +4339,7 @@ fn test_replace_placeholder_address() {
             assert_eq!(allocation.allocations.len(), 1);
             assert_eq!(
                 allocation.allocations[0],
-                (carol.to_string(), Uint128::new(100_000))
+                (carol.to_string(), coin(100_000, "uom"))
             );
         });
 }
@@ -4284,6 +4376,7 @@ fn test_cant_replace_address_with_existing_allocation() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "Test replace address".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"), // Matches Bob's allocation
                     distribution_type: vec![DistributionType::LumpSum {
@@ -4305,11 +4398,11 @@ fn test_cant_replace_address_with_existing_allocation() {
     suite
         .query_allocations(Some(bob), None, None, |result| {
             let allocation = result.unwrap();
-            assert!(allocation.allocations[0].1 == Uint128::new(100_000));
+            assert!(allocation.allocations[0].1 == coin(100_000, "uom"));
         })
         .query_allocations(Some(carol), None, None, |result| {
             let allocation = result.unwrap();
-            assert!(allocation.allocations[0].1 == Uint128::new(50_000));
+            assert!(allocation.allocations[0].1 == coin(50_000, "uom"));
         })
         .replace_address(
             alice,
@@ -4364,6 +4457,7 @@ fn test_blacklist_address() {
             params: Box::new(CampaignParams {
                 name: "Test Airdrop I".to_string(),
                 description: "This is an airdrop with cliff".to_string(),
+                ty: "airdrop".to_string(),
                 reward_denom: "uom".to_string(),
                 total_reward: coin(600_000, "uom"), // Sum of allocations
                 distribution_type: vec![DistributionType::LumpSum {
@@ -4495,6 +4589,7 @@ fn test_claim_more_than_currently_available_fails() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -4573,6 +4668,7 @@ fn test_partial_claim_lump_sum() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(100_000, "uom"),
                     distribution_type: vec![
@@ -4717,6 +4813,7 @@ fn test_partial_claim_lumpsum_and_linear_vesting() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: reward_denom.to_string(),
                     total_reward: coin(100_000, reward_denom),
                     distribution_type: vec![
@@ -4936,6 +5033,7 @@ fn test_claim_zero_amount_fails() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: reward_denom.to_string(),
                     total_reward: coin(100_000, reward_denom),
                     distribution_type: vec![
@@ -5012,6 +5110,7 @@ fn test_claim_full_amount_when_none_specified_after_partial_claims() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: reward_denom.to_string(),
                     total_reward: coin(100_000, reward_denom),
                     distribution_type: vec![

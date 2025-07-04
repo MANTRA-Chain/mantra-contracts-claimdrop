@@ -1,7 +1,9 @@
 use cosmwasm_std::{coin, coins, Addr, Decimal, Uint128};
 use cw_multi_test::AppResponse;
 
-use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
+use mantra_claimdrop_std::msg::{
+    CampaignAction, CampaignParams, DistributionType, RewardsResponse,
+};
 
 use crate::suite::TestingSuite;
 mod suite;
@@ -43,6 +45,7 @@ fn bug_large_numbers() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with no cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: denom.to_string(),
                     total_reward: coin(amount, denom),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -117,6 +120,7 @@ fn bug_large_numbers_2() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with no cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: denom.to_string(),
                     total_reward: coin(amount, denom),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -211,6 +215,7 @@ fn bug_large_numbers_3() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with no cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: denom.to_string(),
                     total_reward: coin(amount, denom),
                     distribution_type: vec![DistributionType::LumpSum {

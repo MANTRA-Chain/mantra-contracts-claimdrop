@@ -11,7 +11,8 @@
     "name",
     "reward_denom",
     "start_time",
-    "total_reward"
+    "total_reward",
+    "type"
   ],
   "properties": {
     "claimed": {
@@ -69,6 +70,10 @@
           "$ref": "#/definitions/Coin"
         }
       ]
+    },
+    "type": {
+      "description": "Campaign type. Value used by front ends.",
+      "type": "string"
     }
   },
   "additionalProperties": false,

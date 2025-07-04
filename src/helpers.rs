@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use cosmwasm_std::{ensure, Coin, Decimal256, Deps, Timestamp, Uint128, Uint256};
 
-use crate::error::ContractError;
-use crate::msg::{Campaign, CampaignParams, DistributionType};
 use crate::state::{get_claims_for_address, Claim, DistributionSlot};
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::{Campaign, CampaignParams, DistributionType};
 
 /// Validates the provided campaign parameters are valid.
 pub(crate) fn validate_campaign_params(
@@ -12,6 +12,7 @@ pub(crate) fn validate_campaign_params(
     campaign_params: &CampaignParams,
 ) -> Result<(), ContractError> {
     campaign_params.validate_campaign_name_description()?;
+    campaign_params.validate_campaign_type()?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_campaign_distribution()?;
     campaign_params.validate_rewards()?;
