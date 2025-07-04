@@ -12,6 +12,7 @@ pub(crate) fn validate_campaign_params(
     campaign_params: &CampaignParams,
 ) -> Result<(), ContractError> {
     campaign_params.validate_campaign_name_description()?;
+    campaign_params.validate_campaign_type()?;
     campaign_params.validate_campaign_times(current_time)?;
     campaign_params.validate_campaign_distribution()?;
     campaign_params.validate_rewards()?;

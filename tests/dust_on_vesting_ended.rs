@@ -31,6 +31,7 @@ fn can_claim_dust_after_vesting_ends() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(23, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -137,6 +138,7 @@ fn can_claim_dust_after_vesting_ends_2() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(23, "uom"),
                     distribution_type: vec![

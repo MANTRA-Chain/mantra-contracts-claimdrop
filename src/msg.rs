@@ -148,6 +148,9 @@ pub struct Campaign {
     pub name: String,
     /// The campaign description
     pub description: String,
+    /// Campaign type. Value used by front ends.
+    #[serde(rename = "type")]
+    pub ty: String,
     /// The denom to be distributed as reward by the campaign
     pub reward_denom: String,
     /// The total amount of the reward asset that is intended to be allocated to the campaign
@@ -169,9 +172,10 @@ impl Display for Campaign {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Campaign {{ name: {}, description: {}, reward_denom: {}, total_reward: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
+            "Campaign {{ name: {}, description: {}, type: {}, reward_denom: {}, total_reward: {}, claimed: {}, distribution_type: {:?}, start_time: {}, end_time: {}, closed: {:?} }}",
             self.name,
             self.description,
+            self.ty,
             self.reward_denom,
             self.total_reward,
             self.claimed,
@@ -191,6 +195,7 @@ impl Campaign {
         Campaign {
             name: params.name,
             description: params.description,
+            ty: params.ty,
             reward_denom: params.reward_denom,
             total_reward: params.total_reward,
             claimed: Coin {
@@ -222,6 +227,9 @@ pub struct CampaignParams {
     pub name: String,
     /// The campaign description
     pub description: String,
+    /// Campaign type. Value used by front ends.
+    #[serde(rename = "type")]
+    pub ty: String,
     /// The denom to be distributed as reward by the campaign
     pub reward_denom: String,
     /// The total amount of the reward asset that is intended to be allocated to the campaign
@@ -267,6 +275,27 @@ impl CampaignParams {
             ContractError::InvalidCampaignParam {
                 param: "description".to_string(),
                 reason: "cannot be longer than 2000 characters".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    /// Validates the campaign type
+    pub fn validate_campaign_type(&self) -> Result<(), ContractError> {
+        ensure!(
+            !self.ty.is_empty(),
+            ContractError::InvalidCampaignParam {
+                param: "type".to_string(),
+                reason: "cannot be empty".to_string(),
+            }
+        );
+
+        ensure!(
+            self.ty.len() <= 200usize,
+            ContractError::InvalidCampaignParam {
+                param: "type".to_string(),
+                reason: "cannot be longer than 200 characters".to_string(),
             }
         );
 

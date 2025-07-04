@@ -43,6 +43,7 @@ fn bug_large_numbers() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with no cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: denom.to_string(),
                     total_reward: coin(amount, denom),
                     distribution_type: vec![DistributionType::LumpSum {
@@ -117,6 +118,7 @@ fn bug_large_numbers_2() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with no cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: denom.to_string(),
                     total_reward: coin(amount, denom),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -211,6 +213,7 @@ fn bug_large_numbers_3() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop with no cliff".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: denom.to_string(),
                     total_reward: coin(amount, denom),
                     distribution_type: vec![DistributionType::LumpSum {
