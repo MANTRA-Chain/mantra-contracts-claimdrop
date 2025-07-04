@@ -7,8 +7,8 @@ use cw_multi_test::AppResponse;
 use cw_ownable::OwnershipError;
 
 use crate::suite::TestingSuite;
-use claimdrop_contract::error::ContractError;
-use claimdrop_contract::msg::{
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::{
     CampaignAction, CampaignParams, ClaimedResponse, DistributionType, RewardsResponse,
 };
 mod suite;

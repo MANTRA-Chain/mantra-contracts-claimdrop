@@ -1,7 +1,9 @@
 use cosmwasm_std::{coin, coins, Addr, Decimal, Uint128};
 use cw_multi_test::AppResponse;
 
-use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
+use mantra_claimdrop_std::msg::{
+    CampaignAction, CampaignParams, DistributionType, RewardsResponse,
+};
 
 use crate::suite::TestingSuite;
 mod suite;

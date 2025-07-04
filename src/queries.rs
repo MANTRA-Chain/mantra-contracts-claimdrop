@@ -1,14 +1,14 @@
 use cosmwasm_std::{coin, Coin, Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
-use crate::error::ContractError;
 use crate::helpers;
-use crate::msg::{
-    AllocationsResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
-};
 use crate::state::{
     get_allocation, get_total_claims_amount_for_address, is_blacklisted, ALLOCATIONS, CAMPAIGN,
     CLAIMS,
+};
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::{
+    AllocationsResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
 };
 
 /// Returns the active airdrop campaign.

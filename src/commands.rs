@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
-use crate::error::ContractError;
 use crate::helpers::{self, validate_raw_address};
-use crate::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 use crate::state::{
     get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
     Claim, DistributionSlot, ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
 };
+use mantra_claimdrop_std::error::ContractError;
+use mantra_claimdrop_std::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 
 /// Maximum number of allocations that can be added in a single batch
 pub const MAX_ALLOCATION_BATCH_SIZE: usize = 3000;
