@@ -1,7 +1,9 @@
 use crate::suite::TestingSuite;
-use claimdrop_contract::msg::{CampaignAction, CampaignParams, DistributionType, RewardsResponse};
 use cosmwasm_std::{coin, coins, Decimal, Uint128};
 use cw_multi_test::AppResponse;
+use mantra_claimdrop_std::msg::{
+    CampaignAction, CampaignParams, DistributionType, RewardsResponse,
+};
 mod suite;
 
 #[test]
@@ -31,6 +33,7 @@ fn can_claim_dust_after_vesting_ends() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(23, "uom"),
                     distribution_type: vec![DistributionType::LinearVesting {
@@ -137,6 +140,7 @@ fn can_claim_dust_after_vesting_ends_2() {
                 params: Box::new(CampaignParams {
                     name: "Test Airdrop I".to_string(),
                     description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
                     reward_denom: "uom".to_string(),
                     total_reward: coin(23, "uom"),
                     distribution_type: vec![

@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use claimdrop_contract::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use mantra_claimdrop_std::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

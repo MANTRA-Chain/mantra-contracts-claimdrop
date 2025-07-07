@@ -1,8 +1,6 @@
-use claimdrop_contract::{
-    error::ContractError,
-    helpers::{validate_raw_address, MAX_PLACEHOLDER_ADDRESS_LEN},
-};
+use claimdrop_contract::helpers::{validate_raw_address, MAX_PLACEHOLDER_ADDRESS_LEN};
 use cosmwasm_std::testing::mock_dependencies;
+use mantra_claimdrop_std::error::ContractError;
 
 #[test]
 fn valid_bech32_address() {

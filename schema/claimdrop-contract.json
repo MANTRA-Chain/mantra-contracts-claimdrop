@@ -314,7 +314,8 @@
           "name",
           "reward_denom",
           "start_time",
-          "total_reward"
+          "total_reward",
+          "type"
         ],
         "properties": {
           "description": {
@@ -355,6 +356,10 @@
                 "$ref": "#/definitions/Coin"
               }
             ]
+          },
+          "type": {
+            "description": "Campaign type. Value used by front ends.",
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -698,7 +703,7 @@
       ],
       "properties": {
         "allocations": {
-          "description": "A vector with a tuple with (address, amount) that have been allocated.",
+          "description": "A vector with a tuple with (address, coin) that have been allocated.",
           "type": "array",
           "items": {
             "type": "array",
@@ -707,7 +712,7 @@
                 "type": "string"
               },
               {
-                "$ref": "#/definitions/Uint128"
+                "$ref": "#/definitions/Coin"
               }
             ],
             "maxItems": 2,
@@ -717,6 +722,22 @@
       },
       "additionalProperties": false,
       "definitions": {
+        "Coin": {
+          "type": "object",
+          "required": [
+            "amount",
+            "denom"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "denom": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
           "type": "string"
@@ -736,7 +757,8 @@
         "name",
         "reward_denom",
         "start_time",
-        "total_reward"
+        "total_reward",
+        "type"
       ],
       "properties": {
         "claimed": {
@@ -794,6 +816,10 @@
               "$ref": "#/definitions/Coin"
             }
           ]
+        },
+        "type": {
+          "description": "Campaign type. Value used by front ends.",
+          "type": "string"
         }
       },
       "additionalProperties": false,
