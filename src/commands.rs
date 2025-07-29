@@ -133,6 +133,18 @@ pub(crate) fn claim(
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
 
+    // Check if the caller is authorized to claim:
+    // Only the contract owner OR the wallet with the allocation can claim
+    let is_owner = cw_ownable::get_ownership(deps.storage)?
+        .owner
+        .map(|owner| owner == info.sender)
+        .unwrap_or(false);
+
+    ensure!(
+        is_owner || info.sender == receiver,
+        ContractError::Unauthorized
+    );
+
     ensure!(
         !is_blacklisted(deps.as_ref(), receiver.as_ref())?,
         ContractError::AddressBlacklisted
