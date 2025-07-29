@@ -948,10 +948,23 @@ fn create_campaign_and_claim_single_distribution_type() {
         .query_balance("uom", bob, |balance| {
             assert_eq!(balance, Uint128::new(1_000_000_000));
         })
-        // bob claims for alice
+        // bob tries to claim for alice (should fail - unauthorized)
         .claim(
             bob,
             Some(alice.to_string()),
+            None,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        // alice claims for herself
+        .claim(
+            alice,
+            None,
             None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1068,10 +1081,8 @@ fn cant_claim_unfunded_campaign() {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
                 match err {
-                    ContractError::CampaignError { reason } => {
-                        assert_eq!(reason, "no funds available to claim");
-                    }
-                    _ => panic!("Wrong error type, should return ContractError::CampaignError"),
+                    ContractError::Unauthorized => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
                 }
             },
         )
@@ -1156,6 +1167,19 @@ fn claim_ended_campaign() {
         .claim(
             bob,
             Some(alice.to_string()),
+            None,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        // alice claims for herself
+        .claim(
+            alice,
+            None,
             None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1331,8 +1355,21 @@ fn query_claimed() {
 
     suite
         .claim(
-            bob, //bob claims for alice
+            bob, //bob tries to claim for alice (should fail)
             Some(alice.to_string()),
+            None,
+            |result: Result<AppResponse, anyhow::Error>| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        // alice claims for herself
+        .claim(
+            alice,
+            None,
             None,
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2981,7 +3018,7 @@ fn can_query_claims_after_campaign_is_closed() {
     // Lump sum starts immediately.
     suite
         .claim(
-            bob, //bob claims for alice
+            alice, //alice claims for herself
             Some(alice.to_string()),
             None,
             |result: Result<AppResponse, anyhow::Error>| {
@@ -5269,6 +5306,130 @@ fn test_claim_full_amount_when_none_specified_after_partial_claims() {
                     available_to_claim: vec![]
                 }
             );
+        });
+}
+
+#[test]
+fn test_claim_authorization() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000, "uom"),
+        coin(1_000_000_000, "uusdc"),
+    ]);
+
+    let alice = &suite.senders[0].clone();
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+    let current_time = &suite.get_time();
+
+    let allocations = &vec![
+        (alice.to_string(), Uint128::new(10_000)),
+        (bob.to_string(), Uint128::new(10_000)),
+        (carol.to_string(), Uint128::new(20_000)),
+    ];
+
+    suite
+        .instantiate_claimdrop_contract(Some(alice.to_string()))
+        .add_allocations(
+            alice,
+            allocations,
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
+
+    suite.manage_campaign(
+        alice,
+        CampaignAction::CreateCampaign {
+            params: Box::new(CampaignParams {
+                name: "Test Authorization".to_string(),
+                description: "Testing claim authorization".to_string(),
+                ty: "airdrop".to_string(),
+                reward_denom: "uom".to_string(),
+                total_reward: coin(100_000, "uom"),
+                distribution_type: vec![DistributionType::LumpSum {
+                    percentage: Decimal::one(),
+                    start_time: current_time.seconds() + 1,
+                }],
+                start_time: current_time.seconds() + 1,
+                end_time: current_time.seconds() + 172_800,
+            }),
+        },
+        &coins(100_000, "uom"),
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    suite.add_day();
+
+    // Test 1: Bob tries to claim for Alice (should fail - unauthorized)
+    suite.claim(
+        bob,
+        Some(alice.to_string()),
+        None,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::Unauthorized => {}
+                _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+            }
+        },
+    );
+
+    // Test 2: Carol tries to claim for Bob (should fail - unauthorized)
+    suite.claim(
+        carol,
+        Some(bob.to_string()),
+        None,
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::Unauthorized => {}
+                _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+            }
+        },
+    );
+
+    // Test 3: Alice (owner) can claim on behalf of Bob
+    suite.claim(
+        alice,
+        Some(bob.to_string()),
+        None,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Test 4: Alice can claim for herself
+    suite.claim(
+        alice,
+        None,
+        None,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Test 5: Carol can claim for herself
+    suite.claim(
+        carol,
+        None,
+        None,
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Verify balances
+    suite
+        .query_balance("uom", alice, |balance| {
+            assert_eq!(balance, Uint128::new(999_910_000)); // alice claimed her 10k
+        })
+        .query_balance("uom", bob, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_010_000)); // alice claimed 10k for bob
+        })
+        .query_balance("uom", carol, |balance| {
+            assert_eq!(balance, Uint128::new(1_000_020_000)); // carol claimed her 20k
         });
 }
 
