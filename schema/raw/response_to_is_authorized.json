@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AuthorizedResponse",
+  "description": "Response to the IsAuthorized query.",
+  "type": "object",
+  "required": [
+    "is_authorized"
+  ],
+  "properties": {
+    "is_authorized": {
+      "description": "Whether the address is authorized (owner or authorized wallet)",
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::vec;
 
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 

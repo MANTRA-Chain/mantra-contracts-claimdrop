@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AuthorizedWalletsResponse",
+  "description": "Response to the AuthorizedWallets query.",
+  "type": "object",
+  "required": [
+    "wallets"
+  ],
+  "properties": {
+    "wallets": {
+      "description": "List of authorized wallet addresses",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
