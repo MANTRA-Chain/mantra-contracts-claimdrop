@@ -536,9 +536,8 @@ pub fn manage_authorized_wallets(
         }
     );
 
-    // Validate all addresses first (atomic operation - if any fails, all fail)
     for address in addresses.iter() {
-        let validated_address = deps.api.addr_validate(&address)?;
+        let validated_address = deps.api.addr_validate(address)?;
 
         if authorized {
             AUTHORIZED_WALLETS.save(deps.storage, validated_address.as_str(), &())?;

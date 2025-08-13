@@ -5685,3 +5685,221 @@ fn unvalidated_address_collisions_should_not_be_allowed() {
             },
         );
 }
+
+#[test]
+fn test_manage_authorized_wallets_basic_functionality() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone(); // owner
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
+
+    // Test: Owner can authorize wallets
+    suite.manage_authorized_wallets(
+        alice,
+        vec![bob.to_string(), carol.to_string()],
+        true,
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Test: Query authorized wallets
+    suite.query_authorized_wallets(None, None, |result| {
+        let response = result.unwrap();
+        assert_eq!(response.wallets.len(), 2);
+        assert!(response.wallets.contains(&bob.to_string()));
+        assert!(response.wallets.contains(&carol.to_string()));
+    });
+
+    // Test: Query individual authorization status
+    suite.query_is_authorized(alice.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(response.is_authorized); // owner is always authorized
+    });
+
+    suite.query_is_authorized(bob.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(response.is_authorized); // bob was authorized
+    });
+
+    // Test: Owner can unauthorize wallets
+    suite.manage_authorized_wallets(
+        alice,
+        vec![bob.to_string()],
+        false,
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Verify bob is no longer authorized but carol still is
+    suite.query_is_authorized(bob.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(!response.is_authorized); // bob is no longer authorized
+    });
+
+    suite.query_is_authorized(carol.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(response.is_authorized); // carol is still authorized
+    });
+}
+
+#[test]
+fn test_manage_authorized_wallets_nonpayable_enforcement() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone(); // owner
+    let bob = &suite.senders[1].clone();
+
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
+
+    // Test: Cannot send funds with ManageAuthorizedWallets message
+    suite.manage_authorized_wallets(
+        alice,
+        vec![bob.to_string()],
+        true,
+        &coins(100, "uom"), // Trying to send funds should fail
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::PaymentError(_) => {}
+                _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+            }
+        },
+    );
+}
+
+#[test]
+fn test_manage_authorized_wallets_atomic_batch_operations() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone(); // owner
+    let bob = &suite.senders[1].clone();
+    let carol = &suite.senders[2].clone();
+
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
+
+    // Test: Batch operation with one invalid address should fail atomically
+    suite.manage_authorized_wallets(
+        alice,
+        vec![
+            bob.to_string(),
+            "".to_string(), // Invalid address
+            carol.to_string(),
+        ],
+        true,
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            // Should fail due to invalid address
+            assert!(result.is_err());
+        },
+    );
+
+    // Verify no addresses were authorized
+    suite.query_is_authorized(bob.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(!response.is_authorized);
+    });
+
+    suite.query_is_authorized(carol.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(!response.is_authorized);
+    });
+
+    // Test: Valid batch operation should succeed
+    suite.manage_authorized_wallets(
+        alice,
+        vec![bob.to_string(), carol.to_string()],
+        true,
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Verify both addresses were authorized
+    suite.query_authorized_wallets(None, None, |result| {
+        let response = result.unwrap();
+        assert_eq!(response.wallets.len(), 2);
+    });
+}
+
+#[test]
+fn test_manage_authorized_wallets_unauthorized_access() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone(); // owner
+    let bob = &suite.senders[1].clone(); // unauthorized user
+    let carol = &suite.senders[2].clone();
+
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
+
+    // Test: Non-owner cannot manage authorized wallets
+    suite.manage_authorized_wallets(
+        bob, // bob is not the owner
+        vec![carol.to_string()],
+        true,
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::OwnershipError(cw_ownable::OwnershipError::NotOwner) => {}
+                _ => panic!("Wrong error type, should return OwnershipError::NotOwner"),
+            }
+        },
+    );
+
+    // Verify carol was not authorized
+    suite.query_is_authorized(carol.to_string(), |result| {
+        let response = result.unwrap();
+        assert!(!response.is_authorized);
+    });
+}
+
+#[test]
+fn test_manage_authorized_wallets_pagination() {
+    let mut suite = TestingSuite::default_with_balances(vec![coin(1_000_000_000, "uom")]);
+
+    let alice = &suite.senders[0].clone(); // owner
+
+    suite.instantiate_claimdrop_contract(Some(alice.to_string()));
+
+    // Create 4 test addresses using the valid bech32 addresses from the suite (excluding owner)
+    let addresses: Vec<String> = suite.senders[1..5]
+        .iter()
+        .map(|addr| addr.to_string())
+        .collect();
+
+    suite.manage_authorized_wallets(
+        alice,
+        addresses.clone(),
+        true,
+        &[],
+        |result: Result<AppResponse, anyhow::Error>| {
+            result.unwrap();
+        },
+    );
+
+    // Test: Query all authorized wallets
+    suite.query_authorized_wallets(None, None, |result| {
+        let response = result.unwrap();
+        assert_eq!(response.wallets.len(), 4);
+    });
+
+    // Test: Query with limit
+    suite.query_authorized_wallets(None, Some(2), |result| {
+        let response = result.unwrap();
+        assert_eq!(response.wallets.len(), 2);
+    });
+
+    // Test: Query with start_after beyond all addresses
+    suite.query_authorized_wallets(Some("zzz9999".to_string()), None, |result| {
+        let response = result.unwrap();
+        assert_eq!(response.wallets.len(), 0);
+    });
+}

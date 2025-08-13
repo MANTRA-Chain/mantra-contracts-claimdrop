@@ -768,9 +768,9 @@ checksum = "d8adc4bb1803a324070e64a98ae98f38934d91957a99cfb3a43dcbc01bc56439"
 
 [[package]]
 name = "mantra-claimdrop-std"
-version = "1.1.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea4192a68c7a5236cff7bc333ac740c5a49bd881f931d0e04a9b4fc14b833966"
+checksum = "8f9c977648071abe3e7d8cb9c5fc240ce0baea8f486e634d5be039e2dce50491"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
