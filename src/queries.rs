@@ -1,7 +1,5 @@
 use cosmwasm_std::{coin, Coin, Deps, Env, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::helpers;
 use crate::state::{
@@ -10,20 +8,9 @@ use crate::state::{
 };
 use mantra_claimdrop_std::error::ContractError;
 use mantra_claimdrop_std::msg::{
-    AllocationsResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
+    AllocationsResponse, AuthorizedResponse, AuthorizedWalletsResponse, BlacklistResponse,
+    CampaignResponse, ClaimedResponse, RewardsResponse,
 };
-
-// Temporary response types - will be moved to external package
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct AuthorizedResponse {
-    pub is_authorized: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct AuthorizedWalletsResponse {
-    pub wallets: Vec<String>,
-}
 
 /// Returns the active airdrop campaign.
 ///
