@@ -56,6 +56,13 @@ fn bug_large_numbers() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            owner,
             &coins(amount, denom),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -133,6 +140,13 @@ fn bug_large_numbers_2() {
                     end_time: current_time.plus_days(7).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            owner,
             &coins(amount, denom),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -226,6 +240,13 @@ fn bug_large_numbers_3() {
                     end_time: current_time.plus_days(7).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            owner,
             &coins(amount, denom),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();

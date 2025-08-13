@@ -48,7 +48,7 @@ fn create_multiple_campaigns_fails() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -70,7 +70,7 @@ fn create_multiple_campaigns_fails() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -111,7 +111,7 @@ fn create_multiple_campaigns_fails() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -154,7 +154,7 @@ fn cant_create_campaign_if_not_owner() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -198,7 +198,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -226,7 +226,7 @@ fn validate_campaign_params() {
                 end_time: current_time.seconds() + 172_800,
             }),
         },
-        &coins(100_000, "uom"),
+        &[], // No funds during campaign creation
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             match err {
@@ -255,7 +255,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -284,7 +284,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -314,7 +314,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -344,7 +344,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -374,7 +374,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 1,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -403,7 +403,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 1,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -430,7 +430,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -468,7 +468,7 @@ fn validate_campaign_params() {
                 end_time: current_time.seconds() + 172_800,
             }),
         },
-        &coins(100_000, "uom"),
+        &[], // No funds during campaign creation
         |result: Result<AppResponse, anyhow::Error>| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             match err {
@@ -497,7 +497,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -526,7 +526,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -555,7 +555,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -581,7 +581,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -607,7 +607,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -641,7 +641,7 @@ fn validate_campaign_params() {
 
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -671,7 +671,7 @@ fn validate_campaign_params() {
 
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -703,7 +703,7 @@ fn validate_campaign_params() {
 
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -733,7 +733,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -762,7 +762,7 @@ fn validate_campaign_params() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -792,7 +792,7 @@ fn validate_campaign_params() {
 
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -899,28 +899,36 @@ fn create_campaign_and_claim_single_distribution_type() {
             },
         );
 
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop, 土金, ك".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::one(),
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                    }],
                     start_time: current_time.seconds() + 1,
-                }],
-                start_time: current_time.seconds() + 1,
-                end_time: current_time.seconds() + 172_800,
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    end_time: current_time.seconds() + 172_800,
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     // claim
     suite.claim(
@@ -1151,6 +1159,13 @@ fn claim_ended_campaign() {
                     end_time: current_time.seconds() + 172_800,
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            dan,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1337,6 +1352,13 @@ fn query_claimed() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1601,6 +1623,13 @@ fn create_campaign_and_claim_multiple_distribution_types() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1815,6 +1844,13 @@ fn claim_campaign_with_cliff() {
                     end_time: current_time.plus_days(1460).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -1986,6 +2022,13 @@ fn claim_campaign_with_vesting_cliff_and_lump_sum() {
                     end_time: current_time.plus_days(1460).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2167,6 +2210,13 @@ fn claim_campaign_with_vesting_cliff_in_future_and_lump_sum() {
                     end_time: current_time.plus_days(90).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2379,7 +2429,14 @@ fn topup_campaigns_with_and_without_cliff() {
                     end_time: current_time.plus_days(30).seconds(),
                 }),
             },
-            &coins(30_000, "uom"), // Initial funding less than total_reward
+            &[], // No funds during campaign creation // Initial funding less than total_reward
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(30_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -2500,7 +2557,14 @@ fn topup_campaigns_with_and_without_cliff() {
                     end_time: current_time_after_first_campaign.plus_days(30).seconds(),
                 }),
             },
-            &coins(50_000, "uom"), // Initial funding
+            &[], // No funds during campaign creation // Initial funding
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(50_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -2568,6 +2632,13 @@ fn query_rewards() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2647,7 +2718,14 @@ fn query_rewards_single_user() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
-            &coins(100, "uom"), // Fund with exact user allocation for simplicity here
+            &[], // No funds during campaign creation // Fund with exact user allocation for simplicity here
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -2726,6 +2804,13 @@ fn query_rewards_fails_when_campaign_has_not_started() {
                     end_time: current_time.plus_days(15).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -2774,36 +2859,45 @@ fn close_campaigns() {
     let carol = &suite.senders[2].clone();
     let current_time = &suite.get_time();
 
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                        cliff_duration: None,
-                    },
-                ],
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None)
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: None,
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     //end campaign
     suite
@@ -2863,37 +2957,46 @@ fn close_campaigns() {
         });
 
     // let's create a new campaign
-    suite.instantiate_claimdrop_contract(None).manage_campaign(
-        // Alice is owner of new contract
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(), // Name can be same as closed one
-                description: "This is an airdrop with cliff".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.seconds(), // Use a fresh current_time if logic depends on it relative to now
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(7).seconds(),
-                        end_time: current_time.plus_days(14).seconds(),
-                        cliff_duration: None,
-                    },
-                ],
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .instantiate_claimdrop_contract(None)
+        .manage_campaign(
+            // Alice is owner of new contract
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(), // Name can be same as closed one
+                    description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.seconds(), // Use a fresh current_time if logic depends on it relative to now
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(7).seconds(),
+                            end_time: current_time.plus_days(14).seconds(),
+                            cliff_duration: None,
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.manage_campaign(
         carol, // carol can't since it's not the owner of this new contract instance
@@ -3000,6 +3103,13 @@ fn can_query_claims_after_campaign_is_closed() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            dan,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -3150,6 +3260,13 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -3233,7 +3350,7 @@ fn renouncing_contract_owner_makes_prevents_creating_campaigns() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -3290,7 +3407,14 @@ fn can_claim_dust_without_new_claims() {
                     end_time: current_time.plus_days(60).seconds(), // Campaign ends when vesting ends
                 }),
             },
-            &coins(23, "uom"),
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -3378,7 +3502,7 @@ fn cant_end_distribution_type_after_campaign() {
                     end_time: current_time.plus_days(7).seconds(), // Campaign ends before dist
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                 match err {
@@ -3409,7 +3533,7 @@ fn cant_end_distribution_type_after_campaign() {
                     end_time: current_time.plus_days(7).seconds(),
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -3418,30 +3542,38 @@ fn cant_end_distribution_type_after_campaign() {
     // Must instantiate a new contract or close the previous one before creating another "Test Airdrop I"
     // Assuming we want a new contract for this next test case:
     suite.instantiate_claimdrop_contract(None);
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop III".to_string(), // Changed name
-                description: "This is an airdrop, 土金, ك".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LinearVesting {
-                    percentage: Decimal::percent(100),
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop III".to_string(), // Changed name
+                    description: "This is an airdrop, 土金, ك".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LinearVesting {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.seconds(),
+                        end_time: current_time.plus_days(6).seconds(), // Dist ends before campaign here, which is fine.
+                        cliff_duration: None,
+                    }],
                     start_time: current_time.seconds(),
-                    end_time: current_time.plus_days(6).seconds(), // Dist ends before campaign here, which is fine.
-                    cliff_duration: None,
-                }],
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(7).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    end_time: current_time.plus_days(7).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 }
 
 #[test]
@@ -3472,36 +3604,44 @@ fn test_add_allocations() {
         },
     );
 
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(600_000, "uom"), // Sum of allocations
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(25),
-                        start_time: current_time.plus_days(1).seconds(),
-                    },
-                    DistributionType::LinearVesting {
-                        percentage: Decimal::percent(75),
-                        start_time: current_time.plus_days(8).seconds(),
-                        end_time: current_time.plus_days(15).seconds(),
-                        cliff_duration: None,
-                    },
-                ],
-                start_time: current_time.plus_days(1).seconds(),
-                end_time: current_time.plus_days(15).seconds(),
-            }),
-        },
-        &coins(600_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(600_000, "uom"), // Sum of allocations
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(25),
+                            start_time: current_time.plus_days(1).seconds(),
+                        },
+                        DistributionType::LinearVesting {
+                            percentage: Decimal::percent(75),
+                            start_time: current_time.plus_days(8).seconds(),
+                            end_time: current_time.plus_days(15).seconds(),
+                            cliff_duration: None,
+                        },
+                    ],
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(15).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite
         .query_allocations(Some(alice), None, None, |result| {
@@ -3633,7 +3773,7 @@ fn cant_add_allocations_with_invalid_placeholders() {
     let valid_mantra_address = "mantra1w8e2wyzhrg3y5ghe9yg0xn0u7548e627zs7xahfvn5l63ry2x8zsqru7xd";
     let valid_mantra_address_uppercase =
         "MANTRA1W8E2WYZHRG3Y5GHE9YG0XN0U7548E627ZS7XAHFVN5L63RY2X8ZSQRU7XD";
-    let invalid_chars = "invalid-address!";
+    let invalid_chars = "invalid\x00address"; // control character should fail
     let invalid_too_long = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c80x24a42fD28C976A61Df5D00D
     0599C34c4f90748c80x24a42fD28C976A61Df5D00D0599C34c4f90748c80x24a42fD28C976A61Df5D00D0599C34c4f9074
     8c80x24a42fD28C976A61Df5D00D0599C34c4f90748c80x24a42fD28C976A61Df5D00D0599C34c4f90748casuwsa";
@@ -3829,28 +3969,36 @@ fn test_cannot_add_allocations_after_campaign_start() {
 
     suite.instantiate_claimdrop_contract(None); // Alice is owner
 
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::percent(100),
-                    start_time: current_time.plus_days(1).seconds(),
-                }],
-                start_time: current_time.plus_days(1).seconds(), // Campaign starts in 1 day
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.plus_days(1).seconds(),
+                    }],
+                    start_time: current_time.plus_days(1).seconds(), // Campaign starts in 1 day
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     // Upload allocations
     let allocations = &vec![
@@ -3911,28 +4059,36 @@ fn test_replace_address() {
             },
         );
     // Create campaign AFTER allocations are set, so replace_address can be tested before start
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "Test replace address".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"), // Matches Bob's allocation
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::percent(100),               // All at once
-                    start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
-                }],
-                start_time: current_time.plus_days(1).seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "Test replace address".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"), // Matches Bob's allocation
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),               // All at once
+                        start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
+                    }],
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     // At this point, campaign hasn't started. Bob has an allocation. Carol doesn't.
     // Bob has made no claims.
@@ -3998,35 +4154,43 @@ fn test_replace_address() {
             result.unwrap();
         },
     ); // Bob gets 100k again
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop II".to_string(),
-                description: "Test replace address with claims".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![
-                    DistributionType::LumpSum {
-                        percentage: Decimal::percent(50),   // 50% now
-                        start_time: current_time.seconds(), // Starts now
-                    },
-                    DistributionType::LumpSum {
-                        // Remaining 50% later
-                        percentage: Decimal::percent(50),
-                        start_time: current_time.plus_days(5).seconds(),
-                    },
-                ],
-                start_time: current_time.seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop II".to_string(),
+                    description: "Test replace address with claims".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![
+                        DistributionType::LumpSum {
+                            percentage: Decimal::percent(50),   // 50% now
+                            start_time: current_time.seconds(), // Starts now
+                        },
+                        DistributionType::LumpSum {
+                            // Remaining 50% later
+                            percentage: Decimal::percent(50),
+                            start_time: current_time.plus_days(5).seconds(),
+                        },
+                    ],
+                    start_time: current_time.seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     // Bob claims the first 50% (50_000)
     suite.claim(
@@ -4153,7 +4317,7 @@ fn test_remove_address() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -4284,28 +4448,36 @@ fn test_replace_placeholder_address() {
             },
         );
     // Create campaign AFTER allocations are set, so replace_address can be tested before start
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "Test replace address".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"), // Matches Bob's allocation
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::percent(100),               // All at once
-                    start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
-                }],
-                start_time: current_time.plus_days(1).seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "Test replace address".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"), // Matches Bob's allocation
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),               // All at once
+                        start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
+                    }],
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.add_day();
 
@@ -4424,6 +4596,13 @@ fn test_cant_replace_address_with_existing_allocation() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -4488,28 +4667,36 @@ fn test_blacklist_address() {
         },
     );
 
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Airdrop I".to_string(),
-                description: "This is an airdrop with cliff".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(600_000, "uom"), // Sum of allocations
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::percent(100),
-                    start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
-                }],
-                start_time: current_time.plus_days(1).seconds(),
-                end_time: current_time.plus_days(14).seconds(),
-            }),
-        },
-        &coins(600_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Airdrop I".to_string(),
+                    description: "This is an airdrop with cliff".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(600_000, "uom"), // Sum of allocations
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::percent(100),
+                        start_time: current_time.plus_days(1).seconds(), // Starts tomorrow
+                    }],
+                    start_time: current_time.plus_days(1).seconds(),
+                    end_time: current_time.plus_days(14).seconds(),
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(1_000_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite
         .blacklist_address(
@@ -4645,7 +4832,7 @@ fn test_claim_more_than_currently_available_fails() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
-            &coins(100_000, "uom"),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -4724,6 +4911,13 @@ fn test_partial_claim_lump_sum() {
                     end_time: current_time.plus_days(14).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -4869,7 +5063,14 @@ fn test_partial_claim_lumpsum_and_linear_vesting() {
                     end_time: current_time.plus_days(5).seconds(),
                 }),
             },
-            &coins(100_000, reward_denom),
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -5089,7 +5290,7 @@ fn test_claim_zero_amount_fails() {
                     end_time: current_time.plus_days(5).seconds(),
                 }),
             },
-            &coins(100_000, reward_denom),
+            &[], // No funds during campaign creation
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -5166,7 +5367,14 @@ fn test_claim_full_amount_when_none_specified_after_partial_claims() {
                     end_time: current_time.plus_days(5).seconds(),
                 }),
             },
-            &coins(100_000, reward_denom),
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
             },
@@ -5337,28 +5545,36 @@ fn test_claim_authorization() {
             },
         );
 
-    suite.manage_campaign(
-        alice,
-        CampaignAction::CreateCampaign {
-            params: Box::new(CampaignParams {
-                name: "Test Authorization".to_string(),
-                description: "Testing claim authorization".to_string(),
-                ty: "airdrop".to_string(),
-                reward_denom: "uom".to_string(),
-                total_reward: coin(100_000, "uom"),
-                distribution_type: vec![DistributionType::LumpSum {
-                    percentage: Decimal::one(),
+    suite
+        .manage_campaign(
+            alice,
+            CampaignAction::CreateCampaign {
+                params: Box::new(CampaignParams {
+                    name: "Test Authorization".to_string(),
+                    description: "Testing claim authorization".to_string(),
+                    ty: "airdrop".to_string(),
+                    reward_denom: "uom".to_string(),
+                    total_reward: coin(100_000, "uom"),
+                    distribution_type: vec![DistributionType::LumpSum {
+                        percentage: Decimal::one(),
+                        start_time: current_time.seconds() + 1,
+                    }],
                     start_time: current_time.seconds() + 1,
-                }],
-                start_time: current_time.seconds() + 1,
-                end_time: current_time.seconds() + 172_800,
-            }),
-        },
-        &coins(100_000, "uom"),
-        |result: Result<AppResponse, anyhow::Error>| {
-            result.unwrap();
-        },
-    );
+                    end_time: current_time.seconds() + 172_800,
+                }),
+            },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
+            &coins(100_000, "uom"),
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        );
 
     suite.add_day();
 
