@@ -284,16 +284,12 @@ pub fn validate_address_placeholder(placeholder: &str) -> Result<String, Contrac
         }
     );
 
-    // only alphanumeric characters and dots allowed, i.e. for 0x addresses or ENS domains
-    if !address
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '.')
-    {
+    // Very permissive validation to support various placeholder types:
+    // ENS domains (with emoji, international characters), email addresses, social handles, etc.
+    // Only block control characters which could cause parsing/display issues
+    if address.chars().any(|c| c.is_control()) {
         return Err(ContractError::InvalidInput {
-            reason: format!(
-                "placeholder address '{}' contains invalid characters",
-                placeholder
-            ),
+            reason: format!("placeholder address '{placeholder}' contains control characters"),
         });
     }
 
