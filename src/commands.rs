@@ -23,7 +23,7 @@ pub(crate) fn manage_campaign(
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     match campaign_action {
-        CampaignAction::CreateCampaign { params } => create_campaign(deps, env, *params),
+        CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
         CampaignAction::CloseCampaign {} => {
             cw_utils::nonpayable(&info)?;
             close_campaign(deps, env)
@@ -35,8 +35,10 @@ pub(crate) fn manage_campaign(
 fn create_campaign(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     campaign_params: CampaignParams,
 ) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
     let campaign: Option<Campaign> = CAMPAIGN.may_load(deps.storage)?;
 
     ensure!(
@@ -127,6 +129,10 @@ pub(crate) fn claim(
             reason: "has been closed, cannot claim".to_string()
         }
     );
+
+    // Note: Campaign end_time is intentionally not checked here.
+    // Users should be able to claim their allocated tokens even after the campaign end_time has passed,
+    // as long as the campaign has not been manually closed by the owner.
 
     let receiver = receiver
         .map(|addr| deps.api.addr_validate(&addr))
@@ -357,7 +363,7 @@ pub fn add_allocations(
         .add_attribute("count", allocations_len))
 }
 
-/// Replaces an address in the allocation list. This can only be done before the campaign has started.
+/// Replaces an address in the allocation list. This can be done at any time during the campaign.
 ///
 /// # Arguments
 /// * `deps` - The dependencies

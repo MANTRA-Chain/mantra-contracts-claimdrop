@@ -46,6 +46,13 @@ fn can_claim_dust_after_vesting_ends() {
                     end_time: current_time.plus_days(90).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(23, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
@@ -159,6 +166,13 @@ fn can_claim_dust_after_vesting_ends_2() {
                     end_time: current_time.plus_days(90).seconds(),
                 }),
             },
+            &[], // No funds during campaign creation
+            |result: Result<AppResponse, anyhow::Error>| {
+                result.unwrap();
+            },
+        )
+        .top_up_campaign(
+            alice,
             &coins(23, "uom"),
             |result: Result<AppResponse, anyhow::Error>| {
                 result.unwrap();
