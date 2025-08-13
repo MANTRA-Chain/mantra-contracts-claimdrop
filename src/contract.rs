@@ -13,19 +13,30 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let owner = msg.owner.unwrap_or(info.sender.into_string());
-    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&owner))?;
+    let owner = deps
+        .api
+        .addr_validate(&msg.owner.unwrap_or(info.sender.to_string()))?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&owner.as_str()))?;
 
-    Ok(Response::default().add_attributes(vec![
-        ("action", "instantiate".to_string()),
-        ("owner", owner),
-    ]))
+    let mut info = info.clone();
+    info.sender = owner.clone();
+    let mut response = Response::default()
+        .add_attribute("action", "instantiate")
+        .add_attribute("owner", &owner);
+
+    if let Some(action) = msg.action {
+        let campaign_res = commands::manage_campaign(deps, env, info, action)?;
+        // Merge the campaign response with the instantiate response
+        response = response.add_attributes(campaign_res.attributes);
+    }
+
+    Ok(response)
 }
 
 #[entry_point]
