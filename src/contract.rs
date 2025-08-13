@@ -60,6 +60,13 @@ pub fn execute(
             cw_utils::nonpayable(&info)?;
             commands::blacklist_address(deps, info, address, blacklist)
         }
+        // ExecuteMsg::ManageAuthorizedWallets {
+        //     addresses,
+        //     authorized,
+        // } => {
+        //     cw_utils::nonpayable(&info)?;
+        //     commands::manage_authorized_wallets(deps, info, addresses, authorized)
+        // }
         ExecuteMsg::UpdateOwnership(action) => {
             cw_utils::nonpayable(&info)?;
             Ok(

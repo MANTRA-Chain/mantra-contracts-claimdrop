@@ -1,17 +1,22 @@
 use std::collections::HashMap;
+use std::vec;
 
 use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
 
 use crate::helpers::{self, validate_raw_address};
 use crate::state::{
-    get_allocation, get_claims_for_address, get_total_claims_amount_for_address, is_blacklisted,
-    Claim, DistributionSlot, ALLOCATIONS, BLACKLIST, CAMPAIGN, CLAIMS,
+    assert_authorized, get_allocation, get_claims_for_address, get_total_claims_amount_for_address,
+    is_authorized, is_blacklisted, Claim, DistributionSlot, ALLOCATIONS, AUTHORIZED_WALLETS,
+    BLACKLIST, CAMPAIGN, CLAIMS,
 };
 use mantra_claimdrop_std::error::ContractError;
 use mantra_claimdrop_std::msg::{Campaign, CampaignAction, CampaignParams, DistributionType};
 
 /// Maximum number of allocations that can be added in a single batch
 pub const MAX_ALLOCATION_BATCH_SIZE: usize = 3000;
+
+/// Maximum number of authorized wallets that can be managed in a single batch operation
+pub const MAX_AUTHORIZED_WALLETS_BATCH_SIZE: usize = 1000;
 
 /// Manages a campaign
 pub(crate) fn manage_campaign(
@@ -20,7 +25,7 @@ pub(crate) fn manage_campaign(
     info: MessageInfo,
     campaign_action: CampaignAction,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    assert_authorized(deps.as_ref(), &info.sender)?;
 
     match campaign_action {
         CampaignAction::CreateCampaign { params } => create_campaign(deps, env, info, *params),
@@ -140,14 +145,11 @@ pub(crate) fn claim(
         .unwrap_or_else(|| info.sender.clone());
 
     // Check if the caller is authorized to claim:
-    // Only the contract owner OR the wallet with the allocation can claim
-    let is_owner = cw_ownable::get_ownership(deps.storage)?
-        .owner
-        .map(|owner| owner == info.sender)
-        .unwrap_or(false);
+    // Owner, authorized wallet, OR the wallet with the allocation can claim
+    let is_authorized_user = is_authorized(deps.as_ref(), &info.sender)?;
 
     ensure!(
-        is_owner || info.sender == receiver,
+        is_authorized_user || info.sender == receiver,
         ContractError::Unauthorized
     );
 
@@ -319,7 +321,7 @@ pub fn add_allocations(
     info: MessageInfo,
     allocations: Vec<(String, Uint128)>,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    assert_authorized(deps.as_ref(), &info.sender)?;
 
     // Check batch size limit
     ensure!(
@@ -379,7 +381,7 @@ pub fn replace_address(
     old_address_raw: String,
     new_address_raw: String,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    assert_authorized(deps.as_ref(), &info.sender)?;
 
     let old_address_canonical = validate_raw_address(deps.as_ref(), &old_address_raw)?;
     // New address should be a valid cosmos address
@@ -443,7 +445,7 @@ pub fn remove_address(
     info: MessageInfo,
     address: String,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    assert_authorized(deps.as_ref(), &info.sender)?;
 
     // Check if campaign has started
     let campaign = CAMPAIGN.may_load(deps.storage)?;
@@ -483,7 +485,7 @@ pub fn blacklist_address(
     address: String,
     blacklist: bool,
 ) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    assert_authorized(deps.as_ref(), &info.sender)?;
 
     let address = validate_raw_address(deps.as_ref(), &address)?;
 
@@ -497,4 +499,57 @@ pub fn blacklist_address(
         .add_attribute("action", "blacklist_address".to_string())
         .add_attribute("address", address)
         .add_attribute("blacklisted", blacklist.to_string()))
+}
+
+/// Manages authorized wallets that can perform admin actions. Only the owner can manage the authorized wallets list.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `info` - The message info
+/// * `addresses` - Vector of addresses to authorize/unauthorize
+/// * `authorized` - Whether to authorize or unauthorize the addresses
+///
+/// # Returns
+/// * `Result<Response, ContractError>` - The response with attributes
+pub fn manage_authorized_wallets(
+    deps: DepsMut,
+    info: MessageInfo,
+    addresses: Vec<String>,
+    authorized: bool,
+) -> Result<Response, ContractError> {
+    // Only owner can manage authorized wallets
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    // Check batch size limit
+    ensure!(
+        addresses.len() <= MAX_AUTHORIZED_WALLETS_BATCH_SIZE,
+        ContractError::BatchSizeLimitExceeded {
+            actual: addresses.len(),
+            max: MAX_AUTHORIZED_WALLETS_BATCH_SIZE,
+        }
+    );
+
+    ensure!(
+        !addresses.is_empty(),
+        ContractError::InvalidInput {
+            reason: "addresses cannot be empty".to_string(),
+        }
+    );
+
+    // Validate all addresses first (atomic operation - if any fails, all fail)
+    for address in addresses.iter() {
+        let validated_address = deps.api.addr_validate(&address)?;
+
+        if authorized {
+            AUTHORIZED_WALLETS.save(deps.storage, validated_address.as_str(), &())?;
+        } else {
+            AUTHORIZED_WALLETS.remove(deps.storage, validated_address.as_str());
+        }
+    }
+
+    Ok(Response::default().add_attributes(vec![
+        ("action", "manage_authorized_wallets".to_string()),
+        ("count", addresses.len().to_string()),
+        ("authorized", authorized.to_string()),
+    ]))
 }
