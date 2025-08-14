@@ -289,7 +289,7 @@ pub fn validate_address_placeholder(placeholder: &str) -> Result<String, Contrac
     // Only block control characters which could cause parsing/display issues
     if address.chars().any(|c| c.is_control()) {
         return Err(ContractError::InvalidInput {
-            reason: format!("placeholder address '{placeholder}' contains invalid characters"),
+            reason: format!("placeholder address '{placeholder}' contains control characters"),
         });
     }
 
