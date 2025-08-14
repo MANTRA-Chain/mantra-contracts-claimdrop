@@ -19,16 +19,17 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let owner = deps
-        .api
-        .addr_validate(&msg.owner.unwrap_or(info.sender.to_string()))?;
-    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&owner.as_str()))?;
+    let owner = match msg.owner {
+        Some(owner_str) => deps.api.addr_validate(&owner_str)?,
+        None => info.sender.clone(),
+    };
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
 
     let mut info = info.clone();
     info.sender = owner.clone();
     let mut response = Response::default()
         .add_attribute("action", "instantiate")
-        .add_attribute("owner", &owner);
+        .add_attribute("owner", owner);
 
     if let Some(action) = msg.action {
         let campaign_res = commands::manage_campaign(deps, env, info, action)?;
