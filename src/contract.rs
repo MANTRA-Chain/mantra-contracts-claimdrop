@@ -33,7 +33,15 @@ pub fn instantiate(
     if let Some(action) = msg.action {
         let campaign_res = commands::manage_campaign(deps, env, info, action)?;
         // Merge the campaign response with the instantiate response
-        response = response.add_attributes(campaign_res.attributes);
+        response = response
+            .add_attributes(campaign_res.attributes)
+            .add_submessages(campaign_res.messages)
+            .add_events(campaign_res.events);
+
+        // Merge data if present (later data overwrites earlier)
+        if let Some(data) = campaign_res.data {
+            response = response.set_data(data);
+        }
     }
 
     Ok(response)

@@ -3826,7 +3826,7 @@ fn cant_add_allocations_with_invalid_placeholders() {
                     assert_eq!(
                         reason,
                         format!(
-                            "placeholder address '{}' contains control characters",
+                            "placeholder address '{}' contains invalid characters",
                             invalid_chars
                         )
                         .to_string()
