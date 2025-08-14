@@ -3,12 +3,13 @@ use cw_storage_plus::Bound;
 
 use crate::helpers;
 use crate::state::{
-    get_allocation, get_total_claims_amount_for_address, is_blacklisted, ALLOCATIONS, CAMPAIGN,
-    CLAIMS,
+    get_allocation, get_total_claims_amount_for_address, is_authorized, is_blacklisted,
+    ALLOCATIONS, AUTHORIZED_WALLETS, CAMPAIGN, CLAIMS,
 };
 use mantra_claimdrop_std::error::ContractError;
 use mantra_claimdrop_std::msg::{
-    AllocationsResponse, BlacklistResponse, CampaignResponse, ClaimedResponse, RewardsResponse,
+    AllocationsResponse, AuthorizedResponse, AuthorizedWalletsResponse, BlacklistResponse,
+    CampaignResponse, ClaimedResponse, RewardsResponse,
 };
 
 /// Returns the active airdrop campaign.
@@ -233,4 +234,50 @@ pub fn query_is_blacklisted(
 ) -> Result<BlacklistResponse, ContractError> {
     let is_blacklisted = is_blacklisted(deps, &address)?;
     Ok(BlacklistResponse { is_blacklisted })
+}
+
+/// Returns whether an address is authorized (owner or authorized wallet).
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - The address to check
+///
+/// # Returns
+/// * `Result<AuthorizedResponse, ContractError>` - The authorization status
+pub fn query_is_authorized(
+    deps: Deps,
+    address: String,
+) -> Result<AuthorizedResponse, ContractError> {
+    let validated_address = deps.api.addr_validate(&address)?;
+    let is_authorized = is_authorized(deps, &validated_address)?;
+    Ok(AuthorizedResponse { is_authorized })
+}
+
+/// Returns a list of authorized wallet addresses with pagination support.
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `start_after` - Optional address to start pagination from
+/// * `limit` - Optional limit for pagination
+///
+/// # Returns
+/// * `Result<AuthorizedWalletsResponse, ContractError>` - The authorized wallets list
+pub fn query_authorized_wallets(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> Result<AuthorizedWalletsResponse, ContractError> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT as u32).min(MAX_LIMIT as u32) as usize;
+    let start = cw_utils::calc_range_start_string(start_after).map(Bound::ExclusiveRaw);
+
+    let wallets: Vec<String> = AUTHORIZED_WALLETS
+        .range(deps.storage, start, None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            let (address, _) = item?;
+            Ok(address)
+        })
+        .collect::<StdResult<Vec<String>>>()?;
+
+    Ok(AuthorizedWalletsResponse { wallets })
 }

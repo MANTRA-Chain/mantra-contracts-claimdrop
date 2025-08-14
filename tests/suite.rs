@@ -4,8 +4,9 @@ use cw_multi_test::{
     WasmKeeper,
 };
 use mantra_claimdrop_std::msg::{
-    AllocationsResponse, BlacklistResponse, CampaignAction, CampaignResponse, ClaimedResponse,
-    ExecuteMsg, InstantiateMsg, QueryMsg, RewardsResponse,
+    AllocationsResponse, AuthorizedResponse, AuthorizedWalletsResponse, BlacklistResponse,
+    CampaignAction, CampaignResponse, ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+    RewardsResponse,
 };
 
 type MantraApp = App<BankKeeper, MockApiBech32>;
@@ -275,6 +276,26 @@ impl TestingSuite {
             result,
         )
     }
+
+    #[track_caller]
+    pub fn manage_authorized_wallets(
+        &mut self,
+        sender: &Addr,
+        addresses: Vec<String>,
+        authorized: bool,
+        funds: &[Coin],
+        result: impl ResultHandler,
+    ) -> &mut Self {
+        self.execute_contract(
+            sender,
+            ExecuteMsg::ManageAuthorizedWallets {
+                addresses,
+                authorized,
+            },
+            funds,
+            result,
+        )
+    }
 }
 
 // queries
@@ -383,5 +404,24 @@ impl TestingSuite {
         let balance_response = self.app.wrap().query_balance(address, denom);
         result(balance_response.unwrap_or(coin(0, denom)).amount);
         self
+    }
+
+    #[track_caller]
+    pub fn query_is_authorized(
+        &mut self,
+        address: String,
+        result: impl Fn(StdResult<AuthorizedResponse>),
+    ) -> &mut Self {
+        self.query_contract(QueryMsg::IsAuthorized { address }, result)
+    }
+
+    #[track_caller]
+    pub fn query_authorized_wallets(
+        &mut self,
+        start_after: Option<String>,
+        limit: Option<u32>,
+        result: impl Fn(StdResult<AuthorizedWalletsResponse>),
+    ) -> &mut Self {
+        self.query_contract(QueryMsg::AuthorizedWallets { start_after, limit }, result)
     }
 }

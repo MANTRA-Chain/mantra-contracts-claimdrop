@@ -193,6 +193,37 @@
         "additionalProperties": false
       },
       {
+        "description": "Manages authorized wallets that can perform admin actions. Only the owner can manage authorized wallets.",
+        "type": "object",
+        "required": [
+          "manage_authorized_wallets"
+        ],
+        "properties": {
+          "manage_authorized_wallets": {
+            "type": "object",
+            "required": [
+              "addresses",
+              "authorized"
+            ],
+            "properties": {
+              "addresses": {
+                "description": "Vector of addresses to authorize/unauthorize",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "authorized": {
+                "description": "Whether to authorize or unauthorize the addresses",
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
         "type": "object",
         "required": [
@@ -675,6 +706,61 @@
         "additionalProperties": false
       },
       {
+        "description": "Check if an address is authorized (owner or authorized wallet)",
+        "type": "object",
+        "required": [
+          "is_authorized"
+        ],
+        "properties": {
+          "is_authorized": {
+            "type": "object",
+            "required": [
+              "address"
+            ],
+            "properties": {
+              "address": {
+                "description": "The address to check",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get authorized wallets with pagination",
+        "type": "object",
+        "required": [
+          "authorized_wallets"
+        ],
+        "properties": {
+          "authorized_wallets": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "description": "The maximum number of items to return. Used for paginating results.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "description": "The address to start querying from. Used for paginating results.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Query the contract's ownership information",
         "type": "object",
         "required": [
@@ -743,6 +829,25 @@
           "type": "string"
         }
       }
+    },
+    "authorized_wallets": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AuthorizedWalletsResponse",
+      "description": "Response to the AuthorizedWallets query.",
+      "type": "object",
+      "required": [
+        "wallets"
+      ],
+      "properties": {
+        "wallets": {
+          "description": "List of authorized wallet addresses",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "campaign": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -983,6 +1088,22 @@
           "type": "string"
         }
       }
+    },
+    "is_authorized": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AuthorizedResponse",
+      "description": "Response to the IsAuthorized query.",
+      "type": "object",
+      "required": [
+        "is_authorized"
+      ],
+      "properties": {
+        "is_authorized": {
+          "description": "Whether the address is authorized (owner or authorized wallet)",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
     },
     "is_blacklisted": {
       "$schema": "http://json-schema.org/draft-07/schema#",

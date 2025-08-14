@@ -60,6 +60,13 @@ pub fn execute(
             cw_utils::nonpayable(&info)?;
             commands::blacklist_address(deps, info, address, blacklist)
         }
+        ExecuteMsg::ManageAuthorizedWallets {
+            addresses,
+            authorized,
+        } => {
+            cw_utils::nonpayable(&info)?;
+            commands::manage_authorized_wallets(deps, info, addresses, authorized)
+        }
         ExecuteMsg::UpdateOwnership(action) => {
             cw_utils::nonpayable(&info)?;
             Ok(
@@ -103,6 +110,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::IsBlacklisted { address } => Ok(to_json_binary(&queries::query_is_blacklisted(
             deps, address,
         )?)?),
+        QueryMsg::IsAuthorized { address } => Ok(to_json_binary(&queries::query_is_authorized(
+            deps, address,
+        )?)?),
+        QueryMsg::AuthorizedWallets { start_after, limit } => Ok(to_json_binary(
+            &queries::query_authorized_wallets(deps, start_after, limit)?,
+        )?),
     }
 }
 

@@ -141,6 +141,61 @@
       "additionalProperties": false
     },
     {
+      "description": "Check if an address is authorized (owner or authorized wallet)",
+      "type": "object",
+      "required": [
+        "is_authorized"
+      ],
+      "properties": {
+        "is_authorized": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to check",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get authorized wallets with pagination",
+      "type": "object",
+      "required": [
+        "authorized_wallets"
+      ],
+      "properties": {
+        "authorized_wallets": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "The maximum number of items to return. Used for paginating results.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "description": "The address to start querying from. Used for paginating results.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Query the contract's ownership information",
       "type": "object",
       "required": [

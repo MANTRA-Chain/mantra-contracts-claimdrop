@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Addr, Deps, Uint128};
 use cw_storage_plus::{Item, Map};
 
 use crate::helpers;
@@ -27,6 +27,10 @@ pub const ALLOCATIONS: Map<&str, Uint128> = Map::new("allocations");
 
 /// Stores blacklisted addresses. Blacklisted addresses cannot claim their allocations.
 pub const BLACKLIST: Map<&str, bool> = Map::new("blacklist");
+
+/// Stores authorized wallet addresses that can perform admin actions.
+/// Key: address string, Value: () (presence indicates authorization)
+pub const AUTHORIZED_WALLETS: Map<&str, ()> = Map::new("authorized_wallets");
 
 /// Returns the claims that an address has made for a campaign
 ///
@@ -95,4 +99,60 @@ pub fn is_blacklisted(deps: Deps, address: &str) -> Result<bool, ContractError> 
             helpers::validate_raw_address(deps, address)?.as_str(),
         )?
         .unwrap_or(false))
+}
+
+/// Checks if an address is authorized (owner or authorized wallet)
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `address` - The address to check
+///
+/// # Returns
+/// * `Result<bool, ContractError>` - Whether the address is authorized
+pub fn is_authorized(deps: Deps, address: &Addr) -> Result<bool, ContractError> {
+    let is_owner = cw_ownable::get_ownership(deps.storage)?
+        .owner
+        .map(|owner| owner == address)
+        .unwrap_or(false);
+
+    if is_owner {
+        return Ok(true);
+    }
+
+    let is_authorized = AUTHORIZED_WALLETS
+        .may_load(deps.storage, address.as_str())?
+        .is_some();
+
+    Ok(is_authorized)
+}
+
+/// Asserts that sender is authorized (owner or authorized wallet)
+///
+/// # Arguments
+/// * `deps` - The dependencies
+/// * `sender` - The sender address to check
+///
+/// # Returns
+/// * `Result<(), ContractError>` - Success or appropriate error
+pub fn assert_authorized(deps: Deps, sender: &Addr) -> Result<(), ContractError> {
+    // First check if sender is owner to maintain backward compatibility with error types
+    if let Ok(ownership) = cw_ownable::get_ownership(deps.storage) {
+        if let Some(owner) = ownership.owner {
+            if owner == sender {
+                return Ok(());
+            }
+        }
+    }
+
+    // If not owner, check if authorized wallet
+    let is_authorized = AUTHORIZED_WALLETS
+        .may_load(deps.storage, sender.as_str())?
+        .is_some();
+
+    if is_authorized {
+        return Ok(());
+    }
+
+    // If neither owner nor authorized, return the same error type as cw_ownable::assert_owner
+    cw_ownable::assert_owner(deps.storage, sender).map_err(|e| e.into())
 }
